@@ -48,31 +48,40 @@ ENTRY = "click_email"
 success=lambda ctx, value: "module_b" if value else "module_c"
 ```
 
-## 命令
+## 快捷脚本（推荐）
+
+安装后用 `poe`（类似 `npm run`），任务定义在 `pyproject.toml` 的 `[tool.poe.tasks]`：
 
 ```powershell
-# 查看帮助
+poe              # 列出任务
+poe dry          # 干跑流程
+poe flow         # 真实点击跑流程
+poe test         # 跑测试
+poe info         # 运行信息
+poe version
+poe lint
+```
+
+传额外参数（poe 后加 `--`）：
+
+```powershell
+poe dry -- -s click_email
+poe flow -- --only click_email
+```
+
+## 完整命令
+
+```powershell
 vision-workflow --help
 vision-workflow flow --help
 
-# 从入口跑（真实点击）
 vision-workflow flow config.flow
-
-# 干跑：只识图/规划，不真动鼠标
 vision-workflow flow config.flow --dry-run
-
-# 从任意模块开始
 vision-workflow flow config.flow -s click_email --dry-run
-
-# 只跑某一个模块生命周期（不跳转）
 vision-workflow flow config.flow --only click_email --dry-run
-
-# 运行信息 / 版本
 vision-workflow info
 vision-workflow version
 ```
-
-也可用模块方式：`python -m vision_workflow flow config.flow --dry-run`
 
 ## 安装
 
