@@ -7,8 +7,18 @@
 ```text
 Module(id)
   → action(ctx)          # 做事（可不识图）
-  → judge(ctx, value)    # 可选判定函数
-  → success / fail       # 下一个模块 id（或函数动态返回）
+    → judge(ctx, value)  # 可选判定函数
+    → success / fail     # 下一个模块 id（或函数动态返回）
+```
+
+## 目录
+
+```text
+config/                 # 你的流程配置（MODULES + ENTRY）
+  flow.py
+  actions.py
+src/vision_workflow/    # 框架：识图、鼠标、模块跳转
+data/samples/           # 模板图
 ```
 
 ## 配置（`config/flow.py`）
@@ -23,6 +33,7 @@ MODULES = [
         judge=judge_ok,
         success="done",          # 成功跳转
         fail="handle_fail",      # 失败跳转；写自己的 id 即循环
+        max_loops=0,             # 0=不限制本模块循环次数
     ),
     Module(id="done", action=..., success=END),
     Module(id="handle_fail", action=..., success=END, fail=FAIL),
@@ -37,15 +48,34 @@ ENTRY = "click_email"
 success=lambda ctx, value: "module_b" if value else "module_c"
 ```
 
-## 运行
+## 命令
 
 ```powershell
-# 从入口跑，按 success/fail 跳转
+# 查看帮助
+vision-workflow --help
+vision-workflow flow --help
+
+# 从入口跑（真实点击）
+vision-workflow flow config.flow
+
+# 干跑：只识图/规划，不真动鼠标
 vision-workflow flow config.flow --dry-run
 
 # 从任意模块开始
-vision-workflow flow config.flow -s handle_fail --dry-run
+vision-workflow flow config.flow -s click_email --dry-run
 
 # 只跑某一个模块生命周期（不跳转）
 vision-workflow flow config.flow --only click_email --dry-run
+
+# 运行信息 / 版本
+vision-workflow info
+vision-workflow version
+```
+
+也可用模块方式：`python -m vision_workflow flow config.flow --dry-run`
+
+## 安装
+
+```powershell
+pip install -e ".[dev]"
 ```

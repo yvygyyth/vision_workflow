@@ -1,1 +1,1 @@
-"""项目流程配置包：在 flow.py 里用 import + STEPS 数组写流程。"""
+"""项目流程配置：在 flow.py 里声明 MODULES + ENTRY。"""

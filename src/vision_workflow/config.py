@@ -1,4 +1,4 @@
-"""运行时设置（纯代码 / 环境变量，不再读 YAML）。"""
+"""运行时设置（环境变量 / .env）。"""
 
 from __future__ import annotations
 
@@ -25,12 +25,6 @@ class AppSettings(BaseSettings):
     log_level: str = "INFO"
 
 
-class PipelineConfig(BaseModel):
-    recognizer: str = "mock"
-    dry_run: bool = False
-    min_confidence: float = Field(default=0.5, ge=0.0, le=1.0)
-
-
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     dir: str = "logs"
@@ -39,9 +33,6 @@ class LoggingConfig(BaseModel):
 class RuntimeConfig(BaseModel):
     app: dict[str, Any] = Field(default_factory=dict)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
-    recognizers: dict[str, Any] = Field(default_factory=dict)
-    actions: dict[str, Any] = Field(default_factory=dict)
     root_dir: Path = ROOT_DIR
 
     def resolve_path(self, path: str | Path) -> Path:
@@ -57,20 +48,6 @@ def get_settings(_config_path: str | None = None) -> RuntimeConfig:
     return RuntimeConfig(
         app={"name": "vision-workflow", "env": env.env},
         logging=LoggingConfig(level=env.log_level, dir="logs"),
-        pipeline=PipelineConfig(),
-        recognizers={
-            "mock": {
-                "default_intent": "notify",
-                "default_payload": {"message": "mock"},
-                "confidence": 0.95,
-            }
-        },
-        actions={
-            "open_url": {"enabled": True, "allow_hosts": ["example.com", "localhost"]},
-            "save_file": {"enabled": True, "output_dir": "data/output"},
-            "click_button": {"enabled": False},
-            "notify": {"enabled": True},
-        },
         root_dir=ROOT_DIR,
     )
 

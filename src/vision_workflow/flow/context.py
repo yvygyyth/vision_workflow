@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FlowContext:
-    """在 event / unrecognized 回调里使用。"""
+    """模块 action / judge 里使用的运行时上下文。"""
 
     def __init__(
         self,

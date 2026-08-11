@@ -1,8 +1,8 @@
-"""生成一张联调用示例图。"""
+"""生成一张占位模板图（可按需裁剪替换）。"""
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 
 def main() -> None:
@@ -10,22 +10,12 @@ def main() -> None:
     out = root / "data" / "samples" / "demo.png"
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    img = Image.new("RGB", (640, 360), color=(24, 48, 72))
+    img = Image.new("RGB", (120, 40), color=(24, 48, 72))
     draw = ImageDraw.Draw(img)
-    draw.rectangle((40, 40, 600, 320), outline=(90, 180, 255), width=3)
-    draw.text((80, 140), "Vision Workflow Demo", fill=(240, 248, 255))
-    draw.text((80, 190), "intent: open_url", fill=(180, 220, 255))
+    draw.rectangle((2, 2, 117, 37), outline=(90, 180, 255), width=2)
+    draw.text((16, 12), "demo", fill=(240, 248, 255))
     img.save(out)
-
-    # rule 识图器可读的 sidecar
-    sidecar = out.with_suffix(".json")
-    sidecar.write_text(
-        '{\n  "intent": "notify",\n  "confidence": 0.92,\n'
-        '  "text": "demo image",\n  "payload": {"message": "示例识图成功"}\n}\n',
-        encoding="utf-8",
-    )
     print(f"created: {out}")
-    print(f"created: {sidecar}")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
-"""流程配置与运行结果类型。"""
+"""流程运行结果与识图选项类型。"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -40,14 +39,3 @@ class FlowRunResult(BaseModel):
     feedback: str = ""
     path: list[str] = Field(default_factory=list)
     steps: list[StepRunResult] = Field(default_factory=list)
-
-
-@dataclass
-class Flow:
-    """最外层：STEPS 数组，元素可以是 Promise / 普通函数。"""
-
-    name: str
-    steps: list[Any]
-    dry_run: bool = False
-    defaults: MatchOptions = field(default_factory=MatchOptions)
-    base_dir: str | None = None

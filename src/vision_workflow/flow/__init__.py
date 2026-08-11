@@ -32,8 +32,6 @@ def load_flow_module(target: str) -> ModuleGraph:
         obj = mod.FLOW
     elif hasattr(mod, "MODULES"):
         obj = mod.MODULES
-    elif hasattr(mod, "STEPS"):
-        obj = mod.STEPS
     elif hasattr(mod, "build_flow"):
         obj = mod.build_flow()
     else:

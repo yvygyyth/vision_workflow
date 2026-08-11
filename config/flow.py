@@ -13,8 +13,8 @@ MODULES = [
         action=action_click_email,          # 本模块要做的事（可不识图）
         judge=judge_email_still_there,      # 判定函数（可省略）
         success="done",                     # 成功 → 跳到 done
-        fail="handle_fail",                 # 失败 → 跳到 handle_fail（也可写回 click_email 做循环）
-        max_loops=3,
+        fail="click_email",                 # 失败 → 跳到 handle_fail（也可写回 click_email 做循环）
+        max_loops=0,
     ),
     Module(
         id="done",
