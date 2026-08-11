@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vision-workflow"
+version = "0.1.0"
+description = "配置驱动识图执行流程：模板识别 + 链式鼠标 + Python 流程数组"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Vision Workflow" }]
+dependencies = [
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "pillow>=10.0",
+    "python-dotenv>=1.0",
+    "rich>=13.7",
+    "typer>=0.12",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.8",
+    "pyautogui>=0.9.54",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+]
+ocr = [
+    "easyocr>=1.7",
+]
+openai = [
+    "openai>=1.30",
+]
+
+[project.scripts]
+vision-workflow = "vision_workflow.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
