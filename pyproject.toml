@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vision-workflow"
 version = "0.1.0"
-description = "模块跳转式识图执行流程：模板识别 + 鼠标操作 + Python 配置"
+description = "模块组成流程、流程组成工作流：模板识别 + 鼠标操作 + Python 配置"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

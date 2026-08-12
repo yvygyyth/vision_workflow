@@ -17,7 +17,7 @@ from vision_workflow.logging_utils import setup_logging
 
 app = typer.Typer(
     name="vision-workflow",
-    help="模块跳转式识图执行流程",
+    help="模块组成流程、流程组成工作流",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -30,24 +30,32 @@ def flow_cmd(
         ...,
         help="Python 流程模块，如 config.flow 或 config/flow.py",
     ),
-    start: Optional[str] = typer.Option(None, "--start", "-s", help="从指定模块 id 开始"),
-    only: Optional[str] = typer.Option(None, "--only", help="只执行某一个模块的生命周期（不跳转）"),
+    start: Optional[str] = typer.Option(
+        None,
+        "--start",
+        "-s",
+        help="从流程 id 或 flow.module 开始",
+    ),
+    only: Optional[str] = typer.Option(
+        None,
+        "--only",
+        help="只执行某一个模块（module 或 flow.module）",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="不真实操作鼠标"),
     base_dir: Optional[Path] = typer.Option(None, "--base-dir", help="模板图相对路径基准目录"),
     json_out: bool = typer.Option(False, "--json", help="JSON 输出"),
 ) -> None:
-    """按模块 id 组合跳转执行流程。"""
+    """执行 Workflow（模块组成流程，流程再组合）。"""
     cwd = str(Path.cwd())
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
     setup_logging(reload_settings())
-    flow = load_flow_module(target)
+    workflow = load_flow_module(target)
     runner = FlowRunner(
-        flow,
+        workflow,
         base_dir=base_dir,
         dry_run=True if dry_run else None,
-        entry=start,
     )
     if only:
         settled = runner.run_module(only)
@@ -67,7 +75,7 @@ def flow_cmd(
     if json_out:
         console.print_json(result.model_dump_json())
     else:
-        table = Table(title=f"Flow · {result.flow_name}")
+        table = Table(title=f"Workflow · {result.flow_name}")
         table.add_column("字段")
         table.add_column("值")
         table.add_row("success", str(result.success))

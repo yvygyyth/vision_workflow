@@ -1,4 +1,4 @@
-"""流程运行结果与识图选项类型。"""
+"""流程 / 工作流运行结果类型。"""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ class MatchResult(BaseModel):
 
 
 class StepRunResult(BaseModel):
-    step_id: str
+    step_id: str  # flow_id.module_id
     success: bool = True
     message: str = ""
     feedback: str = ""

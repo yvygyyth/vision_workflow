@@ -1,33 +1,62 @@
-from config.actions import (
-    action_click_email,
-    action_handle_fail,
-    action_log_done,
-    judge_email_still_there,
+"""模块组成流程，流程组成工作流。"""
+
+from config.actions import action_handle_fail, action_log_done
+from vision_workflow.events import click
+from vision_workflow.module import END, Flow, Module, Workflow
+
+# --- 流程 1：收邮件 ---
+mail_flow = Flow(
+    id="mail",
+    entry="click_email",
+    modules=[
+        Module(
+            id="click_email",
+            event=click("data/samples/email.png"),
+            success="one_click",
+            # fail 省略 → 结束当前流程
+        ),
+        Module(
+            id="one_click",
+            event=click("data/samples/email_one_click_receive.png"),
+            success=END,
+            fail="click_email",  # 失败可跳回其它模块
+        ),
+        Module(
+            id="space_click",
+            event=click("data/samples/space-close.png"),
+            success=END
+        ),
+    ],
+    success="wrap_up",  # 本流程成功 → 下一个流程
+    # fail 省略 → 结束整个工作流
 )
-from vision_workflow.module import END, FAIL, Module
 
-# 平级模块：每个都有 id，生命周期结束后跳到任意模块
-MODULES = [
-    Module(
-        id="click_email",
-        action=action_click_email,          # 本模块要做的事（可不识图）
-        judge=judge_email_still_there,      # 判定函数（可省略）
-        success="done",                     # 成功 → 跳到 done
-        fail="click_email",                 # 失败 → 跳到 handle_fail（也可写回 click_email 做循环）
-        max_loops=0,
-    ),
-    Module(
-        id="done",
-        action=action_log_done,
-        success=END,
-        fail=END,
-    ),
-    Module(
-        id="handle_fail",
-        action=action_handle_fail,
-        success=END,
-        fail=FAIL,
-    ),
-]
+# --- 流程 2：收尾 ---
+wrap_up_flow = Flow(
+    id="wrap_up",
+    entry="done",
+    modules=[
+        Module(id="done", event=action_log_done, success=END),
+    ],
+    success=END,
+)
 
-ENTRY = "click_email"  # 从哪个模块开始；也可运行时指定任意 id
+# --- 失败处理流程（可选，在其它流程 fail= 时引用）---
+fail_flow = Flow(
+    id="handle_fail",
+    entry="report",
+    modules=[
+        Module(id="report", event=action_handle_fail, success=END),
+    ],
+    success=END,
+)
+
+FLOWS = [mail_flow, wrap_up_flow, fail_flow]
+ENTRY = "mail"
+
+WORKFLOW = Workflow(
+    id="main",
+    name="config.flow",
+    flows=FLOWS,
+    entry=ENTRY,
+)

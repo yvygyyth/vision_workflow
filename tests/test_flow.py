@@ -1,105 +1,176 @@
-"""组合式模块跳转测试。"""
+"""Module / Flow / Workflow 测试。"""
 
 from pathlib import Path
 
 from vision_workflow.flow import FlowRunner, load_flow_module
-from vision_workflow.module import END, FAIL, Module, ModuleGraph
+from vision_workflow.module import END, Flow, Module, Workflow
 from vision_workflow.promise import Settled
 
 
-def test_module_jump_success() -> None:
-    graph = ModuleGraph(
-        name="t",
-        entry="a",
+def test_module_jump_inside_flow() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="f",
         dry_run=True,
-        modules=[
-            Module(
-                id="a",
-                action=lambda ctx: True,
-                judge=lambda ctx, v: True,
-                success="b",
-                fail=FAIL,
-            ),
-            Module(
-                id="b",
-                action=lambda ctx: ctx.log("b") or True,
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(id="a", event=lambda ctx: True, success="b"),
+                    Module(id="b", event=lambda ctx: ctx.log("b") or True, success=END),
+                ],
                 success=END,
-                fail=FAIL,
+            )
+        ],
+    )
+    result = FlowRunner(workflow).run()
+    assert result.success
+    assert result.path == ["f.a", "f.b"]
+
+
+def test_module_fail_defaults_end_flow() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="f",
+        dry_run=True,
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(
+                        id="a",
+                        event=lambda ctx: Settled.reject("x", feedback="x"),
+                        success="b",
+                        # fail 默认结束流程
+                    ),
+                    Module(id="b", event=lambda ctx: True, success=END),
+                ],
+                success=END,
+            )
+        ],
+    )
+    result = FlowRunner(workflow).run()
+    assert not result.success
+    assert result.path == ["f.a"]
+
+
+def test_flow_compose_to_workflow() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="mail",
+        dry_run=True,
+        flows=[
+            Flow(
+                id="mail",
+                entry="a",
+                modules=[Module(id="a", event=lambda ctx: True, success=END)],
+                success="done_flow",
+            ),
+            Flow(
+                id="done_flow",
+                entry="d",
+                modules=[Module(id="d", event=lambda ctx: True, success=END)],
+                success=END,
             ),
         ],
     )
-    result = FlowRunner(graph).run()
+    result = FlowRunner(workflow).run()
     assert result.success
-    assert result.path == ["a", "b"]
+    assert result.path == ["mail.a", "done_flow.d"]
 
 
-def test_module_jump_fail_to_handler() -> None:
-    graph = ModuleGraph(
-        name="t",
-        entry="a",
+def test_flow_fail_jumps_to_handler_flow() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="mail",
         dry_run=True,
-        modules=[
-            Module(
-                id="a",
-                action=lambda ctx: True,
-                judge=lambda ctx, v: False,
-                success="b",
-                fail="err",
-            ),
-            Module(
-                id="b",
-                action=lambda ctx: True,
+        flows=[
+            Flow(
+                id="mail",
+                entry="a",
+                modules=[
+                    Module(
+                        id="a",
+                        event=lambda ctx: Settled.reject("boom", feedback="boom"),
+                        success=END,
+                    )
+                ],
                 success=END,
+                fail="handle_fail",
             ),
-            Module(
-                id="err",
-                action=lambda ctx: Settled.resolve("handled", feedback="handled"),
+            Flow(
+                id="handle_fail",
+                entry="h",
+                modules=[
+                    Module(
+                        id="h",
+                        event=lambda ctx: Settled.resolve("ok", feedback="handled"),
+                        success=END,
+                    )
+                ],
                 success=END,
-                fail=FAIL,
             ),
         ],
     )
-    result = FlowRunner(graph).run()
-    assert result.success
-    assert result.path == ["a", "err"]
+    result = FlowRunner(workflow).run()
+    assert result.path == ["mail.a", "handle_fail.h"]
+    assert not result.success  # 业务路径曾失败
 
 
 def test_run_single_module() -> None:
-    graph = ModuleGraph(
-        name="t",
-        entry="a",
+    workflow = Workflow(
+        id="w",
+        entry="f",
         dry_run=True,
-        modules=[Module(id="a", action=lambda ctx: 1, success=END)],
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[Module(id="a", event=lambda ctx: 1, success=END)],
+            )
+        ],
     )
-    settled = FlowRunner(graph).run_module("a")
+    settled = FlowRunner(workflow).run_module("a")
     assert settled.ok
 
 
 def test_dynamic_success_jump() -> None:
-    graph = ModuleGraph(
-        name="t",
-        entry="a",
+    workflow = Workflow(
+        id="w",
+        entry="f",
         dry_run=True,
-        modules=[
-            Module(
-                id="a",
-                action=lambda ctx: "go-b",
-                success=lambda ctx, v: "b" if v == "go-b" else END,
-                fail=FAIL,
-            ),
-            Module(id="b", action=lambda ctx: True, success=END),
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(
+                        id="a",
+                        event=lambda ctx: "go-b",
+                        success=lambda ctx, v: "b" if v == "go-b" else END,
+                    ),
+                    Module(id="b", event=lambda ctx: True, success=END),
+                ],
+                success=END,
+            )
         ],
     )
-    result = FlowRunner(graph).run()
-    assert result.path == ["a", "b"]
+    result = FlowRunner(workflow).run()
+    assert result.path == ["f.a", "f.b"]
 
 
-def test_config_modules_load() -> None:
+def test_config_workflow_load() -> None:
     import sys
 
     root = Path(__file__).resolve().parents[1]
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    flow = load_flow_module("config.flow")
-    assert flow.entry == "click_email"
-    assert {m.id for m in flow.modules} >= {"click_email", "done", "handle_fail"}
+    wf = load_flow_module("config.flow")
+    assert wf.entry == "mail"
+    assert {f.id for f in wf.flows} >= {"mail", "wrap_up", "handle_fail"}
+    mail = wf.get("mail")
+    assert mail.entry == "click_email"
+    assert mail.get("click_email").success == "one_click"
+    assert mail.get("click_email").fail is None

@@ -1,21 +1,27 @@
-"""按模块 id 跳转执行组合式流程。"""
+"""Workflow 执行：Flow 内模块跳转，Flow 之间再组合。"""
 
 from __future__ import annotations
 
 import importlib
 import logging
 from pathlib import Path
-from typing import Any
 
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
-from vision_workflow.module import END, FAIL, Module, ModuleGraph
+from vision_workflow.module import END, FAIL, Flow, Module, Workflow, resolve_next
 from vision_workflow.promise import Settled
 
 logger = logging.getLogger(__name__)
 
 
-def load_flow_module(target: str) -> ModuleGraph:
+def load_flow_module(target: str) -> Workflow:
+    """加载配置模块，返回 Workflow。
+
+    配置可提供：
+    - WORKFLOW: Workflow
+    - FLOWS + ENTRY: 流程列表
+    - MODULES + ENTRY: 单流程快捷写法（自动包成一个 Workflow）
+    """
     module_name, _, attr = target.partition(":")
     if module_name.endswith(".py") or "/" in module_name or "\\" in module_name:
         path = Path(module_name).expanduser().resolve()
@@ -26,53 +32,89 @@ def load_flow_module(target: str) -> ModuleGraph:
     else:
         mod = importlib.import_module(module_name)
 
+    base_dir = getattr(mod, "BASE_DIR", None)
+    if not base_dir and getattr(mod, "__file__", None):
+        base_dir = str(Path(mod.__file__).resolve().parents[1])
+    name = str(getattr(mod, "NAME", None) or getattr(mod, "__name__", "workflow"))
+    dry_run = bool(getattr(mod, "DRY_RUN", False))
+
     if attr:
         obj = getattr(mod, attr)
-    elif hasattr(mod, "FLOW"):
-        obj = mod.FLOW
-    elif hasattr(mod, "MODULES"):
-        obj = mod.MODULES
-    elif hasattr(mod, "build_flow"):
-        obj = mod.build_flow()
-    else:
-        raise AttributeError(f"模块 {module_name} 需提供 MODULES / FLOW / build_flow()")
-
-    if callable(obj) and not isinstance(obj, (ModuleGraph, list)):
-        obj = obj()
-
-    if isinstance(obj, ModuleGraph):
-        return obj
-
-    if isinstance(obj, list):
-        entry = getattr(mod, "ENTRY", None) or (obj[0].id if obj else "")
-        base_dir = getattr(mod, "BASE_DIR", None)
-        if not base_dir and getattr(mod, "__file__", None):
-            base_dir = str(Path(mod.__file__).resolve().parents[1])
-        return ModuleGraph(
-            name=str(getattr(mod, "NAME", None) or getattr(mod, "__name__", "flow")),
-            modules=list(obj),
+    elif hasattr(mod, "WORKFLOW"):
+        obj = mod.WORKFLOW
+    elif hasattr(mod, "FLOWS"):
+        entry = getattr(mod, "ENTRY", None)
+        if not entry:
+            raise AttributeError(f"模块 {module_name} 提供 FLOWS 时需同时提供 ENTRY")
+        obj = Workflow(
+            id=getattr(mod, "WORKFLOW_ID", "main"),
+            name=name,
+            flows=list(mod.FLOWS),
             entry=str(entry),
-            dry_run=bool(getattr(mod, "DRY_RUN", False)),
+            dry_run=dry_run,
             base_dir=str(base_dir or Path.cwd()),
         )
+    elif hasattr(mod, "FLOW") and isinstance(getattr(mod, "FLOW"), Flow):
+        flow = mod.FLOW
+        obj = Workflow(
+            id=getattr(mod, "WORKFLOW_ID", "main"),
+            name=name,
+            flows=[flow],
+            entry=flow.id,
+            dry_run=dry_run,
+            base_dir=str(base_dir or Path.cwd()),
+        )
+    elif hasattr(mod, "MODULES"):
+        entry = getattr(mod, "ENTRY", None) or mod.MODULES[0].id
+        flow = Flow(
+            id=getattr(mod, "FLOW_ID", "main"),
+            name=name,
+            modules=list(mod.MODULES),
+            entry=str(entry),
+            success=END,
+            fail=None,
+        )
+        obj = Workflow(
+            id=getattr(mod, "WORKFLOW_ID", "main"),
+            name=name,
+            flows=[flow],
+            entry=flow.id,
+            dry_run=dry_run,
+            base_dir=str(base_dir or Path.cwd()),
+        )
+    else:
+        raise AttributeError(
+            f"模块 {module_name} 需提供 WORKFLOW / FLOWS / FLOW / MODULES"
+        )
 
-    raise TypeError(f"期望 ModuleGraph 或 MODULES 列表，得到 {type(obj)}")
+    if callable(obj) and not isinstance(obj, Workflow):
+        obj = obj()
+
+    if not isinstance(obj, Workflow):
+        raise TypeError(f"期望 Workflow，得到 {type(obj)}")
+
+    if obj.base_dir is None and base_dir:
+        obj.base_dir = str(base_dir)
+    if not obj.name:
+        obj.name = name
+    return obj
 
 
 class FlowRunner:
+    """兼容旧名：实际执行 Workflow。"""
+
     def __init__(
         self,
-        flow: ModuleGraph,
+        workflow: Workflow,
         *,
         base_dir: Path | None = None,
         dry_run: bool | None = None,
-        entry: str | None = None,
     ) -> None:
-        self.flow = flow
-        root = Path(flow.base_dir) if flow.base_dir else (base_dir or Path.cwd())
+        self.workflow = workflow
+        root = Path(workflow.base_dir) if workflow.base_dir else (base_dir or Path.cwd())
         self.base_dir = root.resolve()
-        self.dry_run = flow.dry_run if dry_run is None else dry_run
-        self.entry = entry or flow.entry
+        self.dry_run = workflow.dry_run if dry_run is None else dry_run
+        self.entry = workflow.entry
         self.ctx = FlowContext(
             base_dir=self.base_dir,
             dry_run=self.dry_run,
@@ -80,13 +122,15 @@ class FlowRunner:
         )
 
     def run(self, start: str | None = None) -> FlowRunResult:
-        current = start or self.entry
-        result = FlowRunResult(flow_name=self.flow.name, success=True)
-        visits: dict[str, int] = {}
-        guard = 0
-        max_guard = max(50, len(self.flow.modules) * 20)
+        start_token = start or self.entry
+        flow_id, module_start = self._parse_start(start_token)
 
-        while current not in {END, FAIL, None, ""}:
+        result = FlowRunResult(flow_name=self.workflow.name or self.workflow.id, success=True)
+        current_flow = flow_id
+        guard = 0
+        max_guard = max(50, sum(len(f.modules) for f in self.workflow.flows) * 20)
+
+        while current_flow not in {END, FAIL, None, ""}:
             guard += 1
             if guard > max_guard:
                 result.success = False
@@ -95,56 +139,47 @@ class FlowRunner:
                 break
 
             try:
-                mod = self.flow.get(current)
+                flow = self.workflow.get(current_flow)
             except KeyError as exc:
                 result.success = False
                 result.message = str(exc)
                 result.feedback = str(exc)
                 break
 
-            if not mod.enabled:
-                result.success = False
-                result.message = f"模块已禁用: {mod.id}"
-                break
-
-            visits[mod.id] = visits.get(mod.id, 0) + 1
-            if mod.max_loops and visits[mod.id] > mod.max_loops:
-                result.success = False
-                result.message = f"模块 [{mod.id}] 超过 max_loops={mod.max_loops}"
-                result.feedback = result.message
-                break
-
-            result.path.append(mod.id)
-            settled, nxt = mod.lifecycle(self.ctx)
-            result.steps.append(
-                StepRunResult(
-                    step_id=mod.id,
-                    success=settled.ok,
-                    message=settled.error if not settled.ok else "ok",
-                    feedback=settled.feedback,
-                    value=settled.value,
-                )
+            flow_ok, last_settled = self._run_flow(
+                flow,
+                result,
+                start_module=module_start if current_flow == flow_id else None,
             )
+            module_start = None
 
-            # fail 跳到 FAIL 终止符 → 整流程失败
-            # fail 跳到其它模块 id → 继续执行（组合跳转）
-            if nxt == FAIL:
-                result.success = False
-                result.message = settled.error or settled.feedback or f"模块失败: {mod.id}"
-                result.feedback = settled.feedback or result.message
+            if not flow_ok and last_settled is None:
+                # 流程内部已写入错误并应终止
                 break
 
-            if nxt == END:
-                if not settled.ok:
-                    # 成功分支也能主动 END；若本轮判定失败却指向 END，视为失败结束
+            ctx_value = last_settled.value if last_settled else None
+            if flow_ok:
+                nxt = resolve_next(flow.success, self.ctx, ctx_value, default=END)
+                if nxt == FAIL:
                     result.success = False
-                    result.message = settled.error or settled.feedback
-                    result.feedback = settled.feedback
-                break
+                    result.message = last_settled.error if last_settled else "流程失败"
+                    result.feedback = (last_settled.feedback if last_settled else None) or result.message
+                    break
+                if nxt == END:
+                    break
+                current_flow = nxt
+                continue
 
-            current = nxt
-        else:
-            pass
+            # 当前 Flow 失败
+            result.success = False
+            if last_settled:
+                result.message = last_settled.error or last_settled.feedback or f"流程失败: {flow.id}"
+                result.feedback = last_settled.feedback or result.message
+            nxt = resolve_next(flow.fail, self.ctx, ctx_value, default=END)
+            if nxt in {END, FAIL, None, ""}:
+                break
+            # 失败跳到另一个流程，继续跑（整体仍记为曾失败；若后续要“恢复成功”可再扩展）
+            current_flow = nxt
 
         if result.success and not result.message:
             feedbacks = [s.feedback for s in result.steps if s.feedback]
@@ -154,14 +189,108 @@ class FlowRunner:
             result.feedback = result.message
 
         logger.info(
-            "流程结束 success=%s path=%s | %s",
+            "工作流结束 success=%s path=%s | %s",
             result.success,
             " → ".join(result.path),
             result.feedback,
         )
         return result
 
-    def run_module(self, module_id: str) -> Settled:
-        """只跑某一个模块的生命周期（不自动跳转）。"""
-        settled, _nxt = self.flow.get(module_id).lifecycle(self.ctx)
+    def run_module(self, target: str) -> Settled:
+        """只跑某一个模块。格式: module_id 或 flow_id.module_id。"""
+        if "." in target:
+            flow_id, module_id = target.split(".", 1)
+            mod = self.workflow.get(flow_id).get(module_id)
+        else:
+            # 在入口流程中找；找不到再全局搜
+            try:
+                mod = self.workflow.get(self.entry).get(target)
+            except KeyError:
+                mod = None
+                for flow in self.workflow.flows:
+                    if target in flow._by_id:
+                        mod = flow.get(target)
+                        break
+                if mod is None:
+                    raise KeyError(f"未知模块: {target}") from None
+        settled, _ = mod.run(self.ctx)
         return settled
+
+    def _parse_start(self, token: str) -> tuple[str, str | None]:
+        if "." in token:
+            flow_id, module_id = token.split(".", 1)
+            return flow_id, module_id
+        if token in self.workflow._by_id:
+            return token, None
+        # 当作入口流程里的模块 id
+        return self.entry, token
+
+    def _run_flow(
+        self,
+        flow: Flow,
+        result: FlowRunResult,
+        *,
+        start_module: str | None,
+    ) -> tuple[bool, Settled | None]:
+        current = start_module or flow.entry
+        last: Settled | None = None
+        visits: dict[str, int] = {}
+        guard = 0
+        max_guard = max(20, len(flow.modules) * 20)
+
+        while current not in {END, FAIL, None, ""}:
+            guard += 1
+            if guard > max_guard:
+                result.success = False
+                result.message = f"流程 [{flow.id}] 疑似死循环，已中止"
+                result.feedback = result.message
+                return False, last
+
+            try:
+                mod = flow.get(current)
+            except KeyError as exc:
+                result.success = False
+                result.message = str(exc)
+                result.feedback = str(exc)
+                return False, last
+
+            if not mod.enabled:
+                result.success = False
+                result.message = f"模块已禁用: {flow.id}.{mod.id}"
+                result.feedback = result.message
+                return False, last
+
+            visits[mod.id] = visits.get(mod.id, 0) + 1
+            if visits[mod.id] > max_guard:
+                result.success = False
+                result.message = f"模块 [{flow.id}.{mod.id}] 访问次数过多"
+                result.feedback = result.message
+                return False, last
+
+            step_id = f"{flow.id}.{mod.id}"
+            result.path.append(step_id)
+            settled, nxt = mod.run(self.ctx)
+            last = settled
+            result.steps.append(
+                StepRunResult(
+                    step_id=step_id,
+                    success=settled.ok,
+                    message=settled.error if not settled.ok else "ok",
+                    feedback=settled.feedback,
+                    value=settled.value,
+                )
+            )
+
+            if nxt == FAIL:
+                return False, settled
+
+            if nxt == END:
+                return settled.ok, settled
+
+            current = nxt
+
+        return True, last
+
+
+# 别名
+WorkflowRunner = FlowRunner
