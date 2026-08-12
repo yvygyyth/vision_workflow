@@ -20,11 +20,9 @@ class FlowContext:
         self,
         *,
         base_dir: Path,
-        dry_run: bool = False,
         defaults: MatchOptions | None = None,
     ) -> None:
         self.base_dir = base_dir
-        self.dry_run = dry_run
         self.defaults = defaults or MatchOptions()
         self.vars: dict = {}
 
@@ -48,7 +46,9 @@ class FlowContext:
         """独立识图方法。"""
         opts = self.defaults.model_copy(deep=True)
         if match is not None:
-            opts = MatchOptions.model_validate({**opts.model_dump(), **match.model_dump(exclude_unset=True)})
+            opts = MatchOptions.model_validate(
+                {**opts.model_dump(), **match.model_dump(exclude_unset=True)}
+            )
         if threshold is not None:
             opts.threshold = threshold
         if timeout is not None:
@@ -63,7 +63,7 @@ class FlowContext:
 
     def mouse(self) -> Mouse:
         """新建一条鼠标链（记得末尾 .perform()）。"""
-        return Mouse(dry_run=self.dry_run)
+        return Mouse()
 
     def click_image(self, image: str | Path, **find_kwargs) -> MatchResult:
         """复用：找到图并点击中心。"""
@@ -73,9 +73,6 @@ class FlowContext:
         return hit
 
     def sleep(self, seconds: float) -> None:
-        if self.dry_run:
-            logger.info("(dry-run) sleep %.3fs", seconds)
-            return
         time.sleep(seconds)
 
     def log(self, message: str, *args) -> None:

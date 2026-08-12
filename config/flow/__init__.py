@@ -24,4 +24,6 @@ WORKFLOW = Workflow(
     name="邮箱一键领取",
     flows=FLOWS,
     entry=ENTRY,
+    module_delay_ms=100,  # 模块执行后 → 下一模块
+    flow_delay_ms=200,  # 流程执行后 → 下一流程
 )

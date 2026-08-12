@@ -37,8 +37,7 @@ class MainWindow(ctk.CTk):
 
         self.controls = ControlPanel(
             self,
-            on_run=lambda: self._start(dry_run=False),
-            on_dry_run=lambda: self._start(dry_run=True),
+            on_run=self._start,
             on_stop=self._stop,
             on_clear=self._clear_log,
             on_reload=self._reload_flows,
@@ -77,7 +76,7 @@ class MainWindow(ctk.CTk):
             f"已加载工作流 [{workflow.display_name}]，共 {len(workflow.flows)} 个流程"
         )
 
-    def _start(self, *, dry_run: bool) -> None:
+    def _start(self) -> None:
         if self.worker.busy:
             self.status.set_status("已有任务在运行", ok=False)
             return
@@ -89,12 +88,10 @@ class MainWindow(ctk.CTk):
             return
 
         self.controls.set_running(True)
-        self.status.set_status(f"{'干跑' if dry_run else '运行'}中：{flow_name}")
-        self.logs.append(
-            f"—— 开始 {'干跑' if dry_run else '运行'}：{flow_name}（{target} / {flow_id}）——"
-        )
+        self.status.set_status(f"运行中：{flow_name}")
+        self.logs.append(f"—— 开始运行：{flow_name}（{target} / {flow_id}）——")
         try:
-            self.worker.start(RunRequest(target=target, dry_run=dry_run, start=flow_id))
+            self.worker.start(RunRequest(target=target, start=flow_id))
         except Exception as exc:  # noqa: BLE001
             self.controls.set_running(False)
             self.status.set_status(f"启动失败: {exc}", ok=False)

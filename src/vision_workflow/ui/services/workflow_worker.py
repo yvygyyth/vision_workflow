@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from vision_workflow.config import reload_settings
-from vision_workflow.flow import FlowRunner, load_flow_module
+from vision_workflow.flow import WorkflowRunner, load_flow_module
 from vision_workflow.logging_utils import setup_logging
 from vision_workflow.models.flow import FlowRunResult
 from vision_workflow.paths import ensure_runtime_path, project_root
@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RunRequest:
     target: str
-    dry_run: bool
     start: str | None = None
 
 
@@ -61,20 +60,18 @@ class WorkflowWorker:
             workflow = load_flow_module(request.target)
             if workflow.base_dir is None:
                 workflow.base_dir = str(root)
-            runner = FlowRunner(
+            runner = WorkflowRunner(
                 workflow,
                 base_dir=project_root(),
-                dry_run=request.dry_run,
                 cancel_event=self._cancel,
             )
-            mode = "dry-run" if request.dry_run else "live"
             logger.info(
-                "开始执行 工作流=%s 入口=%s mode=%s",
+                "开始执行 工作流=%s 入口=%s",
                 workflow.display_name,
                 request.start or workflow.entry,
-                mode,
             )
-            result = runner.run(start=request.start or None)        except BaseException as exc:  # noqa: BLE001
+            result = runner.run(start=request.start or None)
+        except BaseException as exc:  # noqa: BLE001
             error = exc
             logger.exception("执行失败: %s", exc)
         self._on_finished(result, error)

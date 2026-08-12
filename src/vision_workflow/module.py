@@ -25,6 +25,9 @@ logger = logging.getLogger(__name__)
 END = "end"
 FAIL = "fail"
 
+DEFAULT_MODULE_DELAY_MS = 100
+DEFAULT_FLOW_DELAY_MS = 200
+
 EventFn = Callable[[FlowContext], Any]
 NextRef = str | Callable[[FlowContext, Any], str] | None
 
@@ -37,6 +40,13 @@ def resolve_next(ref: NextRef, ctx: FlowContext, value: Any, *, default: str = E
     return str(ref)
 
 
+def resolve_delay_ms(config: dict[str, Any] | None, default: int) -> int:
+    """读取 config['delay_ms']；未配置则用 default。单位毫秒。"""
+    if config and "delay_ms" in config:
+        return max(0, int(config["delay_ms"]))
+    return max(0, int(default))
+
+
 @dataclass
 class Module:
     """最小一级节点：只做事，按事件结果跳转。"""
@@ -47,6 +57,7 @@ class Module:
     fail: NextRef | None = None  # None → 结束当前流程（END）
     name: str = ""
     enabled: bool = True
+    config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
 
     def run(self, ctx: FlowContext) -> tuple[Settled, str]:
         label = self.name or self.id
@@ -89,6 +100,7 @@ class Flow:
     success: NextRef = END  # 本流程成功结束后，下一个流程 id
     fail: NextRef | None = None  # 本流程失败后；None → 结束整个工作流
     name: str = ""  # UI / 日志展示名；空则回退为 id
+    config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
 
@@ -120,8 +132,10 @@ class Workflow:
     entry: str
     id: str = "workflow"
     name: str = ""  # UI 展示名；空则回退为 id
-    dry_run: bool = False
     base_dir: str | None = None
+    module_delay_ms: int = DEFAULT_MODULE_DELAY_MS  # 模块执行后、进入下一模块前
+    flow_delay_ms: int = DEFAULT_FLOW_DELAY_MS  # 流程执行后、进入下一流程前
+    config: dict[str, Any] = field(default_factory=dict)
 
     _by_id: dict[str, Flow] = field(init=False, repr=False)
 

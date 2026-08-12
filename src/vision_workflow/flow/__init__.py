@@ -9,7 +9,7 @@ from pathlib import Path
 
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
-from vision_workflow.module import END, FAIL, Flow, Module, Workflow, resolve_next
+from vision_workflow.module import END, FAIL, Flow, Module, Workflow, resolve_delay_ms, resolve_next
 from vision_workflow.paths import project_root
 from vision_workflow.promise import Settled
 
@@ -36,7 +36,6 @@ def load_flow_module(target: str) -> Workflow:
 
     base_dir = getattr(mod, "BASE_DIR", None) or str(project_root())
     name = str(getattr(mod, "NAME", None) or getattr(mod, "__name__", "workflow"))
-    dry_run = bool(getattr(mod, "DRY_RUN", False))
 
     if attr:
         obj = getattr(mod, attr)
@@ -51,7 +50,6 @@ def load_flow_module(target: str) -> Workflow:
             name=name,
             flows=list(mod.FLOWS),
             entry=str(entry),
-            dry_run=dry_run,
             base_dir=str(base_dir or Path.cwd()),
         )
     elif hasattr(mod, "FLOW") and isinstance(getattr(mod, "FLOW"), Flow):
@@ -61,7 +59,6 @@ def load_flow_module(target: str) -> Workflow:
             name=name,
             flows=[flow],
             entry=flow.id,
-            dry_run=dry_run,
             base_dir=str(base_dir or Path.cwd()),
         )
     elif hasattr(mod, "MODULES"):
@@ -79,7 +76,6 @@ def load_flow_module(target: str) -> Workflow:
             name=name,
             flows=[flow],
             entry=flow.id,
-            dry_run=dry_run,
             base_dir=str(base_dir or Path.cwd()),
         )
     else:
@@ -100,31 +96,42 @@ def load_flow_module(target: str) -> Workflow:
     return obj
 
 
-class FlowRunner:
-    """兼容旧名：实际执行 Workflow。"""
+class WorkflowRunner:
+    """执行 Workflow（流程内模块跳转，流程间再组合）。"""
 
     def __init__(
         self,
         workflow: Workflow,
         *,
         base_dir: Path | None = None,
-        dry_run: bool | None = None,
         cancel_event: threading.Event | None = None,
     ) -> None:
         self.workflow = workflow
         root = Path(workflow.base_dir) if workflow.base_dir else (base_dir or Path.cwd())
         self.base_dir = root.resolve()
-        self.dry_run = workflow.dry_run if dry_run is None else dry_run
         self.entry = workflow.entry
         self.cancel_event = cancel_event
         self.ctx = FlowContext(
             base_dir=self.base_dir,
-            dry_run=self.dry_run,
             defaults=MatchOptions(),
         )
 
     def _cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
+
+    def _sleep_ms(self, delay_ms: int, *, reason: str) -> None:
+        if delay_ms <= 0 or self._cancelled():
+            return
+        logger.info("延迟 %sms（%s）", delay_ms, reason)
+        self.ctx.sleep(delay_ms / 1000.0)
+
+    def _after_module_delay(self, mod: Module) -> None:
+        delay = resolve_delay_ms(mod.config, self.workflow.module_delay_ms)
+        self._sleep_ms(delay, reason=f"模块后 {mod.name or mod.id}")
+
+    def _after_flow_delay(self, flow: Flow) -> None:
+        delay = resolve_delay_ms(flow.config, self.workflow.flow_delay_ms)
+        self._sleep_ms(delay, reason=f"流程后 {flow.display_name}")
 
     def run(self, start: str | None = None) -> FlowRunResult:
         start_token = start or self.entry
@@ -190,6 +197,7 @@ class FlowRunner:
                     break
                 if nxt == END:
                     break
+                self._after_flow_delay(flow)
                 current_flow = nxt
                 continue
 
@@ -204,6 +212,7 @@ class FlowRunner:
             nxt = resolve_next(flow.fail, self.ctx, ctx_value, default=END)
             if nxt in {END, FAIL, None, ""}:
                 break
+            self._after_flow_delay(flow)
             current_flow = nxt
         if result.success and not result.message:
             feedbacks = [s.feedback for s in result.steps if s.feedback]
@@ -315,9 +324,8 @@ class FlowRunner:
             if nxt == END:
                 return settled.ok, settled
 
+            # 还有下一模块：执行后延迟
+            self._after_module_delay(mod)
             current = nxt
 
         return True, last
-
-
-WorkflowRunner = FlowRunner

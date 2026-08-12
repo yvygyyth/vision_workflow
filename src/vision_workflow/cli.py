@@ -12,7 +12,7 @@ from rich.table import Table
 
 from vision_workflow import __version__
 from vision_workflow.config import reload_settings
-from vision_workflow.flow import FlowRunner, load_flow_module
+from vision_workflow.flow import WorkflowRunner, load_flow_module
 from vision_workflow.logging_utils import setup_logging
 
 app = typer.Typer(
@@ -41,7 +41,6 @@ def flow_cmd(
         "--only",
         help="只执行某一个模块（module 或 flow.module）",
     ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="不真实操作鼠标"),
     base_dir: Optional[Path] = typer.Option(None, "--base-dir", help="模板图相对路径基准目录"),
     json_out: bool = typer.Option(False, "--json", help="JSON 输出"),
 ) -> None:
@@ -52,11 +51,7 @@ def flow_cmd(
 
     setup_logging(reload_settings())
     workflow = load_flow_module(target)
-    runner = FlowRunner(
-        workflow,
-        base_dir=base_dir,
-        dry_run=True if dry_run else None,
-    )
+    runner = WorkflowRunner(workflow, base_dir=base_dir)
     if only:
         settled = runner.run_module(only)
         if json_out:

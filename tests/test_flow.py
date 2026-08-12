@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from vision_workflow.flow import FlowRunner, load_flow_module
-from vision_workflow.module import END, Flow, Module, Workflow
+from vision_workflow.flow import WorkflowRunner, load_flow_module
+from vision_workflow.module import END, Flow, Module, Workflow, resolve_delay_ms
 from vision_workflow.promise import Settled
 
 
@@ -11,7 +11,6 @@ def test_module_jump_inside_flow() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        dry_run=True,
         flows=[
             Flow(
                 id="f",
@@ -24,7 +23,7 @@ def test_module_jump_inside_flow() -> None:
             )
         ],
     )
-    result = FlowRunner(workflow).run()
+    result = WorkflowRunner(workflow).run()
     assert result.success
     assert result.path == ["f.a", "f.b"]
 
@@ -33,7 +32,6 @@ def test_module_fail_defaults_end_flow() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        dry_run=True,
         flows=[
             Flow(
                 id="f",
@@ -51,7 +49,7 @@ def test_module_fail_defaults_end_flow() -> None:
             )
         ],
     )
-    result = FlowRunner(workflow).run()
+    result = WorkflowRunner(workflow).run()
     assert not result.success
     assert result.path == ["f.a"]
 
@@ -60,7 +58,6 @@ def test_flow_compose_to_workflow() -> None:
     workflow = Workflow(
         id="w",
         entry="mail",
-        dry_run=True,
         flows=[
             Flow(
                 id="mail",
@@ -76,7 +73,7 @@ def test_flow_compose_to_workflow() -> None:
             ),
         ],
     )
-    result = FlowRunner(workflow).run()
+    result = WorkflowRunner(workflow).run()
     assert result.success
     assert result.path == ["mail.a", "done_flow.d"]
 
@@ -85,7 +82,6 @@ def test_flow_fail_jumps_to_handler_flow() -> None:
     workflow = Workflow(
         id="w",
         entry="mail",
-        dry_run=True,
         flows=[
             Flow(
                 id="mail",
@@ -114,7 +110,7 @@ def test_flow_fail_jumps_to_handler_flow() -> None:
             ),
         ],
     )
-    result = FlowRunner(workflow).run()
+    result = WorkflowRunner(workflow).run()
     assert result.path == ["mail.a", "handle_fail.h"]
     assert not result.success  # 业务路径曾失败
 
@@ -123,7 +119,6 @@ def test_run_single_module() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        dry_run=True,
         flows=[
             Flow(
                 id="f",
@@ -132,7 +127,7 @@ def test_run_single_module() -> None:
             )
         ],
     )
-    settled = FlowRunner(workflow).run_module("a")
+    settled = WorkflowRunner(workflow).run_module("a")
     assert settled.ok
 
 
@@ -140,7 +135,6 @@ def test_dynamic_success_jump() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        dry_run=True,
         flows=[
             Flow(
                 id="f",
@@ -157,7 +151,7 @@ def test_dynamic_success_jump() -> None:
             )
         ],
     )
-    result = FlowRunner(workflow).run()
+    result = WorkflowRunner(workflow).run()
     assert result.path == ["f.a", "f.b"]
 
 
@@ -177,3 +171,52 @@ def test_config_workflow_load() -> None:
     assert mail.get("click_email").success == "one_click"
     assert mail.get("click_email").fail is None
     assert ("收邮件", "mail") in wf.flow_choices()
+    assert wf.module_delay_ms == 100
+    assert wf.flow_delay_ms == 200
+
+
+def test_resolve_delay_ms() -> None:
+    assert resolve_delay_ms({}, 100) == 100
+    assert resolve_delay_ms({"delay_ms": 50}, 100) == 50
+    assert resolve_delay_ms({"delay_ms": 0}, 100) == 0
+
+
+def test_module_and_flow_config_delay() -> None:
+    sleeps: list[float] = []
+
+    workflow = Workflow(
+        id="w",
+        entry="f1",
+        module_delay_ms=100,
+        flow_delay_ms=200,
+        flows=[
+            Flow(
+                id="f1",
+                entry="a",
+                modules=[
+                    Module(id="a", event=lambda ctx: True, success="b", config={"delay_ms": 30}),
+                    Module(id="b", event=lambda ctx: True, success=END),
+                ],
+                success="f2",
+                config={"delay_ms": 40},
+            ),
+            Flow(
+                id="f2",
+                entry="c",
+                modules=[Module(id="c", event=lambda ctx: True, success=END)],
+                success=END,
+            ),
+        ],
+    )
+    runner = WorkflowRunner(workflow)
+    original = runner.ctx.sleep
+
+    def _spy(seconds: float) -> None:
+        sleeps.append(seconds)
+        original(seconds)
+
+    runner.ctx.sleep = _spy  # type: ignore[method-assign]
+    result = runner.run()
+    assert result.success
+    assert result.path == ["f1.a", "f1.b", "f2.c"]
+    assert sleeps == [0.03, 0.04]  # 模块后 30ms，流程后 40ms

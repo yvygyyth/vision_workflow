@@ -1,4 +1,4 @@
-"""控制区：工作流目标、流程选择、干跑/运行/停止。"""
+"""控制区：工作流目标、流程选择、运行/停止。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ class ControlPanel(ctk.CTkFrame):
         master: ctk.CTk | ctk.CTkFrame,
         *,
         on_run: Callable[[], None],
-        on_dry_run: Callable[[], None],
         on_stop: Callable[[], None],
         on_clear: Callable[[], None],
         on_reload: Callable[[], None],
@@ -84,18 +83,6 @@ class ControlPanel(ctk.CTkFrame):
         )
         self.flow_menu.grid(row=3, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
 
-        self.btn_dry = ctk.CTkButton(
-            self,
-            text="干跑",
-            command=on_dry_run,
-            height=36,
-            fg_color="#E7EEE9",
-            hover_color="#D7E3DB",
-            text_color=theme.ACCENT,
-            font=theme.FONT_UI,
-        )
-        self.btn_dry.grid(row=4, column=0, sticky="ew", padx=(16, 8), pady=(8, 14))
-
         self.btn_run = ctk.CTkButton(
             self,
             text="运行",
@@ -105,7 +92,7 @@ class ControlPanel(ctk.CTkFrame):
             hover_color="#255A3F",
             font=theme.FONT_UI,
         )
-        self.btn_run.grid(row=4, column=1, sticky="ew", padx=8, pady=(8, 14))
+        self.btn_run.grid(row=4, column=0, columnspan=2, sticky="ew", padx=(16, 8), pady=(8, 14))
 
         self.btn_stop = ctk.CTkButton(
             self,
@@ -144,7 +131,7 @@ class ControlPanel(ctk.CTkFrame):
 
     def set_workflow_meta(self, name: str) -> None:
         self.title_label.configure(text=name or "Vision Workflow")
-        self.subtitle_label.configure(text="选择下方流程后运行 / 干跑")
+        self.subtitle_label.configure(text="选择下方流程后运行")
 
     def set_flow_choices(self, choices: list[tuple[str, str]], *, selected_id: str | None = None) -> None:
         """choices: (display_name, flow_id)。"""
@@ -164,7 +151,6 @@ class ControlPanel(ctk.CTkFrame):
         state_run = "disabled" if running else "normal"
         state_stop = "normal" if running else "disabled"
         self.btn_run.configure(state=state_run)
-        self.btn_dry.configure(state=state_run)
         self.btn_stop.configure(state=state_stop)
         self.btn_reload.configure(state=state_run)
         self.target_entry.configure(state="disabled" if running else "normal")

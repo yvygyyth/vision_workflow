@@ -50,7 +50,6 @@ target-version = "py310"
 # 类似 npm scripts：poe <任务名>
 [tool.poe.tasks]
 flow = "vision-workflow flow config.flow"
-dry = "vision-workflow flow config.flow --dry-run"
 ui = "vision-workflow ui"
 info = "vision-workflow info"
 version = "vision-workflow version"

@@ -1,6 +1,6 @@
 # vision-workflow
 
-三级组合：**模块 → 流程 → 工作流**。桌面 UI 可干跑 / 运行 / 停止，并可打包成 exe。
+三级组合：**模块 → 流程 → 工作流**。桌面 UI 可运行 / 停止，并可打包成 exe。
 
 ```text
 Module  最小节点：id + event + success + fail?
@@ -16,6 +16,21 @@ Workflow(id="main", name="邮箱一键领取", entry="mail", flows=[...])
 ```
 
 `name` 给 UI / 日志展示；不填则回退为 `id`。
+
+## 延迟与 config
+
+执行后延迟（进入下一项之前）：
+
+- 全局默认：模块之间 **100ms**，流程之间 **200ms**（`Workflow.module_delay_ms` / `flow_delay_ms`）
+- 单个模块 / 流程可用 `config={"delay_ms": N}` 覆盖；`0` 表示不延迟
+
+```python
+Module(id="a", event=..., success="b", config={"delay_ms": 300})
+Flow(id="mail", ..., config={"delay_ms": 500})
+Workflow(..., module_delay_ms=100, flow_delay_ms=200)
+```
+
+`config` 还可放其它扩展属性。
 
 ## 模块
 
@@ -55,7 +70,7 @@ vision-workflow ui
 python -m vision_workflow.ui
 ```
 
-界面：工作流名称、流程下拉（按 `name`）、干跑、运行、停止、日志、状态。
+界面：工作流名称、流程下拉（按 `name`）、运行、停止、日志、状态。
 
 ## 打包 exe
 
@@ -69,9 +84,9 @@ poe build
 ## CLI
 
 ```powershell
-poe dry
 poe flow
-vision-workflow flow config.flow --dry-run
+vision-workflow flow config.flow
+vision-workflow flow config.flow -s mail
 ```
 
 ## 安装

@@ -3,7 +3,7 @@
 示例::
 
     Mouse().move(100, 200).click().sleep(0.3).drag(300, 400).perform()
-    Mouse(dry_run=True).at(match.center).click().perform()
+    Mouse().at(match.center).click().perform()
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ class _Op:
 class Mouse:
     """链式鼠标控制器。调用 perform()/run() 才真正执行。"""
 
-    dry_run: bool = False
     _ops: list[_Op] = field(default_factory=list, repr=False)
     _x: int | None = field(default=None, repr=False)
     _y: int | None = field(default=None, repr=False)
@@ -54,9 +53,6 @@ class Mouse:
         def run() -> None:
             nx, ny = self._resolve_xy(x, y, relative=relative)
             self._x, self._y = nx, ny
-            if self.dry_run:
-                logger.info("(dry-run) mouse.move → (%s, %s)", nx, ny)
-                return
             self._api().moveTo(nx, ny, duration=duration)
 
         self._ops.append(_Op("move", {"x": x, "y": y, "relative": relative}, run))
@@ -73,9 +69,6 @@ class Mouse:
         def run() -> None:
             nx, ny = self._resolve_xy(x, y, relative=False)
             self._x, self._y = nx, ny
-            if self.dry_run:
-                logger.info("(dry-run) mouse.click %s x%s @ (%s, %s)", button, clicks, nx, ny)
-                return
             self._api().click(x=nx, y=ny, clicks=clicks, button=button)
 
         self._ops.append(_Op("click", {"button": button, "clicks": clicks}, run))
@@ -101,10 +94,6 @@ class Mouse:
                 raise RuntimeError("drag 前需要先有起点坐标（at/move/click）")
             sx, sy = self._x, self._y
             ex, ey = self._resolve_xy(x, y, relative=relative)
-            if self.dry_run:
-                logger.info("(dry-run) mouse.drag (%s,%s) → (%s,%s)", sx, sy, ex, ey)
-                self._x, self._y = ex, ey
-                return
             api = self._api()
             api.moveTo(sx, sy)
             api.dragTo(ex, ey, duration=duration, button=button)
@@ -116,9 +105,6 @@ class Mouse:
     def scroll(self, amount: int, *, x: int | None = None, y: int | None = None) -> Self:
         def run() -> None:
             nx, ny = self._resolve_xy(x, y, relative=False)
-            if self.dry_run:
-                logger.info("(dry-run) mouse.scroll %s @ (%s, %s)", amount, nx, ny)
-                return
             self._api().scroll(amount, x=nx, y=ny)
 
         self._ops.append(_Op("scroll", {"amount": amount}, run))
@@ -126,9 +112,6 @@ class Mouse:
 
     def sleep(self, seconds: float) -> Self:
         def run() -> None:
-            if self.dry_run:
-                logger.info("(dry-run) mouse.sleep %.3fs", seconds)
-                return
             time.sleep(seconds)
 
         self._ops.append(_Op("sleep", {"seconds": seconds}, run))
@@ -142,7 +125,6 @@ class Mouse:
             op.runner()
         return self
 
-    # 别名，方便链式末尾书写
     run = perform
     go = perform
 
@@ -169,7 +151,6 @@ class Mouse:
             return int(x), int(y)
         if self._x is not None and self._y is not None:
             return self._x, self._y
-        # 回落到当前鼠标位置
         pos = self._api().position()
         return int(pos[0]), int(pos[1])
 

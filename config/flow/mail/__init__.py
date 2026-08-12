@@ -16,6 +16,7 @@ FLOW = Flow(
             id="click_email",
             event=click_email,
             success="one_click",
+            # config={"delay_ms": 300},  # 可选：覆盖全局模块延迟
         ),
         Module(
             id="one_click",
@@ -30,4 +31,5 @@ FLOW = Flow(
         ),
     ],
     success="wrap_up",
+    # config={"delay_ms": 500},  # 可选：覆盖全局流程延迟
 )
