@@ -21,9 +21,9 @@ Thumbs.db
 # Project
 logs/*
 !logs/.gitkeep
-data/samples/**
-!data/samples/**/
-!data/samples/**/.gitkeep
+data/ming_jiang_sha/**
+!data/ming_jiang_sha/**/
+!data/ming_jiang_sha/**/.gitkeep
 .coverage
 htmlcov/
 .pytest_cache/

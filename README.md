@@ -47,7 +47,7 @@ from vision_workflow.module import MISS, OK, Module, abort, onward, to
 
 Module(
     id="click_email",
-    event=click("data/samples/mail/email.png"),
+    event=click("data/ming_jiang_sha/mail/email.png"),
     on={OK: onward, MISS: abort},  # onward=下一模块；abort=失败结束本流程
 )
 Module(
@@ -63,7 +63,7 @@ Module(
 ## 目录
 
 ```text
-data/samples/<流程id>/              # 模板图（打包后在 exe 旁，可热更）
+data/ming_jiang_sha/<流程id>/              # 模板图（打包后在 exe 旁，可热更）
 src/vision_workflow/
   flows/
     __init__.py                     # WORKFLOWS 目录注册

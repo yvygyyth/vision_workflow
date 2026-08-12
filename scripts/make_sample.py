@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    out = root / "data" / "samples" / "demo.png"
+    out = root / "data" / "ming_jiang_sha" / "demo.png"
     out.parent.mkdir(parents=True, exist_ok=True)
 
     img = Image.new("RGB", (120, 40), color=(24, 48, 72))
