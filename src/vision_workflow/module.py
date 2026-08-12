@@ -1,7 +1,9 @@
 """三级组合：Module → Flow → Workflow。
 
 Module（最小节点）::
-    id + event → 成功跳转 / 失败跳转（失败可省略，默认结束当前流程）
+    id + event → 成功跳转 / 失败跳转
+    success 可省略：默认下一模块；最后一个默认结束流程
+    fail 可省略：默认结束当前流程
 
 Flow::
     若干 Module 组成一个流程
@@ -53,13 +55,13 @@ class Module:
 
     id: str
     event: EventFn
-    success: NextRef = END
+    success: NextRef = None  # None → 流程内下一个模块；末尾则为 END
     fail: NextRef | None = None  # None → 结束当前流程（END）
     name: str = ""
     enabled: bool = True
     config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
 
-    def run(self, ctx: FlowContext) -> tuple[Settled, str]:
+    def run(self, ctx: FlowContext, *, default_success: str = END) -> tuple[Settled, str]:
         label = self.name or self.id
         logger.info("模块开始 (%s)", label)
 
@@ -77,12 +79,10 @@ class Module:
         else:
             settled = Settled.resolve(raw)
 
-        nxt = resolve_next(
-            self.success if settled.ok else self.fail,
-            ctx,
-            settled.value,
-            default=END,
-        )
+        if settled.ok:
+            nxt = resolve_next(self.success, ctx, settled.value, default=default_success)
+        else:
+            nxt = resolve_next(self.fail, ctx, settled.value, default=END)
         settled.feedback = settled.feedback or (
             f"({self.id}) 成功 → {nxt}" if settled.ok else f"({self.id}) 失败 → {nxt}"
         )
@@ -103,6 +103,7 @@ class Flow:
     config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
+    _next_success: dict[str, str] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         ids = [m.id for m in self.modules]
@@ -111,6 +112,16 @@ class Flow:
         self._by_id = {m.id: m for m in self.modules}
         if self.entry not in self._by_id:
             raise KeyError(f"流程 [{self.id}] 入口模块不存在: {self.entry}")
+        # success 未写时：默认下一模块；最后一个默认 END
+        self._next_success = {}
+        for i, m in enumerate(self.modules):
+            if i + 1 < len(self.modules):
+                self._next_success[m.id] = self.modules[i + 1].id
+            else:
+                self._next_success[m.id] = END
+
+    def default_success_for(self, module_id: str) -> str:
+        return self._next_success.get(module_id, END)
 
     @property
     def display_name(self) -> str:

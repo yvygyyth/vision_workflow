@@ -231,21 +231,28 @@ class WorkflowRunner:
 
     def run_module(self, target: str) -> Settled:
         """只跑某一个模块。格式: module_id 或 flow_id.module_id。"""
+        flow: Flow | None = None
         if "." in target:
             flow_id, module_id = target.split(".", 1)
-            mod = self.workflow.get(flow_id).get(module_id)
+            flow = self.workflow.get(flow_id)
+            mod = flow.get(module_id)
         else:
             try:
-                mod = self.workflow.get(self.entry).get(target)
+                flow = self.workflow.get(self.entry)
+                mod = flow.get(target)
             except KeyError:
                 mod = None
-                for flow in self.workflow.flows:
-                    if target in flow._by_id:
-                        mod = flow.get(target)
+                for candidate in self.workflow.flows:
+                    if target in candidate._by_id:
+                        flow = candidate
+                        mod = candidate.get(target)
                         break
-                if mod is None:
+                if mod is None or flow is None:
                     raise KeyError(f"未知模块: {target}") from None
-        settled, _ = mod.run(self.ctx)
+        settled, _ = mod.run(
+            self.ctx,
+            default_success=flow.default_success_for(mod.id),
+        )
         return settled
 
     def _parse_start(self, token: str) -> tuple[str, str | None]:
@@ -306,7 +313,10 @@ class WorkflowRunner:
 
             step_id = f"{flow.id}.{mod.id}"
             result.path.append(step_id)
-            settled, nxt = mod.run(self.ctx)
+            settled, nxt = mod.run(
+                self.ctx,
+                default_success=flow.default_success_for(mod.id),
+            )
             last = settled
             result.steps.append(
                 StepRunResult(

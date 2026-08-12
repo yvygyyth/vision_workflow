@@ -7,7 +7,29 @@ from vision_workflow.module import END, Flow, Module, Workflow, resolve_delay_ms
 from vision_workflow.promise import Settled
 
 
-def test_module_jump_inside_flow() -> None:
+def test_module_success_defaults_to_next() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="f",
+        module_delay_ms=0,
+        flow_delay_ms=0,
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(id="a", event=lambda ctx: True),
+                    Module(id="b", event=lambda ctx: True),
+                    Module(id="c", event=lambda ctx: True),
+                ],
+                success=END,
+            )
+        ],
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    assert result.path == ["f.a", "f.b", "f.c"]
+
     workflow = Workflow(
         id="w",
         entry="f",
@@ -168,7 +190,8 @@ def test_config_workflow_load() -> None:
     mail = wf.get("mail")
     assert mail.display_name == "收邮件"
     assert mail.entry == "click_email"
-    assert mail.get("click_email").success == "one_click"
+    assert mail.get("click_email").success is None
+    assert mail.default_success_for("click_email") == "one_click"
     assert mail.get("click_email").fail is None
     assert ("收邮件", "mail") in wf.flow_choices()
     assert wf.module_delay_ms == 100

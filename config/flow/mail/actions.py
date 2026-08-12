@@ -9,3 +9,4 @@ from vision_workflow.module import EventFn
 click_email: EventFn = click("data/samples/mail/email.png")
 click_one_click_receive: EventFn = click("data/samples/mail/email_one_click_receive.png")
 click_space_close: EventFn = click("data/samples/mail/space-close.png")
+click_email_close: EventFn = click("data/samples/mail/email-close.png")

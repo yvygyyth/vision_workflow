@@ -35,12 +35,10 @@ Workflow(..., module_delay_ms=100, flow_delay_ms=200)
 ## 模块
 
 ```python
-Module(
-    id="click_email",
-    event=click("data/samples/mail/email.png"),
-    success="one_click",
-    # fail 省略 → 结束当前流程
-)
+Module(id="click_email", event=click("data/samples/mail/email.png"))
+# success 省略 → 自动下一个模块；最后一个成功则结束本流程
+# fail 省略 → 结束当前流程
+Module(id="one_click", event=..., fail="click_email")  # 失败可跳回
 ```
 
 ## 目录
