@@ -6,7 +6,7 @@ from vision_workflow.flows.parts.mail.actions import (
     click_one_click_receive,
     click_space_close,
 )
-from vision_workflow.module import MISS, OK, Flow, Module, abort, onward, to
+from vision_workflow.module import END, MISS, OK, Flow, Module, abort, onward, to
 
 # 识图点击：找到 → 下一模块；未找到 → 失败结束本流程
 _CLICK = {OK: onward, MISS: abort}
@@ -26,5 +26,5 @@ FLOW = Flow(
         Module(id="space_click", event=click_space_close, on=_CLICK),
         Module(id="email_close", event=click_email_close, on=_CLICK),
     ],
-    success="wrap_up",
+    success=END,
 )

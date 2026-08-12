@@ -255,7 +255,7 @@ def test_config_workflow_load() -> None:
     wf = WORKFLOW
     assert wf.entry == "mail"
     assert wf.display_name == "名将杀免费资源每日领取"
-    assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge", "wrap_up", "handle_fail"}
+    assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge"}
     mail = wf.get("mail")
     assert mail.display_name == "收邮件"
     assert mail.entry == "click_email"

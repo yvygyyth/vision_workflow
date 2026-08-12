@@ -1,14 +1,13 @@
 """复杂流程：名将杀免费资源每日领取。"""
 
 from vision_workflow.flows.parts.dang_qing_ge import FLOW as dang_qing_ge
-from vision_workflow.flows.parts.handle_fail import FLOW as handle_fail
 from vision_workflow.flows.parts.mail import FLOW as mail
-from vision_workflow.flows.parts.wrap_up import FLOW as wrap_up
+from vision_workflow.flows.parts.zhu_jiu_store import FLOW as zhu_jiu_store
 from vision_workflow.module import Workflow
 
 WORKFLOW = Workflow(
     id="main",
     name="名将杀免费资源每日领取",
-    flows=[mail, dang_qing_ge, wrap_up, handle_fail],
+    flows=[mail, dang_qing_ge, zhu_jiu_store],
     entry="mail",
 )
