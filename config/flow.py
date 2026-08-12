@@ -18,7 +18,7 @@ mail_flow = Flow(
         Module(
             id="one_click",
             event=click("data/samples/email_one_click_receive.png"),
-            success=END,
+            success="space_click",
             fail="click_email",  # 失败可跳回其它模块
         ),
         Module(
