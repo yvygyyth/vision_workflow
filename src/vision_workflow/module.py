@@ -1,9 +1,9 @@
 """三级组合：Module → Flow → Workflow。
 
 Module（最小节点）::
-    id + event → 成功跳转 / 失败跳转
-    success 可省略：默认下一模块；最后一个默认结束流程
-    fail 可省略：默认结束当前流程
+    id + event + on
+    event 必须返回 on 中的某个 key；否则报错结束当前流程
+    on[key] 为该可能性对应的处理函数，返回下一模块 id（或 END / FAIL）
 
 Flow::
     若干 Module 组成一个流程
@@ -14,23 +14,26 @@ Workflow::
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from vision_workflow.flow.context import FlowContext
-from vision_workflow.promise import Settled
-
-logger = logging.getLogger(__name__)
+from vision_workflow.models.flow import MatchOptions, MatchResult
 
 END = "end"
 FAIL = "fail"
 
+# 常用可能性 key（约定，非强制）
+OK = "ok"
+MISS = "miss"
+
 DEFAULT_MODULE_DELAY_MS = 100
 DEFAULT_FLOW_DELAY_MS = 200
 
-EventFn = Callable[[FlowContext], Any]
+EventFn = Callable[["ModuleContext"], str]
+OutcomeFn = Callable[["ModuleContext"], str]
 NextRef = str | Callable[[FlowContext, Any], str] | None
 
 
@@ -50,17 +53,122 @@ def resolve_delay_ms(config: dict[str, Any] | None, default: int) -> int:
 
 
 @dataclass
+class ModuleContext:
+    """传给 event 与 on[*] 的运行时上下文，便于扩展自循环等。"""
+
+    ctx: FlowContext
+    module: Module
+    flow: Flow
+    workflow: Workflow
+    cancelled: Callable[[], bool] = field(default=lambda: False)
+    # event 产出：key 为可能性；value 为附带载荷（如 MatchResult）
+    key: str | None = None
+    value: Any = None
+
+    # ----- FlowContext 能力透传 -----
+
+    @property
+    def base_dir(self) -> Path:
+        return self.ctx.base_dir
+
+    @property
+    def vars(self) -> dict:
+        return self.ctx.vars
+
+    def resolve(self, image: str | Path) -> Path:
+        return self.ctx.resolve(image)
+
+    def find(
+        self,
+        image: str | Path,
+        *,
+        threshold: float | None = None,
+        timeout: float | None = None,
+        interval: float | None = None,
+        region: tuple[int, int, int, int] | None = None,
+        grayscale: bool | None = None,
+        match: MatchOptions | None = None,
+    ) -> MatchResult:
+        return self.ctx.find(
+            image,
+            threshold=threshold,
+            timeout=timeout,
+            interval=interval,
+            region=region,
+            grayscale=grayscale,
+            match=match,
+        )
+
+    def mouse(self):
+        return self.ctx.mouse()
+
+    def click_image(self, image: str | Path, **find_kwargs) -> MatchResult:
+        return self.ctx.click_image(image, **find_kwargs)
+
+    def sleep(self, seconds: float) -> None:
+        self.ctx.sleep(seconds)
+
+    def log(self, message: str, *args) -> None:
+        self.ctx.log(message, *args)
+
+    # ----- 跳转辅助（供 on[*] 使用）-----
+
+    def next(self) -> str:
+        """流程内默认下一模块；末尾为 END。"""
+        return self.flow.default_next_for(self.module.id)
+
+    def goto(self, module_id: str) -> str:
+        return module_id
+
+    def again(self) -> str:
+        """自循环：回到当前模块。"""
+        return self.module.id
+
+    def end(self) -> str:
+        return END
+
+    def fail(self) -> str:
+        """结束当前流程并标记失败。"""
+        return FAIL
+
+
+def onward(m: ModuleContext) -> str:
+    """常用 outcome：进入默认下一模块。"""
+    return m.next()
+
+
+def abort(m: ModuleContext) -> str:
+    """常用 outcome：失败结束当前流程。"""
+    return m.fail()
+
+
+def to(module_id: str) -> OutcomeFn:
+    """常用 outcome 工厂：跳到指定模块。"""
+
+    def _go(_m: ModuleContext) -> str:
+        return module_id
+
+    return _go
+
+
+@dataclass
 class Module:
-    """最小一级节点：只做事，按事件结果跳转。"""
+    """最小一级节点：event 产出可能性 key，由 on[key] 决定下一跳。"""
 
     id: str
     event: EventFn
-    success: NextRef = None  # None → 流程内下一个模块；末尾则为 END
-    fail: NextRef | None = None  # None → 结束当前流程（END）
+    on: dict[str, OutcomeFn]
     name: str = ""
     enabled: bool = True
     config: dict[str, Any] = field(default_factory=dict)
-    # 常用: delay_ms / retry / retry_delay_ms
+    # 常用: delay_ms / retry / retry_delay_ms / retry_on
+
+    def __post_init__(self) -> None:
+        if not self.on:
+            raise ValueError(f"模块 [{self.id}] 必须提供非空 on（可能性 → 处理函数）")
+        bad = [k for k, fn in self.on.items() if not callable(fn)]
+        if bad:
+            raise TypeError(f"模块 [{self.id}] on 的值必须是函数，非法 key: {bad}")
 
 
 @dataclass
@@ -77,7 +185,7 @@ class Flow:
     # 常用: delay_ms / retry / retry_delay_ms
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
-    _next_success: dict[str, str] = field(init=False, repr=False)
+    _next_default: dict[str, str] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         ids = [m.id for m in self.modules]
@@ -86,16 +194,16 @@ class Flow:
         self._by_id = {m.id: m for m in self.modules}
         if self.entry not in self._by_id:
             raise KeyError(f"流程 [{self.id}] 入口模块不存在: {self.entry}")
-        # success 未写时：默认下一模块；最后一个默认 END
-        self._next_success = {}
+        # 列表顺序：默认下一模块；最后一个默认 END
+        self._next_default = {}
         for i, m in enumerate(self.modules):
             if i + 1 < len(self.modules):
-                self._next_success[m.id] = self.modules[i + 1].id
+                self._next_default[m.id] = self.modules[i + 1].id
             else:
-                self._next_success[m.id] = END
+                self._next_default[m.id] = END
 
-    def default_success_for(self, module_id: str) -> str:
-        return self._next_success.get(module_id, END)
+    def default_next_for(self, module_id: str) -> str:
+        return self._next_default.get(module_id, END)
 
     @property
     def display_name(self) -> str:
@@ -144,10 +252,3 @@ class Workflow:
     def flow_choices(self) -> list[tuple[str, str]]:
         """UI 用：(display_name, flow_id)。"""
         return [(f.display_name, f.id) for f in self.flows]
-
-
-def goto(target_id: str) -> Callable[[FlowContext, Any], str]:
-    def _goto(_ctx: FlowContext, _value: Any = None) -> str:
-        return target_id
-
-    return _goto

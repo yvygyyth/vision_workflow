@@ -3,11 +3,21 @@
 from pathlib import Path
 
 from vision_workflow.flow import WorkflowRunner, load_flow_module
-from vision_workflow.module import END, Flow, Module, Workflow, resolve_delay_ms
-from vision_workflow.promise import Settled
+from vision_workflow.module import (
+    END,
+    MISS,
+    OK,
+    Flow,
+    Module,
+    Workflow,
+    abort,
+    onward,
+    resolve_delay_ms,
+    to,
+)
 
 
-def test_module_success_defaults_to_next() -> None:
+def test_module_on_defaults_to_next() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
@@ -18,9 +28,9 @@ def test_module_success_defaults_to_next() -> None:
                 id="f",
                 entry="a",
                 modules=[
-                    Module(id="a", event=lambda ctx: True),
-                    Module(id="b", event=lambda ctx: True),
-                    Module(id="c", event=lambda ctx: True),
+                    Module(id="a", event=lambda m: OK, on={OK: onward}),
+                    Module(id="b", event=lambda m: OK, on={OK: onward}),
+                    Module(id="c", event=lambda m: OK, on={OK: onward}),
                 ],
                 success=END,
             )
@@ -38,8 +48,12 @@ def test_module_success_defaults_to_next() -> None:
                 id="f",
                 entry="a",
                 modules=[
-                    Module(id="a", event=lambda ctx: True, success="b"),
-                    Module(id="b", event=lambda ctx: ctx.log("b") or True, success=END),
+                    Module(id="a", event=lambda m: OK, on={OK: to("b")}),
+                    Module(
+                        id="b",
+                        event=lambda m: (m.log("b") or OK),
+                        on={OK: lambda m: m.end()},
+                    ),
                 ],
                 success=END,
             )
@@ -50,7 +64,7 @@ def test_module_success_defaults_to_next() -> None:
     assert result.path == ["f.a", "f.b"]
 
 
-def test_module_fail_defaults_end_flow() -> None:
+def test_module_unknown_key_ends_flow() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
@@ -61,11 +75,35 @@ def test_module_fail_defaults_end_flow() -> None:
                 modules=[
                     Module(
                         id="a",
-                        event=lambda ctx: Settled.reject("x", feedback="x"),
-                        success="b",
-                        # fail 默认结束流程
+                        event=lambda m: "nope",
+                        on={OK: to("b")},
                     ),
-                    Module(id="b", event=lambda ctx: True, success=END),
+                    Module(id="b", event=lambda m: OK, on={OK: onward}),
+                ],
+                success=END,
+            )
+        ],
+    )
+    result = WorkflowRunner(workflow).run()
+    assert not result.success
+    assert result.path == ["f.a"]
+
+
+def test_module_miss_abort_ends_flow() -> None:
+    workflow = Workflow(
+        id="w",
+        entry="f",
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(
+                        id="a",
+                        event=lambda m: MISS,
+                        on={OK: to("b"), MISS: abort},
+                    ),
+                    Module(id="b", event=lambda m: OK, on={OK: onward}),
                 ],
                 success=END,
             )
@@ -84,13 +122,13 @@ def test_flow_compose_to_workflow() -> None:
             Flow(
                 id="mail",
                 entry="a",
-                modules=[Module(id="a", event=lambda ctx: True, success=END)],
+                modules=[Module(id="a", event=lambda m: OK, on={OK: onward})],
                 success="done_flow",
             ),
             Flow(
                 id="done_flow",
                 entry="d",
-                modules=[Module(id="d", event=lambda ctx: True, success=END)],
+                modules=[Module(id="d", event=lambda m: OK, on={OK: onward})],
                 success=END,
             ),
         ],
@@ -111,8 +149,8 @@ def test_flow_fail_jumps_to_handler_flow() -> None:
                 modules=[
                     Module(
                         id="a",
-                        event=lambda ctx: Settled.reject("boom", feedback="boom"),
-                        success=END,
+                        event=lambda m: MISS,
+                        on={OK: onward, MISS: abort},
                     )
                 ],
                 success=END,
@@ -124,8 +162,8 @@ def test_flow_fail_jumps_to_handler_flow() -> None:
                 modules=[
                     Module(
                         id="h",
-                        event=lambda ctx: Settled.resolve("ok", feedback="handled"),
-                        success=END,
+                        event=lambda m: OK,
+                        on={OK: onward},
                     )
                 ],
                 success=END,
@@ -145,7 +183,7 @@ def test_run_single_module() -> None:
             Flow(
                 id="f",
                 entry="a",
-                modules=[Module(id="a", event=lambda ctx: 1, success=END)],
+                modules=[Module(id="a", event=lambda m: OK, on={OK: onward})],
             )
         ],
     )
@@ -153,7 +191,7 @@ def test_run_single_module() -> None:
     assert settled.ok
 
 
-def test_dynamic_success_jump() -> None:
+def test_dynamic_outcome_jump() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
@@ -164,10 +202,13 @@ def test_dynamic_success_jump() -> None:
                 modules=[
                     Module(
                         id="a",
-                        event=lambda ctx: "go-b",
-                        success=lambda ctx, v: "b" if v == "go-b" else END,
+                        event=lambda m: "go-b",
+                        on={
+                            "go-b": to("b"),
+                            "stop": lambda m: m.end(),
+                        },
                     ),
-                    Module(id="b", event=lambda ctx: True, success=END),
+                    Module(id="b", event=lambda m: OK, on={OK: onward}),
                 ],
                 success=END,
             )
@@ -175,6 +216,42 @@ def test_dynamic_success_jump() -> None:
     )
     result = WorkflowRunner(workflow).run()
     assert result.path == ["f.a", "f.b"]
+
+
+def test_self_loop_again() -> None:
+    hits = {"n": 0}
+
+    def event(m):
+        hits["n"] += 1
+        return "loop" if hits["n"] < 3 else OK
+
+    workflow = Workflow(
+        id="w",
+        entry="f",
+        module_delay_ms=0,
+        flow_delay_ms=0,
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(
+                        id="a",
+                        event=event,
+                        on={
+                            "loop": lambda m: m.again(),
+                            OK: onward,
+                        },
+                    ),
+                ],
+                success=END,
+            )
+        ],
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    assert hits["n"] == 3
+    assert result.path == ["f.a", "f.a", "f.a"]
 
 
 def test_config_workflow_load() -> None:
@@ -190,27 +267,27 @@ def test_config_workflow_load() -> None:
     mail = wf.get("mail")
     assert mail.display_name == "收邮件"
     assert mail.entry == "click_email"
-    assert mail.get("click_email").success is None
-    assert mail.default_success_for("click_email") == "one_click"
-    assert mail.get("click_email").fail is None
+    assert set(mail.get("click_email").on) >= {OK, MISS}
+    assert mail.default_next_for("click_email") == "one_click"
+    assert callable(mail.get("one_click").on[MISS])
     assert ("收邮件", "mail") in wf.flow_choices()
     dqg = wf.get("dang_qing_ge")
     assert dqg.display_name == "丹青阁"
     assert dqg.entry == "icon"
-    assert dqg.default_success_for("icon") == "day_libao"
+    assert dqg.default_next_for("icon") == "day_libao"
     assert ("丹青阁", "dang_qing_ge") in wf.flow_choices()
     assert wf.module_delay_ms == 100
     assert wf.flow_delay_ms == 200
 
 
-def test_module_retry_before_real_fail() -> None:
+def test_module_retry_on_miss() -> None:
     hits = {"n": 0}
 
-    def flaky(ctx):
+    def flaky(m):
         hits["n"] += 1
         if hits["n"] < 3:
-            return Settled.reject("temp", feedback="temp")
-        return Settled.resolve(True)
+            return MISS
+        return OK
 
     workflow = Workflow(
         id="w",
@@ -222,7 +299,12 @@ def test_module_retry_before_real_fail() -> None:
                 id="f",
                 entry="a",
                 modules=[
-                    Module(id="a", event=flaky, config={"retry": 2}),
+                    Module(
+                        id="a",
+                        event=flaky,
+                        on={OK: onward, MISS: abort},
+                        config={"retry": 2, "retry_on": [MISS]},
+                    ),
                 ],
                 success=END,
             )
@@ -253,8 +335,13 @@ def test_module_and_flow_config_delay() -> None:
                 id="f1",
                 entry="a",
                 modules=[
-                    Module(id="a", event=lambda ctx: True, success="b", config={"delay_ms": 30}),
-                    Module(id="b", event=lambda ctx: True, success=END),
+                    Module(
+                        id="a",
+                        event=lambda m: OK,
+                        on={OK: to("b")},
+                        config={"delay_ms": 30},
+                    ),
+                    Module(id="b", event=lambda m: OK, on={OK: onward}),
                 ],
                 success="f2",
                 config={"delay_ms": 40},
@@ -262,7 +349,7 @@ def test_module_and_flow_config_delay() -> None:
             Flow(
                 id="f2",
                 entry="c",
-                modules=[Module(id="c", event=lambda ctx: True, success=END)],
+                modules=[Module(id="c", event=lambda m: OK, on={OK: onward})],
                 success=END,
             ),
         ],

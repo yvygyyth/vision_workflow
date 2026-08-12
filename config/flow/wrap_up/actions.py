@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-from vision_workflow.flow.context import FlowContext
+from vision_workflow.module import OK, ModuleContext
 
 
-def action_log_done(ctx: FlowContext) -> Any:
-    ctx.log("收尾模块执行完毕")
-    return True
+def action_log_done(m: ModuleContext) -> str:
+    m.log("收尾模块执行完毕")
+    return OK

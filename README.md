@@ -3,7 +3,7 @@
 三级组合：**模块 → 流程 → 工作流**。桌面 UI 可运行 / 停止，并可打包成 exe。
 
 ```text
-Module  最小节点：id + event + success + fail?
+Module  最小节点：id + event + on（可能性 → 处理函数）
 Flow    模块组成的一段流程
 Workflow 流程组成的复杂流程
 ```
@@ -30,25 +30,39 @@ Resolve+Delay → Retry → Event
 | `delay_ms` | 成功后、进入下一项前的等待；不写则用 Workflow 全局默认 |
 | `retry` | 失败后重试次数；耗尽才算真失败（总尝试 = 1 + retry） |
 | `retry_delay_ms` | 两次重试之间的等待 |
+| `retry_on` | 哪些 outcome key 也触发重试（如 `["miss"]`）；默认仅非法 key / 异常 |
 
 ```python
 Module(
     id="one_click",
     event=...,
-    fail="click_email",
-    config={"retry": 2, "retry_delay_ms": 200, "delay_ms": 100},
+    on={OK: onward, MISS: to("click_email")},
+    config={"retry": 2, "retry_on": [MISS], "retry_delay_ms": 200, "delay_ms": 100},
 )
 Flow(id="mail", ..., config={"retry": 1, "delay_ms": 500})
 ```
 
 ## 模块
 
+`event` 必须返回 `on` 里的某个 key，否则报错并结束当前流程。`on[key]` 是处理函数，拿到完整 `ModuleContext`，返回下一模块 id（或 `END` / `FAIL`）。
+
 ```python
-Module(id="click_email", event=click("data/samples/mail/email.png"))
-# success 省略 → 自动下一个模块；最后一个成功则结束本流程
-# fail 省略 → 结束当前流程
-Module(id="one_click", event=..., fail="click_email")  # 失败可跳回
+from vision_workflow.module import MISS, OK, Module, abort, onward, to
+
+Module(
+    id="click_email",
+    event=click("data/samples/mail/email.png"),
+    on={OK: onward, MISS: abort},  # onward=下一模块；abort=失败结束本流程
+)
+Module(
+    id="one_click",
+    event=...,
+    on={OK: onward, MISS: to("click_email")},  # 未找到则跳回
+)
+# 自循环示例：on={"loop": lambda m: m.again(), OK: onward}
 ```
+
+`ModuleContext` 透传识图 / 鼠标 / 日志，并提供 `next` / `goto` / `again` / `end` / `fail`，方便以后扩展。
 
 ## 目录
 

@@ -20,6 +20,7 @@ from vision_workflow.module import (
     FAIL,
     Flow,
     Module,
+    ModuleContext,
     Workflow,
     resolve_delay_ms,
     resolve_next,
@@ -39,6 +40,7 @@ class ModuleScope:
     workflow: Workflow
     cancelled: Callable[[], bool] = field(default=lambda: False)
     next_id: str = END
+    module_ctx: ModuleContext | None = None
 
 
 class ModuleMiddleware(Protocol):
@@ -63,29 +65,38 @@ def run_onion(scope: ModuleScope, middlewares: list[ModuleMiddleware], core: Cal
 
 
 def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddleware:
-    """失败不立刻算真失败；耗尽 retries 次重试后才返回失败。"""
+    """失败不立刻算真失败；耗尽 retries 次重试后才返回失败。
+
+    触发重试的情况：
+    - event 异常 / 返回非法 key（settled.ok=False）
+    - 合法 key 且在 config['retry_on'] 中（默认空）
+    """
 
     retries = max(0, int(retries))
     retry_delay_ms = max(0, int(retry_delay_ms))
 
     def mw(scope: ModuleScope, call_next: CallNext) -> Settled:
         label = scope.module.name or scope.module.id
+        retry_on = {str(k) for k in (scope.module.config or {}).get("retry_on") or ()}
         last = Settled.reject("未执行")
         attempts = retries + 1
         for attempt in range(attempts):
             if scope.cancelled():
                 return Settled.reject("用户取消", feedback="用户取消")
             last = call_next()
-            if last.ok:
+            key = scope.module_ctx.key if scope.module_ctx else None
+            should_retry = (not last.ok) or (key is not None and key in retry_on)
+            if not should_retry:
                 return last
             if attempt + 1 >= attempts:
                 break
+            reason = last.feedback or last.error or (f"outcome={key}" if key else "")
             logger.info(
-                "模块 [%s] 失败，准备重试 %s/%s | %s",
+                "模块 [%s] 准备重试 %s/%s | %s",
                 label,
                 attempt + 1,
                 retries,
-                last.feedback or last.error,
+                reason,
             )
             if retry_delay_ms > 0 and not scope.cancelled():
                 scope.ctx.sleep(retry_delay_ms / 1000.0)
@@ -95,26 +106,49 @@ def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddlewa
 
 
 def resolve_and_delay_middleware() -> ModuleMiddleware:
-    """解析下一跳；若成功且还将继续下一模块，则执行后延迟。"""
+    """按 event 返回的 key 调用 on[key]，解析下一跳；继续时执行后延迟。"""
 
     def mw(scope: ModuleScope, call_next: CallNext) -> Settled:
         settled = call_next()
-        default_success = scope.flow.default_success_for(scope.module.id)
-        if settled.ok:
-            nxt = resolve_next(
-                scope.module.success,
-                scope.ctx,
-                settled.value,
-                default=default_success,
+        mctx = scope.module_ctx
+        mod = scope.module
+        label = mod.name or mod.id
+
+        # event 已校验 key；失败（异常 / 未知 key）直接结束本流程
+        if not settled.ok or mctx is None or mctx.key is None:
+            scope.next_id = END
+            return settled
+
+        key = mctx.key
+        try:
+            nxt = str(mod.on[key](mctx) or END)
+        except Exception as exc:
+            logger.exception("模块 on[%s] 异常 (%s)", key, mod.id)
+            scope.next_id = END
+            return Settled.reject(
+                str(exc),
+                value=mctx.value,
+                feedback=f"({mod.id}) on[{key}] 异常",
             )
-        else:
-            nxt = resolve_next(scope.module.fail, scope.ctx, settled.value, default=END)
+
         scope.next_id = nxt
 
-        if settled.ok and nxt not in {END, FAIL, None, ""}:
+        if nxt == FAIL:
+            settled = Settled.reject(
+                f"outcome [{key}] → FAIL",
+                value=mctx.value,
+                feedback=f"({mod.id}) {key} → FAIL",
+            )
+        else:
+            settled = Settled.resolve(
+                mctx.value if mctx.value is not None else key,
+                feedback=f"({mod.id}) {key} → {nxt}",
+            )
+
+        if settled.ok and nxt not in {END, FAIL, ""}:
             delay = resolve_delay_ms(scope.module.config, scope.workflow.module_delay_ms)
             if delay > 0 and not scope.cancelled():
-                logger.info("延迟 %sms（模块后 %s）", delay, scope.module.name or scope.module.id)
+                logger.info("延迟 %sms（模块后 %s）", delay, label)
                 scope.ctx.sleep(delay / 1000.0)
         return settled
 
@@ -135,23 +169,42 @@ def build_module_middlewares(scope: ModuleScope) -> list[ModuleMiddleware]:
 
 
 def run_module_event(scope: ModuleScope) -> Settled:
-    """核心：只跑 event，不解析跳转。"""
+    """核心：跑 event，校验返回值必须是 on 的某个 key。"""
     mod = scope.module
     label = mod.name or mod.id
+    mctx = ModuleContext(
+        ctx=scope.ctx,
+        module=mod,
+        flow=scope.flow,
+        workflow=scope.workflow,
+        cancelled=scope.cancelled,
+    )
+    scope.module_ctx = mctx
+
     logger.info("模块开始 (%s)", label)
     try:
-        raw = mod.event(scope.ctx)
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("模块 event 异常 (%s): %s", mod.id, exc)
+        raw = mod.event(mctx)
+    except Exception as exc:
+        logger.exception("模块 event 异常 (%s)", mod.id)
         settled = Settled.reject(str(exc), feedback=f"({mod.id}) event 异常")
         logger.info("模块结束 (%s) ok=False", label)
         return settled
 
-    if isinstance(raw, Settled):
-        settled = raw
-    else:
-        settled = Settled.resolve(raw)
-    logger.info("模块结束 (%s) ok=%s", label, settled.ok)
+    mctx.key = str(raw)
+    # 附带载荷由 event 写入 mctx.value
+
+    if mctx.key not in mod.on:
+        msg = f"未知结果 [{mctx.key}]，可选: {list(mod.on)}"
+        logger.error("模块 [%s] %s", label, msg)
+        settled = Settled.reject(msg, value=mctx.value, feedback=f"({mod.id}) {msg}")
+        logger.info("模块结束 (%s) ok=False", label)
+        return settled
+
+    settled = Settled.resolve(
+        mctx.value if mctx.value is not None else mctx.key,
+        feedback=f"({mod.id}) outcome={mctx.key}",
+    )
+    logger.info("模块结束 (%s) key=%s", label, mctx.key)
     return settled
 
 
@@ -159,11 +212,7 @@ def execute_module(scope: ModuleScope) -> tuple[Settled, str]:
     """跑完洋葱栈，返回 (settled, next_module_id)。"""
     middlewares = build_module_middlewares(scope)
     settled = run_onion(scope, middlewares, lambda: run_module_event(scope))
-    nxt = scope.next_id
-    settled.feedback = settled.feedback or (
-        f"({scope.module.id}) 成功 → {nxt}" if settled.ok else f"({scope.module.id}) 失败 → {nxt}"
-    )
-    return settled, nxt
+    return settled, scope.next_id
 
 
 # ----- Flow 级洋葱（流程重试 / 流程后延迟）-----
@@ -242,7 +291,7 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
         else:
             nxt = resolve_next(scope.flow.fail, scope.ctx, settled.value, default=END)
         scope.next_flow_id = nxt
-        if settled.ok and nxt not in {END, FAIL, None, ""}:
+        if settled.ok and nxt not in {END, FAIL, ""}:
             delay = resolve_delay_ms(scope.flow.config, scope.workflow.flow_delay_ms)
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.display_name)

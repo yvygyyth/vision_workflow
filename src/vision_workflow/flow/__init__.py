@@ -16,7 +16,7 @@ from vision_workflow.middleware import (
     run_flow_onion,
 )
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
-from vision_workflow.module import END, FAIL, Flow, Module, Workflow
+from vision_workflow.module import END, FAIL, Flow, Workflow
 from vision_workflow.paths import project_root
 from vision_workflow.promise import Settled
 
@@ -59,7 +59,7 @@ def load_flow_module(target: str) -> Workflow:
             entry=str(entry),
             base_dir=str(base_dir or Path.cwd()),
         )
-    elif hasattr(mod, "FLOW") and isinstance(getattr(mod, "FLOW"), Flow):
+    elif hasattr(mod, "FLOW") and isinstance(mod.FLOW, Flow):
         flow = mod.FLOW
         obj = Workflow(
             id=getattr(mod, "WORKFLOW_ID", "main"),
@@ -135,20 +135,11 @@ class WorkflowRunner:
             success=True,
         )
         current_flow = flow_id
-        guard = 0
-        max_guard = max(50, sum(len(f.modules) for f in self.workflow.flows) * 20)
 
-        while current_flow not in {END, FAIL, None, ""}:
+        while current_flow not in {END, FAIL, ""}:
             if self._cancelled():
                 result.success = False
                 result.message = "用户取消"
-                result.feedback = result.message
-                break
-
-            guard += 1
-            if guard > max_guard:
-                result.success = False
-                result.message = "疑似死循环，已中止"
                 result.feedback = result.message
                 break
 
@@ -194,7 +185,7 @@ class WorkflowRunner:
                     result.message = settled.error or "流程失败"
                     result.feedback = settled.feedback or result.message
                     break
-                if nxt in {END, None, ""}:
+                if nxt in {END, ""}:
                     break
                 current_flow = nxt
                 continue
@@ -204,7 +195,7 @@ class WorkflowRunner:
                 settled.error or settled.feedback or f"流程失败: {flow.display_name}"
             )
             result.feedback = settled.feedback or result.message
-            if nxt in {END, FAIL, None, ""}:
+            if nxt in {END, FAIL, ""}:
                 break
             current_flow = nxt
 
@@ -271,20 +262,10 @@ class WorkflowRunner:
         """跑完一轮流程内模块（可被流程级 Retry 多次调用）。"""
         current = start_module or flow.entry
         last = Settled.reject("空流程")
-        visits: dict[str, int] = {}
-        guard = 0
-        max_guard = max(20, len(flow.modules) * 20)
 
-        while current not in {END, FAIL, None, ""}:
+        while current not in {END, FAIL, ""}:
             if self._cancelled():
                 return Settled.reject("用户取消", feedback="用户取消")
-
-            guard += 1
-            if guard > max_guard:
-                return Settled.reject(
-                    f"流程 [{flow.id}] 疑似死循环，已中止",
-                    feedback=f"流程 [{flow.id}] 疑似死循环，已中止",
-                )
 
             try:
                 mod = flow.get(current)
@@ -293,11 +274,6 @@ class WorkflowRunner:
 
             if not mod.enabled:
                 msg = f"模块已禁用: {flow.id}.{mod.id}"
-                return Settled.reject(msg, feedback=msg)
-
-            visits[mod.id] = visits.get(mod.id, 0) + 1
-            if visits[mod.id] > max_guard:
-                msg = f"模块 [{flow.id}.{mod.id}] 访问次数过多"
                 return Settled.reject(msg, feedback=msg)
 
             step_id = f"{flow.id}.{mod.id}"
@@ -331,4 +307,4 @@ class WorkflowRunner:
 
             current = nxt
 
-        return last if last.ok else last
+        return last

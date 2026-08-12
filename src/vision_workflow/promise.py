@@ -1,4 +1,4 @@
-"""模块生命周期结算结果。"""
+"""中间件 / Runner 内部的结算结果。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 @dataclass
 class Settled:
-    """一轮 action/judge 的成功或失败结果。"""
+    """一轮模块/流程执行的成功或失败结果。"""
 
     ok: bool
     value: Any = None
