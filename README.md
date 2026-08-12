@@ -19,27 +19,23 @@ Workflow(id="main", name="邮箱一键领取", entry="mail", flows=[...])
 
 ## 延迟 / 重试（洋葱中间件）
 
-`config` 扩展属性，由中间件洋葱处理（不必在 Runner 里堆逻辑）：
+各级 `config` 均为独立类型（悬停即可查看字段）：`ModuleConfig` / `FlowConfig` / `WorkflowConfig`。
 
 ```text
 Resolve+Delay → Retry → Event
 ```
 
-| 键 | 含义 |
-|----|------|
-| `delay_ms` | 成功后、进入下一项前的等待；不写则用 Workflow 全局默认 |
-| `retry` | 失败后重试次数；耗尽才算真失败（总尝试 = 1 + retry） |
-| `retry_delay_ms` | 两次重试之间的等待 |
-| `retry_on` | 哪些 outcome key 也触发重试（如 `["miss"]`）；默认仅非法 key / 异常 |
-
 ```python
+from vision_workflow.module import ModuleConfig, FlowConfig, WorkflowConfig, Module, Flow, Workflow
+
 Module(
     id="one_click",
     event=...,
     on={OK: onward, MISS: to("click_email")},
-    config={"retry": 2, "retry_on": [MISS], "retry_delay_ms": 200, "delay_ms": 100},
+    config=ModuleConfig(retry=2, retry_on=[MISS], retry_delay_ms=200, delay_ms=100),
 )
-Flow(id="mail", ..., config={"retry": 1, "delay_ms": 500})
+Flow(id="mail", ..., config=FlowConfig(delay_ms=500))
+Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_ms 时的默认
 ```
 
 ## 模块

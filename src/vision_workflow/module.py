@@ -14,10 +14,10 @@ Workflow::
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import MatchOptions, MatchResult
@@ -29,12 +29,11 @@ FAIL = "fail"
 OK = "ok"
 MISS = "miss"
 
-DEFAULT_MODULE_DELAY_MS = 100
-DEFAULT_FLOW_DELAY_MS = 200
-
 EventFn = Callable[["ModuleContext"], str]
 OutcomeFn = Callable[["ModuleContext"], str]
 NextRef = str | Callable[[FlowContext, Any], str] | None
+
+_ConfigT = TypeVar("_ConfigT")
 
 
 def resolve_next(ref: NextRef, ctx: FlowContext, value: Any, *, default: str = END) -> str:
@@ -45,11 +44,45 @@ def resolve_next(ref: NextRef, ctx: FlowContext, value: Any, *, default: str = E
     return str(ref)
 
 
-def resolve_delay_ms(config: dict[str, Any] | None, default: int) -> int:
-    """读取 config['delay_ms']；未配置则用 default。单位毫秒。"""
-    if config and "delay_ms" in config:
-        return max(0, int(config["delay_ms"]))
-    return max(0, int(default))
+@dataclass
+class ModuleConfig:
+    """模块级 config：延迟 / 重试。"""
+
+    delay_ms: int = 0
+    """成功且还将继续下一模块时的等待（毫秒）；0 则回退 WorkflowConfig.delay_ms。"""
+    retry: int = 0
+    """失败或命中 retry_on 后的重试次数（总尝试 = 1 + retry）。"""
+    retry_delay_ms: int = 0
+    """两次重试之间的等待（毫秒）。"""
+    retry_on: list[str] = field(default_factory=list)
+    """哪些 outcome key 也触发重试（默认仅异常 / 非法 key）。"""
+
+
+@dataclass
+class FlowConfig:
+    """流程级 config。"""
+
+    delay_ms: int = 0
+    """本流程成功且还将进入下一流程时的等待（毫秒）；0 则回退 WorkflowConfig.delay_ms。"""
+
+
+@dataclass
+class WorkflowConfig:
+    """复杂流程级 config。"""
+
+    delay_ms: int = 0
+    """默认延迟（毫秒）：模块/流程未单独配置 delay_ms 时使用。"""
+
+
+def _coerce_config(cls: type[_ConfigT], value: _ConfigT | Mapping[str, Any] | None) -> _ConfigT:
+    if value is None:
+        return cls()  # type: ignore[call-arg]
+    if isinstance(value, cls):
+        return value
+    if isinstance(value, Mapping):
+        allowed = {f.name for f in fields(cls)}  # type: ignore[arg-type]
+        return cls(**{k: v for k, v in value.items() if k in allowed})  # type: ignore[call-arg]
+    raise TypeError(f"期望 {cls.__name__} 或 dict，得到 {type(value)}")
 
 
 @dataclass
@@ -160,10 +193,10 @@ class Module:
     on: dict[str, OutcomeFn]
     name: str = ""
     enabled: bool = True
-    config: dict[str, Any] = field(default_factory=dict)
-    # 常用: delay_ms / retry / retry_delay_ms / retry_on
+    config: ModuleConfig = field(default_factory=ModuleConfig)
 
     def __post_init__(self) -> None:
+        self.config = _coerce_config(ModuleConfig, self.config)
         if not self.on:
             raise ValueError(f"模块 [{self.id}] 必须提供非空 on（可能性 → 处理函数）")
         bad = [k for k, fn in self.on.items() if not callable(fn)]
@@ -181,13 +214,13 @@ class Flow:
     success: NextRef = END  # 本流程成功结束后，下一个流程 id
     fail: NextRef | None = None  # 本流程失败后；None → 结束整个工作流
     name: str = ""  # UI / 日志展示名；空则回退为 id
-    config: dict[str, Any] = field(default_factory=dict)
-    # 常用: delay_ms / retry / retry_delay_ms
+    config: FlowConfig = field(default_factory=FlowConfig)
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
     _next_default: dict[str, str] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        self.config = _coerce_config(FlowConfig, self.config)
         ids = [m.id for m in self.modules]
         if len(ids) != len(set(ids)):
             raise ValueError(f"流程 [{self.id}] 模块 id 必须唯一: {ids}")
@@ -226,13 +259,12 @@ class Workflow:
     id: str = "workflow"
     name: str = ""  # UI 展示名；空则回退为 id
     base_dir: str | None = None
-    module_delay_ms: int = DEFAULT_MODULE_DELAY_MS  # 模块执行后、进入下一模块前
-    flow_delay_ms: int = DEFAULT_FLOW_DELAY_MS  # 流程执行后、进入下一流程前
-    config: dict[str, Any] = field(default_factory=dict)
+    config: WorkflowConfig = field(default_factory=WorkflowConfig)
 
     _by_id: dict[str, Flow] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        self.config = _coerce_config(WorkflowConfig, self.config)
         ids = [f.id for f in self.flows]
         if len(ids) != len(set(ids)):
             raise ValueError(f"流程 id 必须唯一: {ids}")

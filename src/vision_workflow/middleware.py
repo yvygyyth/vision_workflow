@@ -22,7 +22,6 @@ from vision_workflow.module import (
     Module,
     ModuleContext,
     Workflow,
-    resolve_delay_ms,
     resolve_next,
 )
 from vision_workflow.promise import Settled
@@ -69,7 +68,7 @@ def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddlewa
 
     触发重试的情况：
     - event 异常 / 返回非法 key（settled.ok=False）
-    - 合法 key 且在 config['retry_on'] 中（默认空）
+    - 合法 key 且在 config.retry_on 中（默认空）
     """
 
     retries = max(0, int(retries))
@@ -77,7 +76,7 @@ def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddlewa
 
     def mw(scope: ModuleScope, call_next: CallNext) -> Settled:
         label = scope.module.name or scope.module.id
-        retry_on = {str(k) for k in (scope.module.config or {}).get("retry_on") or ()}
+        retry_on = {str(k) for k in scope.module.config.retry_on}
         last = Settled.reject("未执行")
         attempts = retries + 1
         for attempt in range(attempts):
@@ -146,7 +145,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
             )
 
         if settled.ok and nxt not in {END, FAIL, ""}:
-            delay = resolve_delay_ms(scope.module.config, scope.workflow.module_delay_ms)
+            delay = max(0, int(mod.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（模块后 %s）", delay, label)
                 scope.ctx.sleep(delay / 1000.0)
@@ -157,9 +156,9 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
 
 def build_module_middlewares(scope: ModuleScope) -> list[ModuleMiddleware]:
     """按 config 组装洋葱（列表首元素 = 最外层）。"""
-    cfg = scope.module.config or {}
-    retries = int(cfg.get("retry", 0) or 0)
-    retry_delay_ms = int(cfg.get("retry_delay_ms", 0) or 0)
+    cfg = scope.module.config
+    retries = max(0, int(cfg.retry))
+    retry_delay_ms = max(0, int(cfg.retry_delay_ms))
 
     # 外 → 内：先解析/延迟，再重试，再事件
     stack: list[ModuleMiddleware] = [resolve_and_delay_middleware()]
@@ -215,7 +214,7 @@ def execute_module(scope: ModuleScope) -> tuple[Settled, str]:
     return settled, scope.next_id
 
 
-# ----- Flow 级洋葱（流程重试 / 流程后延迟）-----
+# ----- Flow 级洋葱（流程后延迟）-----
 
 
 @dataclass
@@ -253,35 +252,6 @@ def run_flow_onion(
     return bind(0)()
 
 
-def flow_retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> FlowMiddleware:
-    retries = max(0, int(retries))
-    retry_delay_ms = max(0, int(retry_delay_ms))
-
-    def mw(scope: FlowScope, call_next: CallNextFlow) -> Settled:
-        last = Settled.reject("未执行")
-        attempts = retries + 1
-        for attempt in range(attempts):
-            if scope.cancelled():
-                return Settled.reject("用户取消", feedback="用户取消")
-            last = call_next()
-            if last.ok:
-                return last
-            if attempt + 1 >= attempts:
-                break
-            logger.info(
-                "流程 [%s] 失败，准备重试 %s/%s | %s",
-                scope.flow.display_name,
-                attempt + 1,
-                retries,
-                last.feedback or last.error,
-            )
-            if retry_delay_ms > 0 and not scope.cancelled():
-                scope.ctx.sleep(retry_delay_ms / 1000.0)
-        return last
-
-    return mw
-
-
 def flow_resolve_and_delay_middleware() -> FlowMiddleware:
     def mw(scope: FlowScope, call_next: CallNextFlow) -> Settled:
         settled = call_next()
@@ -292,7 +262,7 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
             nxt = resolve_next(scope.flow.fail, scope.ctx, settled.value, default=END)
         scope.next_flow_id = nxt
         if settled.ok and nxt not in {END, FAIL, ""}:
-            delay = resolve_delay_ms(scope.flow.config, scope.workflow.flow_delay_ms)
+            delay = max(0, int(scope.flow.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.display_name)
                 scope.ctx.sleep(delay / 1000.0)
@@ -302,10 +272,4 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
 
 
 def build_flow_middlewares(scope: FlowScope) -> list[FlowMiddleware]:
-    cfg = scope.flow.config or {}
-    retries = int(cfg.get("retry", 0) or 0)
-    retry_delay_ms = int(cfg.get("retry_delay_ms", 0) or 0)
-    stack: list[FlowMiddleware] = [flow_resolve_and_delay_middleware()]
-    if retries > 0:
-        stack.append(flow_retry_middleware(retries=retries, retry_delay_ms=retry_delay_ms))
-    return stack
+    return [flow_resolve_and_delay_middleware()]

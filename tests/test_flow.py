@@ -6,11 +6,12 @@ from vision_workflow.module import (
     MISS,
     OK,
     Flow,
+    FlowConfig,
     Module,
+    ModuleConfig,
     Workflow,
     abort,
     onward,
-    resolve_delay_ms,
     to,
 )
 
@@ -19,8 +20,6 @@ def test_module_on_defaults_to_next() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        module_delay_ms=0,
-        flow_delay_ms=0,
         flows=[
             Flow(
                 id="f",
@@ -226,8 +225,6 @@ def test_self_loop_again() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        module_delay_ms=0,
-        flow_delay_ms=0,
         flows=[
             Flow(
                 id="f",
@@ -269,8 +266,8 @@ def test_config_workflow_load() -> None:
     assert dqg.display_name == "丹青阁"
     assert dqg.entry == "icon"
     assert dqg.default_next_for("icon") == "day_libao"
-    assert wf.module_delay_ms == 100
-    assert wf.flow_delay_ms == 200
+    assert isinstance(mail.get("click_email").config, ModuleConfig)
+    assert isinstance(wf.get("mail").config, FlowConfig)
     assert len(WORKFLOWS) >= 1
     assert WORKFLOWS[0].id == "main"
     assert ("邮箱一键领取", "main") in workflow_choices()
@@ -288,8 +285,6 @@ def test_module_retry_on_miss() -> None:
     workflow = Workflow(
         id="w",
         entry="f",
-        module_delay_ms=0,
-        flow_delay_ms=0,
         flows=[
             Flow(
                 id="f",
@@ -299,7 +294,7 @@ def test_module_retry_on_miss() -> None:
                         id="a",
                         event=flaky,
                         on={OK: onward, MISS: abort},
-                        config={"retry": 2, "retry_on": [MISS]},
+                        config=ModuleConfig(retry=2, retry_on=[MISS]),
                     ),
                 ],
                 success=END,
@@ -312,20 +307,12 @@ def test_module_retry_on_miss() -> None:
     assert result.path == ["f.a"]
 
 
-def test_resolve_delay_ms() -> None:
-    assert resolve_delay_ms({}, 100) == 100
-    assert resolve_delay_ms({"delay_ms": 50}, 100) == 50
-    assert resolve_delay_ms({"delay_ms": 0}, 100) == 0
-
-
 def test_module_and_flow_config_delay() -> None:
     sleeps: list[float] = []
 
     workflow = Workflow(
         id="w",
         entry="f1",
-        module_delay_ms=100,
-        flow_delay_ms=200,
         flows=[
             Flow(
                 id="f1",
@@ -335,12 +322,12 @@ def test_module_and_flow_config_delay() -> None:
                         id="a",
                         event=lambda m: OK,
                         on={OK: to("b")},
-                        config={"delay_ms": 30},
+                        config=ModuleConfig(delay_ms=30),
                     ),
                     Module(id="b", event=lambda m: OK, on={OK: onward}),
                 ],
                 success="f2",
-                config={"delay_ms": 40},
+                config=FlowConfig(delay_ms=40),
             ),
             Flow(
                 id="f2",
@@ -362,3 +349,15 @@ def test_module_and_flow_config_delay() -> None:
     assert result.success
     assert result.path == ["f1.a", "f1.b", "f2.c"]
     assert sleeps == [0.03, 0.04]  # 模块后 30ms，流程后 40ms
+
+
+def test_config_dict_coercion() -> None:
+    mod = Module(
+        id="a",
+        event=lambda m: OK,
+        on={OK: onward},
+        config={"delay_ms": 10, "retry": 1},  # type: ignore[arg-type]
+    )
+    assert isinstance(mod.config, ModuleConfig)
+    assert mod.config.delay_ms == 10
+    assert mod.config.retry == 1

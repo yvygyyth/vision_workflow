@@ -14,8 +14,6 @@ WORKFLOW = Workflow(
     name="邮箱一键领取",
     flows=[mail_flow, dang_qing_ge_flow, wrap_up_flow, handle_fail_flow],
     entry="mail",
-    module_delay_ms=100,
-    flow_delay_ms=200,
 )
 
 # 用户可选的复杂流程目录（未来可扩展多项 / 自定义）
