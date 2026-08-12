@@ -37,7 +37,7 @@ Workflow(..., module_delay_ms=100, flow_delay_ms=200)
 ```python
 Module(
     id="click_email",
-    event=click("data/samples/email.png"),
+    event=click("data/samples/mail/email.png"),
     success="one_click",
     # fail 省略 → 结束当前流程
 )
@@ -51,7 +51,7 @@ config/flow/                # 工作流包（仍用 config.flow 加载）
   mail/                     # 一个子流程一个文件夹
   wrap_up/
   handle_fail/
-data/samples/               # 模板图
+data/samples/<流程id>/      # 按流程分目录的模板图
 src/vision_workflow/
   module.py / events.py / flow/
   ui/                       # 桌面界面（模块化）
