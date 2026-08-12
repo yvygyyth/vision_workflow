@@ -1,4 +1,4 @@
-"""控制区：目标、干跑/运行/停止。"""
+"""控制区：工作流目标、流程选择、干跑/运行/停止。"""
 
 from __future__ import annotations
 
@@ -18,33 +18,71 @@ class ControlPanel(ctk.CTkFrame):
         on_dry_run: Callable[[], None],
         on_stop: Callable[[], None],
         on_clear: Callable[[], None],
+        on_reload: Callable[[], None],
         default_target: str = "config.flow",
     ) -> None:
         super().__init__(master, fg_color=theme.SURFACE, corner_radius=12)
         self.grid_columnconfigure(1, weight=1)
 
-        title = ctk.CTkLabel(self, text="Vision Workflow", font=theme.FONT_TITLE, text_color=theme.TEXT)
-        title.grid(row=0, column=0, columnspan=4, sticky="w", padx=16, pady=(14, 4))
+        self._flow_by_label: dict[str, str] = {}
 
-        hint = ctk.CTkLabel(
+        self.title_label = ctk.CTkLabel(
             self,
-            text="模块 → 流程 → 工作流",
+            text="Vision Workflow",
+            font=theme.FONT_TITLE,
+            text_color=theme.TEXT,
+        )
+        self.title_label.grid(row=0, column=0, columnspan=4, sticky="w", padx=16, pady=(14, 4))
+
+        self.subtitle_label = ctk.CTkLabel(
+            self,
+            text="选择流程后运行",
             font=theme.FONT_UI,
             text_color=theme.MUTED,
         )
-        hint.grid(row=1, column=0, columnspan=4, sticky="w", padx=16, pady=(0, 10))
+        self.subtitle_label.grid(row=1, column=0, columnspan=4, sticky="w", padx=16, pady=(0, 10))
 
-        ctk.CTkLabel(self, text="流程", font=theme.FONT_UI, text_color=theme.TEXT).grid(
-            row=2, column=0, sticky="w", padx=(16, 8), pady=8
+        ctk.CTkLabel(self, text="配置", font=theme.FONT_UI, text_color=theme.TEXT).grid(
+            row=2, column=0, sticky="w", padx=(16, 8), pady=6
         )
         self.target_var = ctk.StringVar(value=default_target)
         self.target_entry = ctk.CTkEntry(
             self,
             textvariable=self.target_var,
             font=theme.FONT_UI,
-            height=36,
+            height=34,
         )
-        self.target_entry.grid(row=2, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=8)
+        self.target_entry.grid(row=2, column=1, columnspan=2, sticky="ew", padx=(0, 8), pady=6)
+
+        self.btn_reload = ctk.CTkButton(
+            self,
+            text="刷新",
+            command=on_reload,
+            height=34,
+            width=72,
+            fg_color="#EEF1EF",
+            hover_color="#E2E7E4",
+            text_color=theme.MUTED,
+            font=theme.FONT_UI,
+        )
+        self.btn_reload.grid(row=2, column=3, sticky="e", padx=(0, 16), pady=6)
+
+        ctk.CTkLabel(self, text="流程", font=theme.FONT_UI, text_color=theme.TEXT).grid(
+            row=3, column=0, sticky="w", padx=(16, 8), pady=6
+        )
+        self.flow_var = ctk.StringVar(value="")
+        self.flow_menu = ctk.CTkOptionMenu(
+            self,
+            variable=self.flow_var,
+            values=["(未加载)"],
+            font=theme.FONT_UI,
+            height=34,
+            fg_color="#E7EEE9",
+            button_color=theme.ACCENT,
+            button_hover_color="#255A3F",
+            text_color=theme.TEXT,
+        )
+        self.flow_menu.grid(row=3, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
 
         self.btn_dry = ctk.CTkButton(
             self,
@@ -56,7 +94,7 @@ class ControlPanel(ctk.CTkFrame):
             text_color=theme.ACCENT,
             font=theme.FONT_UI,
         )
-        self.btn_dry.grid(row=3, column=0, sticky="ew", padx=(16, 8), pady=(4, 14))
+        self.btn_dry.grid(row=4, column=0, sticky="ew", padx=(16, 8), pady=(8, 14))
 
         self.btn_run = ctk.CTkButton(
             self,
@@ -67,7 +105,7 @@ class ControlPanel(ctk.CTkFrame):
             hover_color="#255A3F",
             font=theme.FONT_UI,
         )
-        self.btn_run.grid(row=3, column=1, sticky="ew", padx=8, pady=(4, 14))
+        self.btn_run.grid(row=4, column=1, sticky="ew", padx=8, pady=(8, 14))
 
         self.btn_stop = ctk.CTkButton(
             self,
@@ -80,7 +118,7 @@ class ControlPanel(ctk.CTkFrame):
             font=theme.FONT_UI,
             state="disabled",
         )
-        self.btn_stop.grid(row=3, column=2, sticky="ew", padx=8, pady=(4, 14))
+        self.btn_stop.grid(row=4, column=2, sticky="ew", padx=8, pady=(8, 14))
 
         self.btn_clear = ctk.CTkButton(
             self,
@@ -92,10 +130,35 @@ class ControlPanel(ctk.CTkFrame):
             text_color=theme.MUTED,
             font=theme.FONT_UI,
         )
-        self.btn_clear.grid(row=3, column=3, sticky="ew", padx=(8, 16), pady=(4, 14))
+        self.btn_clear.grid(row=4, column=3, sticky="ew", padx=(8, 16), pady=(8, 14))
 
     def target(self) -> str:
         return self.target_var.get().strip() or "config.flow"
+
+    def selected_flow_id(self) -> str | None:
+        label = self.flow_var.get().strip()
+        return self._flow_by_label.get(label)
+
+    def selected_flow_name(self) -> str:
+        return self.flow_var.get().strip()
+
+    def set_workflow_meta(self, name: str) -> None:
+        self.title_label.configure(text=name or "Vision Workflow")
+        self.subtitle_label.configure(text="选择下方流程后运行 / 干跑")
+
+    def set_flow_choices(self, choices: list[tuple[str, str]], *, selected_id: str | None = None) -> None:
+        """choices: (display_name, flow_id)。"""
+        self._flow_by_label = {label: fid for label, fid in choices}
+        labels = [label for label, _ in choices] or ["(无流程)"]
+        self.flow_menu.configure(values=labels)
+
+        selected_label = labels[0]
+        if selected_id:
+            for label, fid in choices:
+                if fid == selected_id:
+                    selected_label = label
+                    break
+        self.flow_var.set(selected_label)
 
     def set_running(self, running: bool) -> None:
         state_run = "disabled" if running else "normal"
@@ -103,4 +166,6 @@ class ControlPanel(ctk.CTkFrame):
         self.btn_run.configure(state=state_run)
         self.btn_dry.configure(state=state_run)
         self.btn_stop.configure(state=state_stop)
+        self.btn_reload.configure(state=state_run)
         self.target_entry.configure(state="disabled" if running else "normal")
+        self.flow_menu.configure(state="disabled" if running else "normal")

@@ -28,7 +28,7 @@ console = Console()
 def flow_cmd(
     target: str = typer.Argument(
         ...,
-        help="Python 流程模块，如 config.flow 或 config/flow.py",
+        help="Python 流程包，如 config.flow",
     ),
     start: Optional[str] = typer.Option(
         None,

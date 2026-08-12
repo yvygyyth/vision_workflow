@@ -10,6 +10,7 @@ from pathlib import Path
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
 from vision_workflow.module import END, FAIL, Flow, Module, Workflow, resolve_next
+from vision_workflow.paths import project_root
 from vision_workflow.promise import Settled
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,7 @@ def load_flow_module(target: str) -> Workflow:
     else:
         mod = importlib.import_module(module_name)
 
-    base_dir = getattr(mod, "BASE_DIR", None)
-    if not base_dir and getattr(mod, "__file__", None):
-        base_dir = str(Path(mod.__file__).resolve().parents[1])
+    base_dir = getattr(mod, "BASE_DIR", None) or str(project_root())
     name = str(getattr(mod, "NAME", None) or getattr(mod, "__name__", "workflow"))
     dry_run = bool(getattr(mod, "DRY_RUN", False))
 
@@ -131,7 +130,10 @@ class FlowRunner:
         start_token = start or self.entry
         flow_id, module_start = self._parse_start(start_token)
 
-        result = FlowRunResult(flow_name=self.workflow.name or self.workflow.id, success=True)
+        result = FlowRunResult(
+            flow_name=self.workflow.display_name,
+            success=True,
+        )
         current_flow = flow_id
         guard = 0
         max_guard = max(50, sum(len(f.modules) for f in self.workflow.flows) * 20)
@@ -157,6 +159,8 @@ class FlowRunner:
                 result.message = str(exc)
                 result.feedback = str(exc)
                 break
+
+            logger.info("流程开始 (%s)", flow.display_name)
 
             flow_ok, last_settled = self._run_flow(
                 flow,
@@ -192,14 +196,15 @@ class FlowRunner:
             result.success = False
             if last_settled:
                 result.message = (
-                    last_settled.error or last_settled.feedback or f"流程失败: {flow.id}"
+                    last_settled.error
+                    or last_settled.feedback
+                    or f"流程失败: {flow.display_name}"
                 )
                 result.feedback = last_settled.feedback or result.message
             nxt = resolve_next(flow.fail, self.ctx, ctx_value, default=END)
             if nxt in {END, FAIL, None, ""}:
                 break
             current_flow = nxt
-
         if result.success and not result.message:
             feedbacks = [s.feedback for s in result.steps if s.feedback]
             result.message = "流程完成"

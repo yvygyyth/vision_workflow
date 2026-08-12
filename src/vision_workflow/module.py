@@ -88,7 +88,7 @@ class Flow:
     entry: str
     success: NextRef = END  # 本流程成功结束后，下一个流程 id
     fail: NextRef | None = None  # 本流程失败后；None → 结束整个工作流
-    name: str = ""
+    name: str = ""  # UI / 日志展示名；空则回退为 id
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
 
@@ -99,6 +99,10 @@ class Flow:
         self._by_id = {m.id: m for m in self.modules}
         if self.entry not in self._by_id:
             raise KeyError(f"流程 [{self.id}] 入口模块不存在: {self.entry}")
+
+    @property
+    def display_name(self) -> str:
+        return self.name.strip() or self.id
 
     def get(self, module_id: str) -> Module:
         if module_id not in self._by_id:
@@ -115,7 +119,7 @@ class Workflow:
     flows: list[Flow]
     entry: str
     id: str = "workflow"
-    name: str = ""
+    name: str = ""  # UI 展示名；空则回退为 id
     dry_run: bool = False
     base_dir: str | None = None
 
@@ -129,10 +133,18 @@ class Workflow:
         if self.entry not in self._by_id:
             raise KeyError(f"入口流程不存在: {self.entry}，可选: {list(self._by_id)}")
 
+    @property
+    def display_name(self) -> str:
+        return self.name.strip() or self.id
+
     def get(self, flow_id: str) -> Flow:
         if flow_id not in self._by_id:
             raise KeyError(f"未知流程: {flow_id}，可选: {list(self._by_id)}")
         return self._by_id[flow_id]
+
+    def flow_choices(self) -> list[tuple[str, str]]:
+        """UI 用：(display_name, flow_id)。"""
+        return [(f.display_name, f.id) for f in self.flows]
 
 
 def goto(target_id: str) -> Callable[[FlowContext, Any], str]:

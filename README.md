@@ -8,6 +8,15 @@ Flow    模块组成的一段流程
 Workflow 流程组成的复杂流程
 ```
 
+## 流程名
+
+```python
+Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
+Workflow(id="main", name="邮箱一键领取", entry="mail", flows=[...])
+```
+
+`name` 给 UI / 日志展示；不填则回退为 `id`。
+
 ## 模块
 
 ```python
@@ -22,7 +31,11 @@ Module(
 ## 目录
 
 ```text
-config/                     # 业务配置（在 src 外，规范且方便改）
+config/flow/                # 工作流包（仍用 config.flow 加载）
+  __init__.py               # WORKFLOW 聚合
+  mail/                     # 一个子流程一个文件夹
+  wrap_up/
+  handle_fail/
 data/samples/               # 模板图
 src/vision_workflow/
   module.py / events.py / flow/
@@ -42,7 +55,7 @@ vision-workflow ui
 python -m vision_workflow.ui
 ```
 
-界面：流程目标、干跑、运行、停止、日志、状态。
+界面：工作流名称、流程下拉（按 `name`）、干跑、运行、停止、日志、状态。
 
 ## 打包 exe
 

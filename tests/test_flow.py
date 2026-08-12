@@ -169,8 +169,11 @@ def test_config_workflow_load() -> None:
         sys.path.insert(0, str(root))
     wf = load_flow_module("config.flow")
     assert wf.entry == "mail"
+    assert wf.display_name == "邮箱一键领取"
     assert {f.id for f in wf.flows} >= {"mail", "wrap_up", "handle_fail"}
     mail = wf.get("mail")
+    assert mail.display_name == "收邮件"
     assert mail.entry == "click_email"
     assert mail.get("click_email").success == "one_click"
     assert mail.get("click_email").fail is None
+    assert ("收邮件", "mail") in wf.flow_choices()

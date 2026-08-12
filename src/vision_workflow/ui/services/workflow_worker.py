@@ -68,9 +68,13 @@ class WorkflowWorker:
                 cancel_event=self._cancel,
             )
             mode = "dry-run" if request.dry_run else "live"
-            logger.info("开始执行 target=%s mode=%s", request.target, mode)
-            result = runner.run(start=request.start or None)
-        except BaseException as exc:  # noqa: BLE001
+            logger.info(
+                "开始执行 工作流=%s 入口=%s mode=%s",
+                workflow.display_name,
+                request.start or workflow.entry,
+                mode,
+            )
+            result = runner.run(start=request.start or None)        except BaseException as exc:  # noqa: BLE001
             error = exc
             logger.exception("执行失败: %s", exc)
         self._on_finished(result, error)
