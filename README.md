@@ -63,11 +63,13 @@ Module(
 ## 目录
 
 ```text
-data/samples/<流程id>/          # 模板图（打包后在 exe 旁，可热更）
+data/samples/<流程id>/              # 模板图（打包后在 exe 旁，可热更）
 src/vision_workflow/
-  flows/                        # 内置工作流（写死入口，随程序打包）
-    __init__.py                 # WORKFLOW
-    mail/ wrap_up/ …
+  flows/
+    __init__.py                     # WORKFLOWS 目录注册
+    parts/                          # Flow 积木（内部编排）
+    workflows/                      # 一目录一个复杂流程
+      main/                         # 邮箱一键领取
   module.py / events.py / flow/
   ui/
 scripts/build_exe.py

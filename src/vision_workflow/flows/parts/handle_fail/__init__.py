@@ -1,6 +1,6 @@
 """子流程：失败处理。"""
 
-from vision_workflow.flows.handle_fail.actions import action_handle_fail
+from vision_workflow.flows.parts.handle_fail.actions import action_handle_fail
 from vision_workflow.module import END, OK, Flow, Module, onward
 
 FLOW = Flow(

@@ -1,23 +1,17 @@
 """内置复杂流程目录。
 
-Flow / Module 仅供脚本编排；面向用户的可执行单位是 Workflow（复杂流程）。
+Flow / Module 仅供脚本编排（见 ``parts/``）；
+面向用户的可执行单位是 Workflow（见 ``workflows/``）。
+
+新增复杂流程：在 ``workflows/<id>/`` 导出 ``WORKFLOW``，再加入下方 ``WORKFLOWS``。
 """
 
-from vision_workflow.flows.dang_qing_ge import FLOW as dang_qing_ge_flow
-from vision_workflow.flows.handle_fail import FLOW as handle_fail_flow
-from vision_workflow.flows.mail import FLOW as mail_flow
-from vision_workflow.flows.wrap_up import FLOW as wrap_up_flow
+from vision_workflow.flows.workflows.main import WORKFLOW as main_workflow
 from vision_workflow.module import Workflow
 
-WORKFLOW = Workflow(
-    id="main",
-    name="邮箱一键领取",
-    flows=[mail_flow, dang_qing_ge_flow, wrap_up_flow, handle_fail_flow],
-    entry="mail",
-)
+WORKFLOW = main_workflow  # CLI / 默认入口兼容
 
-# 用户可选的复杂流程目录（未来可扩展多项 / 自定义）
-WORKFLOWS: list[Workflow] = [WORKFLOW]
+WORKFLOWS: list[Workflow] = [main_workflow]
 
 
 def get_workflow(workflow_id: str) -> Workflow:

@@ -1,6 +1,6 @@
 """子流程：丹青阁。"""
 
-from vision_workflow.flows.dang_qing_ge.actions import (
+from vision_workflow.flows.parts.dang_qing_ge.actions import (
     click_close,
     click_day_libao,
     click_icon,
