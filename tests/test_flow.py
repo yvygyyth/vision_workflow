@@ -254,7 +254,7 @@ def test_config_workflow_load() -> None:
 
     wf = WORKFLOW
     assert wf.entry == "mail"
-    assert wf.display_name == "邮箱一键领取"
+    assert wf.display_name == "名将杀免费资源每日领取"
     assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge", "wrap_up", "handle_fail"}
     mail = wf.get("mail")
     assert mail.display_name == "收邮件"
@@ -270,7 +270,7 @@ def test_config_workflow_load() -> None:
     assert isinstance(wf.get("mail").config, FlowConfig)
     assert len(WORKFLOWS) >= 1
     assert WORKFLOWS[0].id == "main"
-    assert ("邮箱一键领取", "main") in workflow_choices()
+    assert ("名将杀免费资源每日领取", "main") in workflow_choices()
 
 
 def test_module_retry_on_miss() -> None:

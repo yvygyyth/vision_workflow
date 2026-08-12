@@ -12,7 +12,7 @@ Workflow 流程组成的复杂流程
 
 ```python
 Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
-Workflow(id="main", name="邮箱一键领取", entry="mail", flows=[...])
+Workflow(id="main", name="名将杀免费资源每日领取", entry="mail", flows=[...])
 ```
 
 `name` 给 UI / 日志展示；不填则回退为 `id`。
@@ -69,7 +69,7 @@ src/vision_workflow/
     __init__.py                     # WORKFLOWS 目录注册
     parts/                          # Flow 积木（内部编排）
     workflows/                      # 一目录一个复杂流程
-      main/                         # 邮箱一键领取
+      main/                         # 名将杀免费资源每日领取
   module.py / events.py / flow/
   ui/
 scripts/build_exe.py
