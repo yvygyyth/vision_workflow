@@ -198,6 +198,37 @@ def test_config_workflow_load() -> None:
     assert wf.flow_delay_ms == 200
 
 
+def test_module_retry_before_real_fail() -> None:
+    hits = {"n": 0}
+
+    def flaky(ctx):
+        hits["n"] += 1
+        if hits["n"] < 3:
+            return Settled.reject("temp", feedback="temp")
+        return Settled.resolve(True)
+
+    workflow = Workflow(
+        id="w",
+        entry="f",
+        module_delay_ms=0,
+        flow_delay_ms=0,
+        flows=[
+            Flow(
+                id="f",
+                entry="a",
+                modules=[
+                    Module(id="a", event=flaky, config={"retry": 2}),
+                ],
+                success=END,
+            )
+        ],
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    assert hits["n"] == 3
+    assert result.path == ["f.a"]
+
+
 def test_resolve_delay_ms() -> None:
     assert resolve_delay_ms({}, 100) == 100
     assert resolve_delay_ms({"delay_ms": 50}, 100) == 50

@@ -8,8 +8,15 @@ import threading
 from pathlib import Path
 
 from vision_workflow.flow.context import FlowContext
+from vision_workflow.middleware import (
+    FlowScope,
+    ModuleScope,
+    build_flow_middlewares,
+    execute_module,
+    run_flow_onion,
+)
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
-from vision_workflow.module import END, FAIL, Flow, Module, Workflow, resolve_delay_ms, resolve_next
+from vision_workflow.module import END, FAIL, Flow, Module, Workflow
 from vision_workflow.paths import project_root
 from vision_workflow.promise import Settled
 
@@ -119,20 +126,6 @@ class WorkflowRunner:
     def _cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
 
-    def _sleep_ms(self, delay_ms: int, *, reason: str) -> None:
-        if delay_ms <= 0 or self._cancelled():
-            return
-        logger.info("延迟 %sms（%s）", delay_ms, reason)
-        self.ctx.sleep(delay_ms / 1000.0)
-
-    def _after_module_delay(self, mod: Module) -> None:
-        delay = resolve_delay_ms(mod.config, self.workflow.module_delay_ms)
-        self._sleep_ms(delay, reason=f"模块后 {mod.name or mod.id}")
-
-    def _after_flow_delay(self, flow: Flow) -> None:
-        delay = resolve_delay_ms(flow.config, self.workflow.flow_delay_ms)
-        self._sleep_ms(delay, reason=f"流程后 {flow.display_name}")
-
     def run(self, start: str | None = None) -> FlowRunResult:
         start_token = start or self.entry
         flow_id, module_start = self._parse_start(start_token)
@@ -168,13 +161,25 @@ class WorkflowRunner:
                 break
 
             logger.info("流程开始 (%s)", flow.display_name)
-
-            flow_ok, last_settled = self._run_flow(
-                flow,
-                result,
-                start_module=module_start if current_flow == flow_id else None,
-            )
+            start_for_attempt = module_start if current_flow == flow_id else None
             module_start = None
+            first_shot = {"pending": start_for_attempt, "used": False}
+
+            scope = FlowScope(
+                ctx=self.ctx,
+                flow=flow,
+                workflow=self.workflow,
+                cancelled=self._cancelled,
+            )
+
+            def _core(flow: Flow = flow) -> Settled:
+                start = None
+                if not first_shot["used"]:
+                    start = first_shot["pending"]
+                    first_shot["used"] = True
+                return self._run_flow_modules(flow, result, start_module=start)
+
+            settled = run_flow_onion(scope, build_flow_middlewares(scope), _core)
 
             if self._cancelled():
                 result.success = False
@@ -182,38 +187,27 @@ class WorkflowRunner:
                 result.feedback = result.message
                 break
 
-            if not flow_ok and last_settled is None:
-                break
-
-            ctx_value = last_settled.value if last_settled else None
-            if flow_ok:
-                nxt = resolve_next(flow.success, self.ctx, ctx_value, default=END)
+            nxt = scope.next_flow_id
+            if settled.ok:
                 if nxt == FAIL:
                     result.success = False
-                    result.message = last_settled.error if last_settled else "流程失败"
-                    result.feedback = (
-                        (last_settled.feedback if last_settled else None) or result.message
-                    )
+                    result.message = settled.error or "流程失败"
+                    result.feedback = settled.feedback or result.message
                     break
-                if nxt == END:
+                if nxt in {END, None, ""}:
                     break
-                self._after_flow_delay(flow)
                 current_flow = nxt
                 continue
 
             result.success = False
-            if last_settled:
-                result.message = (
-                    last_settled.error
-                    or last_settled.feedback
-                    or f"流程失败: {flow.display_name}"
-                )
-                result.feedback = last_settled.feedback or result.message
-            nxt = resolve_next(flow.fail, self.ctx, ctx_value, default=END)
+            result.message = (
+                settled.error or settled.feedback or f"流程失败: {flow.display_name}"
+            )
+            result.feedback = settled.feedback or result.message
             if nxt in {END, FAIL, None, ""}:
                 break
-            self._after_flow_delay(flow)
             current_flow = nxt
+
         if result.success and not result.message:
             feedbacks = [s.feedback for s in result.steps if s.feedback]
             result.message = "流程完成"
@@ -249,10 +243,14 @@ class WorkflowRunner:
                         break
                 if mod is None or flow is None:
                     raise KeyError(f"未知模块: {target}") from None
-        settled, _ = mod.run(
-            self.ctx,
-            default_success=flow.default_success_for(mod.id),
+        scope = ModuleScope(
+            ctx=self.ctx,
+            module=mod,
+            flow=flow,
+            workflow=self.workflow,
+            cancelled=self._cancelled,
         )
+        settled, _ = execute_module(scope)
         return settled
 
     def _parse_start(self, token: str) -> tuple[str, str | None]:
@@ -263,60 +261,55 @@ class WorkflowRunner:
             return token, None
         return self.entry, token
 
-    def _run_flow(
+    def _run_flow_modules(
         self,
         flow: Flow,
         result: FlowRunResult,
         *,
         start_module: str | None,
-    ) -> tuple[bool, Settled | None]:
+    ) -> Settled:
+        """跑完一轮流程内模块（可被流程级 Retry 多次调用）。"""
         current = start_module or flow.entry
-        last: Settled | None = None
+        last = Settled.reject("空流程")
         visits: dict[str, int] = {}
         guard = 0
         max_guard = max(20, len(flow.modules) * 20)
 
         while current not in {END, FAIL, None, ""}:
             if self._cancelled():
-                result.success = False
-                result.message = "用户取消"
-                result.feedback = result.message
-                return False, last
+                return Settled.reject("用户取消", feedback="用户取消")
 
             guard += 1
             if guard > max_guard:
-                result.success = False
-                result.message = f"流程 [{flow.id}] 疑似死循环，已中止"
-                result.feedback = result.message
-                return False, last
+                return Settled.reject(
+                    f"流程 [{flow.id}] 疑似死循环，已中止",
+                    feedback=f"流程 [{flow.id}] 疑似死循环，已中止",
+                )
 
             try:
                 mod = flow.get(current)
             except KeyError as exc:
-                result.success = False
-                result.message = str(exc)
-                result.feedback = str(exc)
-                return False, last
+                return Settled.reject(str(exc), feedback=str(exc))
 
             if not mod.enabled:
-                result.success = False
-                result.message = f"模块已禁用: {flow.id}.{mod.id}"
-                result.feedback = result.message
-                return False, last
+                msg = f"模块已禁用: {flow.id}.{mod.id}"
+                return Settled.reject(msg, feedback=msg)
 
             visits[mod.id] = visits.get(mod.id, 0) + 1
             if visits[mod.id] > max_guard:
-                result.success = False
-                result.message = f"模块 [{flow.id}.{mod.id}] 访问次数过多"
-                result.feedback = result.message
-                return False, last
+                msg = f"模块 [{flow.id}.{mod.id}] 访问次数过多"
+                return Settled.reject(msg, feedback=msg)
 
             step_id = f"{flow.id}.{mod.id}"
             result.path.append(step_id)
-            settled, nxt = mod.run(
-                self.ctx,
-                default_success=flow.default_success_for(mod.id),
+            scope = ModuleScope(
+                ctx=self.ctx,
+                module=mod,
+                flow=flow,
+                workflow=self.workflow,
+                cancelled=self._cancelled,
             )
+            settled, nxt = execute_module(scope)
             last = settled
             result.steps.append(
                 StepRunResult(
@@ -329,13 +322,13 @@ class WorkflowRunner:
             )
 
             if nxt == FAIL:
-                return False, settled
+                return settled if not settled.ok else Settled.reject("流程 FAIL", value=settled.value)
 
             if nxt == END:
-                return settled.ok, settled
+                if settled.ok:
+                    return settled
+                return settled
 
-            # 还有下一模块：执行后延迟
-            self._after_module_delay(mod)
             current = nxt
 
-        return True, last
+        return last if last.ok else last

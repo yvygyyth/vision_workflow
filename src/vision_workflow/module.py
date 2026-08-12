@@ -59,35 +59,8 @@ class Module:
     fail: NextRef | None = None  # None → 结束当前流程（END）
     name: str = ""
     enabled: bool = True
-    config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
-
-    def run(self, ctx: FlowContext, *, default_success: str = END) -> tuple[Settled, str]:
-        label = self.name or self.id
-        logger.info("模块开始 (%s)", label)
-
-        try:
-            raw = self.event(ctx)
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("模块 event 异常 (%s): %s", self.id, exc)
-            settled = Settled.reject(str(exc), feedback=f"({self.id}) event 异常")
-            nxt = resolve_next(self.fail, ctx, None, default=END)
-            logger.info("模块结束 (%s) ok=False → %s", label, nxt)
-            return settled, nxt
-
-        if isinstance(raw, Settled):
-            settled = raw
-        else:
-            settled = Settled.resolve(raw)
-
-        if settled.ok:
-            nxt = resolve_next(self.success, ctx, settled.value, default=default_success)
-        else:
-            nxt = resolve_next(self.fail, ctx, settled.value, default=END)
-        settled.feedback = settled.feedback or (
-            f"({self.id}) 成功 → {nxt}" if settled.ok else f"({self.id}) 失败 → {nxt}"
-        )
-        logger.info("模块结束 (%s) ok=%s → %s", label, settled.ok, nxt)
-        return settled, nxt
+    config: dict[str, Any] = field(default_factory=dict)
+    # 常用: delay_ms / retry / retry_delay_ms
 
 
 @dataclass
@@ -100,7 +73,8 @@ class Flow:
     success: NextRef = END  # 本流程成功结束后，下一个流程 id
     fail: NextRef | None = None  # 本流程失败后；None → 结束整个工作流
     name: str = ""  # UI / 日志展示名；空则回退为 id
-    config: dict[str, Any] = field(default_factory=dict)  # 额外属性，如 delay_ms
+    config: dict[str, Any] = field(default_factory=dict)
+    # 常用: delay_ms / retry / retry_delay_ms
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
     _next_success: dict[str, str] = field(init=False, repr=False)

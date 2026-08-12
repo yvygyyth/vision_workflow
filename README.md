@@ -17,20 +17,29 @@ Workflow(id="main", name="邮箱一键领取", entry="mail", flows=[...])
 
 `name` 给 UI / 日志展示；不填则回退为 `id`。
 
-## 延迟与 config
+## 延迟 / 重试（洋葱中间件）
 
-执行后延迟（进入下一项之前）：
+`config` 扩展属性，由中间件洋葱处理（不必在 Runner 里堆逻辑）：
 
-- 全局默认：模块之间 **100ms**，流程之间 **200ms**（`Workflow.module_delay_ms` / `flow_delay_ms`）
-- 单个模块 / 流程可用 `config={"delay_ms": N}` 覆盖；`0` 表示不延迟
-
-```python
-Module(id="a", event=..., success="b", config={"delay_ms": 300})
-Flow(id="mail", ..., config={"delay_ms": 500})
-Workflow(..., module_delay_ms=100, flow_delay_ms=200)
+```text
+Resolve+Delay → Retry → Event
 ```
 
-`config` 还可放其它扩展属性。
+| 键 | 含义 |
+|----|------|
+| `delay_ms` | 成功后、进入下一项前的等待；不写则用 Workflow 全局默认 |
+| `retry` | 失败后重试次数；耗尽才算真失败（总尝试 = 1 + retry） |
+| `retry_delay_ms` | 两次重试之间的等待 |
+
+```python
+Module(
+    id="one_click",
+    event=...,
+    fail="click_email",
+    config={"retry": 2, "retry_delay_ms": 200, "delay_ms": 100},
+)
+Flow(id="mail", ..., config={"retry": 1, "delay_ms": 500})
+```
 
 ## 模块
 
