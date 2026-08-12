@@ -1,7 +1,5 @@
 """Module / Flow / Workflow 测试。"""
 
-from pathlib import Path
-
 from vision_workflow.flow import WorkflowRunner, load_flow_module
 from vision_workflow.module import (
     END,
@@ -255,12 +253,9 @@ def test_self_loop_again() -> None:
 
 
 def test_config_workflow_load() -> None:
-    import sys
+    from vision_workflow.flows import DEFAULT_FLOW_TARGET
 
-    root = Path(__file__).resolve().parents[1]
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-    wf = load_flow_module("config.flow")
+    wf = load_flow_module(DEFAULT_FLOW_TARGET)
     assert wf.entry == "mail"
     assert wf.display_name == "邮箱一键领取"
     assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge", "wrap_up", "handle_fail"}

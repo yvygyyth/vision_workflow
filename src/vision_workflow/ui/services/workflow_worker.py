@@ -9,16 +9,16 @@ from dataclasses import dataclass
 
 from vision_workflow.config import reload_settings
 from vision_workflow.flow import WorkflowRunner, load_flow_module
+from vision_workflow.flows import DEFAULT_FLOW_TARGET
 from vision_workflow.logging_utils import setup_logging
 from vision_workflow.models.flow import FlowRunResult
-from vision_workflow.paths import ensure_runtime_path, project_root
+from vision_workflow.paths import project_root
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class RunRequest:
-    target: str
     start: str | None = None
 
 
@@ -55,14 +55,14 @@ class WorkflowWorker:
         result: FlowRunResult | None = None
         error: BaseException | None = None
         try:
-            root = ensure_runtime_path()
             setup_logging(reload_settings(), gui=True)
-            workflow = load_flow_module(request.target)
+            workflow = load_flow_module(DEFAULT_FLOW_TARGET)
+            root = project_root()
             if workflow.base_dir is None:
                 workflow.base_dir = str(root)
             runner = WorkflowRunner(
                 workflow,
-                base_dir=project_root(),
+                base_dir=root,
                 cancel_event=self._cancel,
             )
             logger.info(
@@ -71,7 +71,7 @@ class WorkflowWorker:
                 request.start or workflow.entry,
             )
             result = runner.run(start=request.start or None)
-        except BaseException as exc:  # noqa: BLE001
+        except BaseException as exc:
             error = exc
-            logger.exception("执行失败: %s", exc)
+            logger.exception("执行失败")
         self._on_finished(result, error)

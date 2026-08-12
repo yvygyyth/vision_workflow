@@ -8,8 +8,8 @@ import queue
 import customtkinter as ctk
 
 from vision_workflow.flow import load_flow_module
+from vision_workflow.flows import DEFAULT_FLOW_TARGET
 from vision_workflow.models.flow import FlowRunResult
-from vision_workflow.paths import ensure_runtime_path
 from vision_workflow.ui import theme
 from vision_workflow.ui.panels.control_panel import ControlPanel
 from vision_workflow.ui.panels.log_panel import LogPanel
@@ -40,7 +40,6 @@ class MainWindow(ctk.CTk):
             on_run=self._start,
             on_stop=self._stop,
             on_clear=self._clear_log,
-            on_reload=self._reload_flows,
         )
         self.controls.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 8))
 
@@ -54,18 +53,16 @@ class MainWindow(ctk.CTk):
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(80, self._pump)
-        self.after(100, self._reload_flows)
+        self.after(100, self._load_flows)
 
-    def _reload_flows(self) -> None:
-        ensure_runtime_path()
-        target = self.controls.target()
+    def _load_flows(self) -> None:
         try:
-            workflow = load_flow_module(target)
+            workflow = load_flow_module(DEFAULT_FLOW_TARGET)
         except Exception as exc:  # noqa: BLE001
             self.controls.set_workflow_meta("Vision Workflow")
             self.controls.set_flow_choices([])
             self.status.set_status(f"加载失败: {exc}", ok=False)
-            self.logs.append(f"加载 {target} 失败: {exc}")
+            self.logs.append(f"加载工作流失败: {exc}")
             return
 
         self.title(f"Vision Workflow · {workflow.display_name}")
@@ -80,18 +77,17 @@ class MainWindow(ctk.CTk):
         if self.worker.busy:
             self.status.set_status("已有任务在运行", ok=False)
             return
-        target = self.controls.target()
         flow_id = self.controls.selected_flow_id()
         flow_name = self.controls.selected_flow_name() or flow_id or "入口"
         if not flow_id:
-            self.status.set_status("请先刷新并选择流程", ok=False)
+            self.status.set_status("请先选择流程", ok=False)
             return
 
         self.controls.set_running(True)
         self.status.set_status(f"运行中：{flow_name}")
-        self.logs.append(f"—— 开始运行：{flow_name}（{target} / {flow_id}）——")
+        self.logs.append(f"—— 开始运行：{flow_name}（{flow_id}）——")
         try:
-            self.worker.start(RunRequest(target=target, start=flow_id))
+            self.worker.start(RunRequest(start=flow_id))
         except Exception as exc:  # noqa: BLE001
             self.controls.set_running(False)
             self.status.set_status(f"启动失败: {exc}", ok=False)

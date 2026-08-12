@@ -6,13 +6,11 @@ import customtkinter as ctk
 
 from vision_workflow.config import reload_settings
 from vision_workflow.logging_utils import setup_logging
-from vision_workflow.paths import ensure_runtime_path
 from vision_workflow.ui import theme
 from vision_workflow.ui.window import MainWindow
 
 
 def run_app() -> None:
-    ensure_runtime_path()
     setup_logging(reload_settings(), gui=True)
 
     ctk.set_appearance_mode(theme.APPEARANCE)

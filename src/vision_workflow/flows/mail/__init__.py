@@ -1,6 +1,6 @@
 """子流程：收邮件。"""
 
-from config.flow.mail.actions import (
+from vision_workflow.flows.mail.actions import (
     click_email,
     click_email_close,
     click_one_click_receive,

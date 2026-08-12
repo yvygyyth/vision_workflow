@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -13,6 +11,7 @@ from rich.table import Table
 from vision_workflow import __version__
 from vision_workflow.config import reload_settings
 from vision_workflow.flow import WorkflowRunner, load_flow_module
+from vision_workflow.flows import DEFAULT_FLOW_TARGET
 from vision_workflow.logging_utils import setup_logging
 
 app = typer.Typer(
@@ -26,31 +25,23 @@ console = Console()
 
 @app.command("flow")
 def flow_cmd(
-    target: str = typer.Argument(
-        ...,
-        help="Python 流程包，如 config.flow",
-    ),
-    start: Optional[str] = typer.Option(
+    start: str | None = typer.Option(
         None,
         "--start",
         "-s",
         help="从流程 id 或 flow.module 开始",
     ),
-    only: Optional[str] = typer.Option(
+    only: str | None = typer.Option(
         None,
         "--only",
         help="只执行某一个模块（module 或 flow.module）",
     ),
-    base_dir: Optional[Path] = typer.Option(None, "--base-dir", help="模板图相对路径基准目录"),
+    base_dir: Path | None = typer.Option(None, "--base-dir", help="模板图相对路径基准目录"),
     json_out: bool = typer.Option(False, "--json", help="JSON 输出"),
 ) -> None:
-    """执行 Workflow（模块组成流程，流程再组合）。"""
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
-
+    """执行内置 Workflow（模块组成流程，流程再组合）。"""
     setup_logging(reload_settings())
-    workflow = load_flow_module(target)
+    workflow = load_flow_module(DEFAULT_FLOW_TARGET)
     runner = WorkflowRunner(workflow, base_dir=base_dir)
     if only:
         settled = runner.run_module(only)
@@ -102,6 +93,7 @@ def info_cmd() -> None:
     console.print(f"env       : {cfg.app.get('env')}")
     console.print(f"log_level : {cfg.logging.level}")
     console.print(f"root_dir  : {cfg.root_dir}")
+    console.print(f"workflow  : {DEFAULT_FLOW_TARGET}")
 
 
 @app.command("version")

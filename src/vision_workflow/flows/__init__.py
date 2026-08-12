@@ -1,21 +1,23 @@
-"""工作流入口：聚合各子流程文件夹。
+"""内置工作流：子流程各占一个子包。
 
-目录约定（一个子流程一个文件夹）::
+目录约定::
 
-    config/flow/
+    vision_workflow/flows/
       __init__.py              # WORKFLOW
       mail/
         __init__.py            # FLOW
-        actions.py             # 本流程专属事件（强相关就放旁边）
+        actions.py
       wrap_up/
       handle_fail/
 """
 
-from config.flow.dang_qing_ge import FLOW as dang_qing_ge_flow
-from config.flow.handle_fail import FLOW as handle_fail_flow
-from config.flow.mail import FLOW as mail_flow
-from config.flow.wrap_up import FLOW as wrap_up_flow
+from vision_workflow.flows.dang_qing_ge import FLOW as dang_qing_ge_flow
+from vision_workflow.flows.handle_fail import FLOW as handle_fail_flow
+from vision_workflow.flows.mail import FLOW as mail_flow
+from vision_workflow.flows.wrap_up import FLOW as wrap_up_flow
 from vision_workflow.module import Workflow
+
+DEFAULT_FLOW_TARGET = "vision_workflow.flows"
 
 FLOWS = [mail_flow, dang_qing_ge_flow, wrap_up_flow, handle_fail_flow]
 ENTRY = "mail"

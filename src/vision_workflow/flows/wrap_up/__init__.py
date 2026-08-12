@@ -1,6 +1,6 @@
 """子流程：收尾。"""
 
-from config.flow.wrap_up.actions import action_log_done
+from vision_workflow.flows.wrap_up.actions import action_log_done
 from vision_workflow.module import END, OK, Flow, Module, onward
 
 FLOW = Flow(

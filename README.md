@@ -67,19 +67,14 @@ Module(
 ## 目录
 
 ```text
-config/flow/                # 工作流包（仍用 config.flow 加载）
-  __init__.py               # WORKFLOW 聚合
-  mail/                     # 一个子流程一个文件夹
-  wrap_up/
-  handle_fail/
-data/samples/<流程id>/      # 按流程分目录的模板图
+data/samples/<流程id>/          # 模板图（打包后在 exe 旁，可热更）
 src/vision_workflow/
+  flows/                        # 内置工作流（写死入口，随程序打包）
+    __init__.py                 # WORKFLOW
+    mail/ wrap_up/ …
   module.py / events.py / flow/
-  ui/                       # 桌面界面（模块化）
-    panels/                 # 控制区、日志、状态条
-    services/               # 后台执行、日志桥
-    window.py / app.py
-scripts/build_exe.py        # PyInstaller 打包
+  ui/
+scripts/build_exe.py
 ```
 
 ## 桌面 UI
@@ -91,7 +86,7 @@ vision-workflow ui
 python -m vision_workflow.ui
 ```
 
-界面：工作流名称、流程下拉（按 `name`）、运行、停止、日志、状态。
+界面：工作流名称、流程下拉（按 `name`）、运行、停止、日志、状态。工作流入口写死为 `vision_workflow.flows`。
 
 ## 打包 exe
 
@@ -100,14 +95,14 @@ pip install -e ".[dev]"
 poe build
 ```
 
-产物：`dist/VisionWorkflow/VisionWorkflow.exe`，同级带 `config/`、`data/`（可直接改配置再开软件）。
+产物：`dist/VisionWorkflow/VisionWorkflow.exe`；流程已打进程序，同级仅带 `data/`（模板图可直接改）。
 
 ## CLI
 
 ```powershell
 poe flow
-vision-workflow flow config.flow
-vision-workflow flow config.flow -s mail
+vision-workflow flow
+vision-workflow flow -s mail
 ```
 
 ## 安装

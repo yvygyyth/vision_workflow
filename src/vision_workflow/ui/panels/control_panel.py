@@ -1,4 +1,4 @@
-"""控制区：工作流目标、流程选择、运行/停止。"""
+"""控制区：流程选择、运行/停止。"""
 
 from __future__ import annotations
 
@@ -17,8 +17,6 @@ class ControlPanel(ctk.CTkFrame):
         on_run: Callable[[], None],
         on_stop: Callable[[], None],
         on_clear: Callable[[], None],
-        on_reload: Callable[[], None],
-        default_target: str = "config.flow",
     ) -> None:
         super().__init__(master, fg_color=theme.SURFACE, corner_radius=12)
         self.grid_columnconfigure(1, weight=1)
@@ -41,33 +39,8 @@ class ControlPanel(ctk.CTkFrame):
         )
         self.subtitle_label.grid(row=1, column=0, columnspan=4, sticky="w", padx=16, pady=(0, 10))
 
-        ctk.CTkLabel(self, text="配置", font=theme.FONT_UI, text_color=theme.TEXT).grid(
-            row=2, column=0, sticky="w", padx=(16, 8), pady=6
-        )
-        self.target_var = ctk.StringVar(value=default_target)
-        self.target_entry = ctk.CTkEntry(
-            self,
-            textvariable=self.target_var,
-            font=theme.FONT_UI,
-            height=34,
-        )
-        self.target_entry.grid(row=2, column=1, columnspan=2, sticky="ew", padx=(0, 8), pady=6)
-
-        self.btn_reload = ctk.CTkButton(
-            self,
-            text="刷新",
-            command=on_reload,
-            height=34,
-            width=72,
-            fg_color="#EEF1EF",
-            hover_color="#E2E7E4",
-            text_color=theme.MUTED,
-            font=theme.FONT_UI,
-        )
-        self.btn_reload.grid(row=2, column=3, sticky="e", padx=(0, 16), pady=6)
-
         ctk.CTkLabel(self, text="流程", font=theme.FONT_UI, text_color=theme.TEXT).grid(
-            row=3, column=0, sticky="w", padx=(16, 8), pady=6
+            row=2, column=0, sticky="w", padx=(16, 8), pady=6
         )
         self.flow_var = ctk.StringVar(value="")
         self.flow_menu = ctk.CTkOptionMenu(
@@ -81,7 +54,7 @@ class ControlPanel(ctk.CTkFrame):
             button_hover_color="#255A3F",
             text_color=theme.TEXT,
         )
-        self.flow_menu.grid(row=3, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
+        self.flow_menu.grid(row=2, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
 
         self.btn_run = ctk.CTkButton(
             self,
@@ -92,7 +65,7 @@ class ControlPanel(ctk.CTkFrame):
             hover_color="#255A3F",
             font=theme.FONT_UI,
         )
-        self.btn_run.grid(row=4, column=0, columnspan=2, sticky="ew", padx=(16, 8), pady=(8, 14))
+        self.btn_run.grid(row=3, column=0, columnspan=2, sticky="ew", padx=(16, 8), pady=(8, 14))
 
         self.btn_stop = ctk.CTkButton(
             self,
@@ -105,7 +78,7 @@ class ControlPanel(ctk.CTkFrame):
             font=theme.FONT_UI,
             state="disabled",
         )
-        self.btn_stop.grid(row=4, column=2, sticky="ew", padx=8, pady=(8, 14))
+        self.btn_stop.grid(row=3, column=2, sticky="ew", padx=8, pady=(8, 14))
 
         self.btn_clear = ctk.CTkButton(
             self,
@@ -117,10 +90,7 @@ class ControlPanel(ctk.CTkFrame):
             text_color=theme.MUTED,
             font=theme.FONT_UI,
         )
-        self.btn_clear.grid(row=4, column=3, sticky="ew", padx=(8, 16), pady=(8, 14))
-
-    def target(self) -> str:
-        return self.target_var.get().strip() or "config.flow"
+        self.btn_clear.grid(row=3, column=3, sticky="ew", padx=(8, 16), pady=(8, 14))
 
     def selected_flow_id(self) -> str | None:
         label = self.flow_var.get().strip()
@@ -152,6 +122,4 @@ class ControlPanel(ctk.CTkFrame):
         state_stop = "normal" if running else "disabled"
         self.btn_run.configure(state=state_run)
         self.btn_stop.configure(state=state_stop)
-        self.btn_reload.configure(state=state_run)
-        self.target_entry.configure(state="disabled" if running else "normal")
         self.flow_menu.configure(state="disabled" if running else "normal")

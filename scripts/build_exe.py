@@ -1,4 +1,4 @@
-"""用 PyInstaller 打成 Windows 桌面程序（onedir，config/data 放在 exe 旁）。"""
+"""用 PyInstaller 打成 Windows 桌面程序（onedir；流程打进二进制，data 放 exe 旁）。"""
 
 from __future__ import annotations
 
@@ -32,11 +32,9 @@ def main() -> int:
         "VisionWorkflow",
         "--paths",
         str(ROOT / "src"),
-        "--paths",
-        str(ROOT),
-        # 自动收齐 config.flow 下所有子包，新增流程不必再改这里
+        # 内置流程随程序打包；新增子流程不必再改这里
         "--collect-submodules",
-        "config.flow",
+        "vision_workflow.flows",
         "--collect-all",
         "customtkinter",
         str(ENTRY),
@@ -44,18 +42,16 @@ def main() -> int:
     print(" ".join(cmd))
     subprocess.check_call(cmd, cwd=ROOT)
 
-    for name in ("config", "data"):
-        src = ROOT / name
-        dst = DIST / name
-        if not src.exists():
-            continue
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        print(f"copied {src} -> {dst}")
+    data_src = ROOT / "data"
+    data_dst = DIST / "data"
+    if data_src.exists():
+        if data_dst.exists():
+            shutil.rmtree(data_dst)
+        shutil.copytree(data_src, data_dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        print(f"copied {data_src} -> {data_dst}")
 
     print(f"\n完成: {DIST / 'VisionWorkflow.exe'}")
-    print("可将整个 dist/VisionWorkflow 文件夹分发；config 与 data 在 exe 同级，可直接改。")
+    print("可将整个 dist/VisionWorkflow 文件夹分发；流程已打进程序，模板图在 exe 同级 data/。")
     return 0
 
 
