@@ -11,12 +11,13 @@
       handle_fail/
 """
 
+from config.flow.dang_qing_ge import FLOW as dang_qing_ge_flow
 from config.flow.handle_fail import FLOW as handle_fail_flow
 from config.flow.mail import FLOW as mail_flow
 from config.flow.wrap_up import FLOW as wrap_up_flow
 from vision_workflow.module import Workflow
 
-FLOWS = [mail_flow, wrap_up_flow, handle_fail_flow]
+FLOWS = [mail_flow, dang_qing_ge_flow, wrap_up_flow, handle_fail_flow]
 ENTRY = "mail"
 
 WORKFLOW = Workflow(

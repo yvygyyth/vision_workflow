@@ -186,7 +186,7 @@ def test_config_workflow_load() -> None:
     wf = load_flow_module("config.flow")
     assert wf.entry == "mail"
     assert wf.display_name == "邮箱一键领取"
-    assert {f.id for f in wf.flows} >= {"mail", "wrap_up", "handle_fail"}
+    assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge", "wrap_up", "handle_fail"}
     mail = wf.get("mail")
     assert mail.display_name == "收邮件"
     assert mail.entry == "click_email"
@@ -194,6 +194,11 @@ def test_config_workflow_load() -> None:
     assert mail.default_success_for("click_email") == "one_click"
     assert mail.get("click_email").fail is None
     assert ("收邮件", "mail") in wf.flow_choices()
+    dqg = wf.get("dang_qing_ge")
+    assert dqg.display_name == "丹青阁"
+    assert dqg.entry == "icon"
+    assert dqg.default_success_for("icon") == "day_libao"
+    assert ("丹青阁", "dang_qing_ge") in wf.flow_choices()
     assert wf.module_delay_ms == 100
     assert wf.flow_delay_ms == 200
 
