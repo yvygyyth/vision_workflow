@@ -43,11 +43,12 @@ Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_
 `event` 必须返回 `on` 里的某个 key，否则报错并结束当前流程。`on[key]` 是处理函数，拿到完整 `ModuleContext`，返回下一模块 id（或 `END` / `FAIL`）。
 
 ```python
+from vision_workflow.events import click_image
 from vision_workflow.module import MISS, OK, Module, abort, onward, to
 
 Module(
     id="click_email",
-    event=click("data/ming_jiang_sha/mail/email.png"),
+    event=click_image("data/ming_jiang_sha/mail/email.png"),
     on={OK: onward, MISS: abort},  # onward=下一模块；abort=失败结束本流程
 )
 Module(
