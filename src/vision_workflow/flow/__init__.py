@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import threading
 from pathlib import Path
 
 from vision_workflow.flow.context import FlowContext
@@ -109,17 +110,22 @@ class FlowRunner:
         *,
         base_dir: Path | None = None,
         dry_run: bool | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> None:
         self.workflow = workflow
         root = Path(workflow.base_dir) if workflow.base_dir else (base_dir or Path.cwd())
         self.base_dir = root.resolve()
         self.dry_run = workflow.dry_run if dry_run is None else dry_run
         self.entry = workflow.entry
+        self.cancel_event = cancel_event
         self.ctx = FlowContext(
             base_dir=self.base_dir,
             dry_run=self.dry_run,
             defaults=MatchOptions(),
         )
+
+    def _cancelled(self) -> bool:
+        return self.cancel_event is not None and self.cancel_event.is_set()
 
     def run(self, start: str | None = None) -> FlowRunResult:
         start_token = start or self.entry
@@ -131,6 +137,12 @@ class FlowRunner:
         max_guard = max(50, sum(len(f.modules) for f in self.workflow.flows) * 20)
 
         while current_flow not in {END, FAIL, None, ""}:
+            if self._cancelled():
+                result.success = False
+                result.message = "用户取消"
+                result.feedback = result.message
+                break
+
             guard += 1
             if guard > max_guard:
                 result.success = False
@@ -153,8 +165,13 @@ class FlowRunner:
             )
             module_start = None
 
+            if self._cancelled():
+                result.success = False
+                result.message = "用户取消"
+                result.feedback = result.message
+                break
+
             if not flow_ok and last_settled is None:
-                # 流程内部已写入错误并应终止
                 break
 
             ctx_value = last_settled.value if last_settled else None
@@ -163,22 +180,24 @@ class FlowRunner:
                 if nxt == FAIL:
                     result.success = False
                     result.message = last_settled.error if last_settled else "流程失败"
-                    result.feedback = (last_settled.feedback if last_settled else None) or result.message
+                    result.feedback = (
+                        (last_settled.feedback if last_settled else None) or result.message
+                    )
                     break
                 if nxt == END:
                     break
                 current_flow = nxt
                 continue
 
-            # 当前 Flow 失败
             result.success = False
             if last_settled:
-                result.message = last_settled.error or last_settled.feedback or f"流程失败: {flow.id}"
+                result.message = (
+                    last_settled.error or last_settled.feedback or f"流程失败: {flow.id}"
+                )
                 result.feedback = last_settled.feedback or result.message
             nxt = resolve_next(flow.fail, self.ctx, ctx_value, default=END)
             if nxt in {END, FAIL, None, ""}:
                 break
-            # 失败跳到另一个流程，继续跑（整体仍记为曾失败；若后续要“恢复成功”可再扩展）
             current_flow = nxt
 
         if result.success and not result.message:
@@ -202,7 +221,6 @@ class FlowRunner:
             flow_id, module_id = target.split(".", 1)
             mod = self.workflow.get(flow_id).get(module_id)
         else:
-            # 在入口流程中找；找不到再全局搜
             try:
                 mod = self.workflow.get(self.entry).get(target)
             except KeyError:
@@ -222,7 +240,6 @@ class FlowRunner:
             return flow_id, module_id
         if token in self.workflow._by_id:
             return token, None
-        # 当作入口流程里的模块 id
         return self.entry, token
 
     def _run_flow(
@@ -239,6 +256,12 @@ class FlowRunner:
         max_guard = max(20, len(flow.modules) * 20)
 
         while current not in {END, FAIL, None, ""}:
+            if self._cancelled():
+                result.success = False
+                result.message = "用户取消"
+                result.feedback = result.message
+                return False, last
+
             guard += 1
             if guard > max_guard:
                 result.success = False
@@ -292,5 +315,4 @@ class FlowRunner:
         return True, last
 
 
-# 别名
 WorkflowRunner = FlowRunner

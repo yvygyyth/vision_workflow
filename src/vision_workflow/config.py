@@ -9,8 +9,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from vision_workflow.paths import project_root
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
+
+ROOT_DIR = project_root()
 
 
 class AppSettings(BaseSettings):
@@ -33,7 +35,7 @@ class LoggingConfig(BaseModel):
 class RuntimeConfig(BaseModel):
     app: dict[str, Any] = Field(default_factory=dict)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
-    root_dir: Path = ROOT_DIR
+    root_dir: Path = Field(default_factory=project_root)
 
     def resolve_path(self, path: str | Path) -> Path:
         p = Path(path)
@@ -48,7 +50,7 @@ def get_settings(_config_path: str | None = None) -> RuntimeConfig:
     return RuntimeConfig(
         app={"name": "vision-workflow", "env": env.env},
         logging=LoggingConfig(level=env.log_level, dir="logs"),
-        root_dir=ROOT_DIR,
+        root_dir=project_root(),
     )
 
 

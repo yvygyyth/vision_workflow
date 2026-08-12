@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.26",
     "opencv-python-headless>=4.8",
     "pyautogui>=0.9.54",
+    "customtkinter>=5.2",
 ]
 
 [project.optional-dependencies]
@@ -28,10 +29,12 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.4",
     "poethepoet>=0.32",
+    "pyinstaller>=6.0",
 ]
 
 [project.scripts]
 vision-workflow = "vision_workflow.cli:app"
+vision-workflow-ui = "vision_workflow.ui.app:run_app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -48,7 +51,9 @@ target-version = "py310"
 [tool.poe.tasks]
 flow = "vision-workflow flow config.flow"
 dry = "vision-workflow flow config.flow --dry-run"
+ui = "vision-workflow ui"
 info = "vision-workflow info"
 version = "vision-workflow version"
 test = "pytest"
 lint = "ruff check src tests config"
+build = "python scripts/build_exe.py"

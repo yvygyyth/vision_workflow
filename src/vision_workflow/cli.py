@@ -91,6 +91,14 @@ def flow_cmd(
     raise typer.Exit(code=0 if result.success else 1)
 
 
+@app.command("ui")
+def ui_cmd() -> None:
+    """打开桌面界面。"""
+    from vision_workflow.ui import run_app
+
+    run_app()
+
+
 @app.command("info")
 def info_cmd() -> None:
     """查看当前运行配置。"""

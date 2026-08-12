@@ -8,9 +8,11 @@ typer>=0.12
 numpy>=1.26
 opencv-python-headless>=4.8
 pyautogui>=0.9.54
+customtkinter>=5.2
 
 # 开发
 pytest>=8.0
 pytest-cov>=5.0
 ruff>=0.4
 poethepoet>=0.32
+pyinstaller>=6.0
