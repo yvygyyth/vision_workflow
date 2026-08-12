@@ -1,4 +1,4 @@
-"""控制区：流程选择、运行/停止。"""
+"""控制区：复杂流程选择、运行/停止。"""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class ControlPanel(ctk.CTkFrame):
         super().__init__(master, fg_color=theme.SURFACE, corner_radius=12)
         self.grid_columnconfigure(1, weight=1)
 
-        self._flow_by_label: dict[str, str] = {}
+        self._workflow_by_label: dict[str, str] = {}
 
         self.title_label = ctk.CTkLabel(
             self,
@@ -33,19 +33,19 @@ class ControlPanel(ctk.CTkFrame):
 
         self.subtitle_label = ctk.CTkLabel(
             self,
-            text="选择流程后运行",
+            text="选择复杂流程后运行",
             font=theme.FONT_UI,
             text_color=theme.MUTED,
         )
         self.subtitle_label.grid(row=1, column=0, columnspan=4, sticky="w", padx=16, pady=(0, 10))
 
-        ctk.CTkLabel(self, text="流程", font=theme.FONT_UI, text_color=theme.TEXT).grid(
+        ctk.CTkLabel(self, text="复杂流程", font=theme.FONT_UI, text_color=theme.TEXT).grid(
             row=2, column=0, sticky="w", padx=(16, 8), pady=6
         )
-        self.flow_var = ctk.StringVar(value="")
-        self.flow_menu = ctk.CTkOptionMenu(
+        self.workflow_var = ctk.StringVar(value="")
+        self.workflow_menu = ctk.CTkOptionMenu(
             self,
-            variable=self.flow_var,
+            variable=self.workflow_var,
             values=["(未加载)"],
             font=theme.FONT_UI,
             height=34,
@@ -54,7 +54,7 @@ class ControlPanel(ctk.CTkFrame):
             button_hover_color="#255A3F",
             text_color=theme.TEXT,
         )
-        self.flow_menu.grid(row=2, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
+        self.workflow_menu.grid(row=2, column=1, columnspan=3, sticky="ew", padx=(0, 16), pady=6)
 
         self.btn_run = ctk.CTkButton(
             self,
@@ -92,34 +92,35 @@ class ControlPanel(ctk.CTkFrame):
         )
         self.btn_clear.grid(row=3, column=3, sticky="ew", padx=(8, 16), pady=(8, 14))
 
-    def selected_flow_id(self) -> str | None:
-        label = self.flow_var.get().strip()
-        return self._flow_by_label.get(label)
+    def selected_workflow_id(self) -> str | None:
+        label = self.workflow_var.get().strip()
+        return self._workflow_by_label.get(label)
 
-    def selected_flow_name(self) -> str:
-        return self.flow_var.get().strip()
+    def selected_workflow_name(self) -> str:
+        return self.workflow_var.get().strip()
 
-    def set_workflow_meta(self, name: str) -> None:
-        self.title_label.configure(text=name or "Vision Workflow")
-        self.subtitle_label.configure(text="选择下方流程后运行")
-
-    def set_flow_choices(self, choices: list[tuple[str, str]], *, selected_id: str | None = None) -> None:
-        """choices: (display_name, flow_id)。"""
-        self._flow_by_label = {label: fid for label, fid in choices}
-        labels = [label for label, _ in choices] or ["(无流程)"]
-        self.flow_menu.configure(values=labels)
+    def set_workflow_choices(
+        self,
+        choices: list[tuple[str, str]],
+        *,
+        selected_id: str | None = None,
+    ) -> None:
+        """choices: (display_name, workflow_id)。"""
+        self._workflow_by_label = {label: wid for label, wid in choices}
+        labels = [label for label, _ in choices] or ["(无复杂流程)"]
+        self.workflow_menu.configure(values=labels)
 
         selected_label = labels[0]
         if selected_id:
-            for label, fid in choices:
-                if fid == selected_id:
+            for label, wid in choices:
+                if wid == selected_id:
                     selected_label = label
                     break
-        self.flow_var.set(selected_label)
+        self.workflow_var.set(selected_label)
 
     def set_running(self, running: bool) -> None:
         state_run = "disabled" if running else "normal"
         state_stop = "normal" if running else "disabled"
         self.btn_run.configure(state=state_run)
         self.btn_stop.configure(state=state_stop)
-        self.flow_menu.configure(state="disabled" if running else "normal")
+        self.workflow_menu.configure(state="disabled" if running else "normal")

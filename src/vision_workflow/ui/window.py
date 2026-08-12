@@ -7,8 +7,7 @@ import queue
 
 import customtkinter as ctk
 
-from vision_workflow.flow import load_flow_module
-from vision_workflow.flows import DEFAULT_FLOW_TARGET
+from vision_workflow.flows import WORKFLOW, workflow_choices
 from vision_workflow.models.flow import FlowRunResult
 from vision_workflow.ui import theme
 from vision_workflow.ui.panels.control_panel import ControlPanel
@@ -53,41 +52,36 @@ class MainWindow(ctk.CTk):
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(80, self._pump)
-        self.after(100, self._load_flows)
+        self.after(100, self._load_catalog)
 
-    def _load_flows(self) -> None:
+    def _load_catalog(self) -> None:
         try:
-            workflow = load_flow_module(DEFAULT_FLOW_TARGET)
+            choices = workflow_choices()
         except Exception as exc:  # noqa: BLE001
-            self.controls.set_workflow_meta("Vision Workflow")
-            self.controls.set_flow_choices([])
+            self.controls.set_workflow_choices([])
             self.status.set_status(f"加载失败: {exc}", ok=False)
-            self.logs.append(f"加载工作流失败: {exc}")
+            self.logs.append(f"加载复杂流程目录失败: {exc}")
             return
 
-        self.title(f"Vision Workflow · {workflow.display_name}")
-        self.controls.set_workflow_meta(workflow.display_name)
-        self.controls.set_flow_choices(workflow.flow_choices(), selected_id=workflow.entry)
-        self.status.set_status(f"已加载：{workflow.display_name}")
-        self.logs.append(
-            f"已加载工作流 [{workflow.display_name}]，共 {len(workflow.flows)} 个流程"
-        )
+        self.controls.set_workflow_choices(choices, selected_id=WORKFLOW.id)
+        self.status.set_status(f"已加载 {len(choices)} 个复杂流程")
+        self.logs.append(f"已加载复杂流程目录，共 {len(choices)} 项")
 
     def _start(self) -> None:
         if self.worker.busy:
             self.status.set_status("已有任务在运行", ok=False)
             return
-        flow_id = self.controls.selected_flow_id()
-        flow_name = self.controls.selected_flow_name() or flow_id or "入口"
-        if not flow_id:
-            self.status.set_status("请先选择流程", ok=False)
+        workflow_id = self.controls.selected_workflow_id()
+        workflow_name = self.controls.selected_workflow_name() or workflow_id or "复杂流程"
+        if not workflow_id:
+            self.status.set_status("请先选择复杂流程", ok=False)
             return
 
         self.controls.set_running(True)
-        self.status.set_status(f"运行中：{flow_name}")
-        self.logs.append(f"—— 开始运行：{flow_name}（{flow_id}）——")
+        self.status.set_status(f"运行中：{workflow_name}")
+        self.logs.append(f"—— 开始运行：{workflow_name}（{workflow_id}）——")
         try:
-            self.worker.start(RunRequest(start=flow_id))
+            self.worker.start(RunRequest(workflow_id=workflow_id))
         except Exception as exc:  # noqa: BLE001
             self.controls.set_running(False)
             self.status.set_status(f"启动失败: {exc}", ok=False)

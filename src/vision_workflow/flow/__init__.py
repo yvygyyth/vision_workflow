@@ -10,12 +10,12 @@ from typing import Any
 
 from vision_workflow.flow.context import FlowContext
 
-__all__ = ["FlowContext", "WorkflowRunner", "load_flow_module"]
+__all__ = ["FlowContext", "WorkflowRunner"]
 
 
 def __getattr__(name: str) -> Any:
-    if name in {"WorkflowRunner", "load_flow_module"}:
-        from vision_workflow.flow import runner
+    if name == "WorkflowRunner":
+        from vision_workflow.flow.runner import WorkflowRunner
 
-        return getattr(runner, name)
+        return WorkflowRunner
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

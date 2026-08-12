@@ -1,6 +1,6 @@
 """Module / Flow / Workflow 测试。"""
 
-from vision_workflow.flow import WorkflowRunner, load_flow_module
+from vision_workflow.flow import WorkflowRunner
 from vision_workflow.module import (
     END,
     MISS,
@@ -253,9 +253,9 @@ def test_self_loop_again() -> None:
 
 
 def test_config_workflow_load() -> None:
-    from vision_workflow.flows import DEFAULT_FLOW_TARGET
+    from vision_workflow.flows import WORKFLOW, WORKFLOWS, workflow_choices
 
-    wf = load_flow_module(DEFAULT_FLOW_TARGET)
+    wf = WORKFLOW
     assert wf.entry == "mail"
     assert wf.display_name == "邮箱一键领取"
     assert {f.id for f in wf.flows} >= {"mail", "dang_qing_ge", "wrap_up", "handle_fail"}
@@ -265,14 +265,15 @@ def test_config_workflow_load() -> None:
     assert set(mail.get("click_email").on) >= {OK, MISS}
     assert mail.default_next_for("click_email") == "one_click"
     assert callable(mail.get("one_click").on[MISS])
-    assert ("收邮件", "mail") in wf.flow_choices()
     dqg = wf.get("dang_qing_ge")
     assert dqg.display_name == "丹青阁"
     assert dqg.entry == "icon"
     assert dqg.default_next_for("icon") == "day_libao"
-    assert ("丹青阁", "dang_qing_ge") in wf.flow_choices()
     assert wf.module_delay_ms == 100
     assert wf.flow_delay_ms == 200
+    assert len(WORKFLOWS) >= 1
+    assert WORKFLOWS[0].id == "main"
+    assert ("邮箱一键领取", "main") in workflow_choices()
 
 
 def test_module_retry_on_miss() -> None:

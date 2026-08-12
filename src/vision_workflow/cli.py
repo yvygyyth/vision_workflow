@@ -10,8 +10,8 @@ from rich.table import Table
 
 from vision_workflow import __version__
 from vision_workflow.config import reload_settings
-from vision_workflow.flow import WorkflowRunner, load_flow_module
-from vision_workflow.flows import DEFAULT_FLOW_TARGET
+from vision_workflow.flow import WorkflowRunner
+from vision_workflow.flows import WORKFLOW, get_workflow
 from vision_workflow.logging_utils import setup_logging
 
 app = typer.Typer(
@@ -25,23 +25,29 @@ console = Console()
 
 @app.command("flow")
 def flow_cmd(
+    workflow_id: str | None = typer.Option(
+        None,
+        "--workflow",
+        "-w",
+        help="复杂流程 id；默认入口复杂流程",
+    ),
     start: str | None = typer.Option(
         None,
         "--start",
         "-s",
-        help="从流程 id 或 flow.module 开始",
+        help="调试：从子流程 id 或 flow.module 开始",
     ),
     only: str | None = typer.Option(
         None,
         "--only",
-        help="只执行某一个模块（module 或 flow.module）",
+        help="调试：只执行某一个模块（module 或 flow.module）",
     ),
     base_dir: Path | None = typer.Option(None, "--base-dir", help="模板图相对路径基准目录"),
     json_out: bool = typer.Option(False, "--json", help="JSON 输出"),
 ) -> None:
-    """执行内置 Workflow（模块组成流程，流程再组合）。"""
+    """执行内置复杂流程。"""
     setup_logging(reload_settings())
-    workflow = load_flow_module(DEFAULT_FLOW_TARGET)
+    workflow = get_workflow(workflow_id) if workflow_id else WORKFLOW
     runner = WorkflowRunner(workflow, base_dir=base_dir)
     if only:
         settled = runner.run_module(only)
@@ -93,7 +99,7 @@ def info_cmd() -> None:
     console.print(f"env       : {cfg.app.get('env')}")
     console.print(f"log_level : {cfg.logging.level}")
     console.print(f"root_dir  : {cfg.root_dir}")
-    console.print(f"workflow  : {DEFAULT_FLOW_TARGET}")
+    console.print(f"workflow  : {WORKFLOW.id} ({WORKFLOW.display_name})")
 
 
 @app.command("version")

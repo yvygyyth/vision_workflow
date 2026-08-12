@@ -8,8 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from vision_workflow.config import reload_settings
-from vision_workflow.flow import WorkflowRunner, load_flow_module
-from vision_workflow.flows import DEFAULT_FLOW_TARGET
+from vision_workflow.flow import WorkflowRunner
+from vision_workflow.flows import get_workflow
 from vision_workflow.logging_utils import setup_logging
 from vision_workflow.models.flow import FlowRunResult
 from vision_workflow.paths import project_root
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RunRequest:
-    start: str | None = None
+    workflow_id: str
 
 
 class WorkflowWorker:
@@ -56,7 +56,7 @@ class WorkflowWorker:
         error: BaseException | None = None
         try:
             setup_logging(reload_settings(), gui=True)
-            workflow = load_flow_module(DEFAULT_FLOW_TARGET)
+            workflow = get_workflow(request.workflow_id)
             root = project_root()
             if workflow.base_dir is None:
                 workflow.base_dir = str(root)
@@ -66,11 +66,12 @@ class WorkflowWorker:
                 cancel_event=self._cancel,
             )
             logger.info(
-                "开始执行 工作流=%s 入口=%s",
+                "开始执行 复杂流程=%s 入口=%s",
                 workflow.display_name,
-                request.start or workflow.entry,
+                workflow.entry,
             )
-            result = runner.run(start=request.start or None)
+            # 始终从复杂流程自身入口开始，不暴露子流程选择
+            result = runner.run()
         except BaseException as exc:
             error = exc
             logger.exception("执行失败")

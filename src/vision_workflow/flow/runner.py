@@ -1,8 +1,7 @@
-"""Workflow 执行器与加载。"""
+"""Workflow 执行器。"""
 
 from __future__ import annotations
 
-import importlib
 import logging
 import threading
 from pathlib import Path
@@ -17,90 +16,9 @@ from vision_workflow.middleware import (
 )
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
 from vision_workflow.module import END, FAIL, Flow, Workflow
-from vision_workflow.paths import project_root
 from vision_workflow.promise import Settled
 
 logger = logging.getLogger(__name__)
-
-
-def load_flow_module(target: str) -> Workflow:
-    """加载工作流模块，返回 Workflow。
-
-    模块可提供：
-    - WORKFLOW: Workflow
-    - FLOWS + ENTRY: 流程列表
-    - MODULES + ENTRY: 单流程快捷写法（自动包成一个 Workflow）
-    """
-    module_name, _, attr = target.partition(":")
-    if module_name.endswith(".py") or "/" in module_name or "\\" in module_name:
-        path = Path(module_name).expanduser().resolve()
-        import sys
-
-        sys.path.insert(0, str(path.parent))
-        mod = importlib.import_module(path.stem)
-    else:
-        mod = importlib.import_module(module_name)
-
-    base_dir = getattr(mod, "BASE_DIR", None) or str(project_root())
-    name = str(getattr(mod, "NAME", None) or getattr(mod, "__name__", "workflow"))
-
-    if attr:
-        obj = getattr(mod, attr)
-    elif hasattr(mod, "WORKFLOW"):
-        obj = mod.WORKFLOW
-    elif hasattr(mod, "FLOWS"):
-        entry = getattr(mod, "ENTRY", None)
-        if not entry:
-            raise AttributeError(f"模块 {module_name} 提供 FLOWS 时需同时提供 ENTRY")
-        obj = Workflow(
-            id=getattr(mod, "WORKFLOW_ID", "main"),
-            name=name,
-            flows=list(mod.FLOWS),
-            entry=str(entry),
-            base_dir=str(base_dir or Path.cwd()),
-        )
-    elif hasattr(mod, "FLOW") and isinstance(mod.FLOW, Flow):
-        flow = mod.FLOW
-        obj = Workflow(
-            id=getattr(mod, "WORKFLOW_ID", "main"),
-            name=name,
-            flows=[flow],
-            entry=flow.id,
-            base_dir=str(base_dir or Path.cwd()),
-        )
-    elif hasattr(mod, "MODULES"):
-        entry = getattr(mod, "ENTRY", None) or mod.MODULES[0].id
-        flow = Flow(
-            id=getattr(mod, "FLOW_ID", "main"),
-            name=name,
-            modules=list(mod.MODULES),
-            entry=str(entry),
-            success=END,
-            fail=None,
-        )
-        obj = Workflow(
-            id=getattr(mod, "WORKFLOW_ID", "main"),
-            name=name,
-            flows=[flow],
-            entry=flow.id,
-            base_dir=str(base_dir or Path.cwd()),
-        )
-    else:
-        raise AttributeError(
-            f"模块 {module_name} 需提供 WORKFLOW / FLOWS / FLOW / MODULES"
-        )
-
-    if callable(obj) and not isinstance(obj, Workflow):
-        obj = obj()
-
-    if not isinstance(obj, Workflow):
-        raise TypeError(f"期望 Workflow，得到 {type(obj)}")
-
-    if obj.base_dir is None and base_dir:
-        obj.base_dir = str(base_dir)
-    if not obj.name:
-        obj.name = name
-    return obj
 
 
 class WorkflowRunner:

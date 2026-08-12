@@ -86,7 +86,7 @@ vision-workflow ui
 python -m vision_workflow.ui
 ```
 
-界面：工作流名称、流程下拉（按 `name`）、运行、停止、日志、状态。工作流入口写死为 `vision_workflow.flows`。
+界面：复杂流程下拉（按 `Workflow.name`）、运行、停止、日志、状态。用户只选择并执行复杂流程；Flow / Module 为内部编排。
 
 ## 打包 exe
 

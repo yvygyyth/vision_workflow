@@ -248,7 +248,3 @@ class Workflow:
         if flow_id not in self._by_id:
             raise KeyError(f"未知流程: {flow_id}，可选: {list(self._by_id)}")
         return self._by_id[flow_id]
-
-    def flow_choices(self) -> list[tuple[str, str]]:
-        """UI 用：(display_name, flow_id)。"""
-        return [(f.display_name, f.id) for f in self.flows]
