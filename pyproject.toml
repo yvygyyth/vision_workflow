@@ -56,3 +56,6 @@ version = "vision-workflow version"
 test = "pytest"
 lint = "ruff check src tests"
 build = "python scripts/build_exe.py"
+
+#虚拟环境
+#.\.venv\Scripts\Activate.ps1
