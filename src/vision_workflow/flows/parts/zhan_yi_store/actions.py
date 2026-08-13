@@ -5,7 +5,7 @@ from __future__ import annotations
 from vision_workflow.events import click_image, scroll_at
 from vision_workflow.module import EventFn
 
-_DIR = "data/ming_jiang_sha/zhan_yi-store"
+_DIR = "data/ming_jiang_sha/zhan_yi_store"
 _COMMON = "data/ming_jiang_sha/common"
 
 # entry / entry2 任一即可，优先 entry
