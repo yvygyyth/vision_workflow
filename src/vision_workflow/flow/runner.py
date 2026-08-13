@@ -15,8 +15,16 @@ from vision_workflow.middleware import (
     run_flow_onion,
 )
 from vision_workflow.models.flow import FlowRunResult, MatchOptions, StepRunResult
-from vision_workflow.module import END, FAIL, Flow, Workflow
+from vision_workflow.module import Flow, Workflow
 from vision_workflow.promise import Settled
+from vision_workflow.status import (
+    EventStatus,
+    Jump,
+    NextRef,
+    as_next,
+    is_fail,
+    is_terminal,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +42,7 @@ class WorkflowRunner:
         self.workflow = workflow
         root = Path(workflow.base_dir) if workflow.base_dir else (base_dir or Path.cwd())
         self.base_dir = root.resolve()
-        self.entry = workflow.entry
+        self.entry = workflow.entry or workflow.nodes[0].flow.id
         self.cancel_event = cancel_event
         self.ctx = FlowContext(
             base_dir=self.base_dir,
@@ -52,17 +60,18 @@ class WorkflowRunner:
             flow_name=self.workflow.display_name,
             success=True,
         )
-        current_flow = flow_id
+        current_flow: NextRef = flow_id
 
-        while current_flow not in {END, FAIL, ""}:
+        while not is_terminal(current_flow):
             if self._cancelled():
                 result.success = False
                 result.message = "用户取消"
                 result.feedback = result.message
                 break
 
+            flow_key = str(current_flow)
             try:
-                flow = self.workflow.get(current_flow)
+                flow = self.workflow.get(flow_key)
             except KeyError as exc:
                 result.success = False
                 result.message = str(exc)
@@ -70,7 +79,7 @@ class WorkflowRunner:
                 break
 
             logger.info("流程开始 (%s)", flow.display_name)
-            start_for_attempt = module_start if current_flow == flow_id else None
+            start_for_attempt = module_start if flow_key == flow_id else None
             module_start = None
             first_shot = {"pending": start_for_attempt, "used": False}
 
@@ -96,14 +105,14 @@ class WorkflowRunner:
                 result.feedback = result.message
                 break
 
-            nxt = scope.next_flow_id
+            nxt = as_next(scope.next_flow_id)
             if settled.ok:
-                if nxt == FAIL:
+                if is_fail(nxt):
                     result.success = False
                     result.message = settled.error or "流程失败"
                     result.feedback = settled.feedback or result.message
                     break
-                if nxt in {END, ""}:
+                if is_terminal(nxt):
                     break
                 current_flow = nxt
                 continue
@@ -113,7 +122,7 @@ class WorkflowRunner:
                 settled.error or settled.feedback or f"流程失败: {flow.display_name}"
             )
             result.feedback = settled.feedback or result.message
-            if nxt in {END, FAIL, ""}:
+            if is_terminal(nxt):
                 break
             current_flow = nxt
 
@@ -178,15 +187,16 @@ class WorkflowRunner:
         start_module: str | None,
     ) -> Settled:
         """跑完一轮流程内模块（可被流程级 Retry 多次调用）。"""
-        current = start_module or flow.entry
+        current: NextRef = start_module or flow.entry
         last = Settled.reject("空流程")
 
-        while current not in {END, FAIL, ""}:
+        while not is_terminal(current):
             if self._cancelled():
                 return Settled.reject("用户取消", feedback="用户取消")
 
+            module_id = str(current)
             try:
-                mod = flow.get(current)
+                mod = flow.get(module_id)
             except KeyError as exc:
                 return Settled.reject(str(exc), feedback=str(exc))
 
@@ -204,23 +214,26 @@ class WorkflowRunner:
                 cancelled=self._cancelled,
             )
             settled, nxt = execute_module(scope)
+            nxt = as_next(nxt)
             last = settled
             result.steps.append(
                 StepRunResult(
                     step_id=step_id,
                     success=settled.ok,
-                    message=settled.error if not settled.ok else "ok",
+                    message=settled.error if not settled.ok else EventStatus.FULFILLED.value,
                     feedback=settled.feedback,
                     value=settled.value,
                 )
             )
 
-            if nxt == FAIL:
-                return settled if not settled.ok else Settled.reject("流程 FAIL", value=settled.value)
+            if is_fail(nxt):
+                return (
+                    settled
+                    if not settled.ok
+                    else Settled.reject(f"流程 {Jump.FAIL.value}", value=settled.value)
+                )
 
-            if nxt == END:
-                if settled.ok:
-                    return settled
+            if is_terminal(nxt):
                 return settled
 
             current = nxt

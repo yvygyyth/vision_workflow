@@ -2,14 +2,15 @@
 
 Module（最小节点）::
     id + event + on
-    event 必须返回 on 中的某个 key；否则报错结束当前流程
-    on[key] 为该可能性对应的处理函数，返回下一模块 id（或 END / FAIL）
+    event 必须返回 on 中的某个 key（EventStatus 或自定义 str）
+    on[key] 返回下一模块 id，或 Jump.END / Jump.FAIL
 
 Flow::
-    若干 Module 组成一个流程
+    若干 Module 组成一个流程；跑完映射为 FlowStatus（经由 settled.ok）
 
 Workflow::
-    若干 Flow 组成复杂流程
+    若干 FlowNode（flow + 可选 router）组成复杂流程
+    router 按 FlowStatus 决定下一流程；缺省 fulfilled→顺序下一个，rejected→Jump.END
 """
 
 from __future__ import annotations
@@ -21,27 +22,22 @@ from typing import Any, TypeVar
 
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import MatchOptions, MatchResult
+from vision_workflow.status import (
+    EventStatus,
+    FlowStatus,
+    Jump,
+    NextRef,
+    OutcomeKey,
+    as_flow_status,
+    as_next,
+    as_outcome,
+    is_terminal,
+)
 
-END = "end"
-FAIL = "fail"
-
-# 常用可能性 key（约定，非强制）
-OK = "ok"
-MISS = "miss"
-
-EventFn = Callable[["ModuleContext"], str]
-OutcomeFn = Callable[["ModuleContext"], str]
-NextRef = str | Callable[[FlowContext, Any], str] | None
+EventFn = Callable[["ModuleContext"], OutcomeKey]
+OutcomeFn = Callable[["ModuleContext"], NextRef]
 
 _ConfigT = TypeVar("_ConfigT")
-
-
-def resolve_next(ref: NextRef, ctx: FlowContext, value: Any, *, default: str = END) -> str:
-    if ref is None:
-        return default
-    if callable(ref):
-        return str(ref(ctx, value) or default)
-    return str(ref)
 
 
 @dataclass
@@ -54,8 +50,11 @@ class ModuleConfig:
     """失败或命中 retry_on 后的重试次数（总尝试 = 1 + retry）。"""
     retry_delay_ms: int = 0
     """两次重试之间的等待（毫秒）。"""
-    retry_on: list[str] = field(default_factory=list)
-    """哪些 outcome key 也触发重试（默认仅异常 / 非法 key）。"""
+    retry_on: list[OutcomeKey] = field(default_factory=list)
+    """哪些 outcome 也触发重试（默认仅异常 / 非法 key）。"""
+
+    def __post_init__(self) -> None:
+        self.retry_on = [as_outcome(k) for k in self.retry_on]
 
 
 @dataclass
@@ -93,12 +92,9 @@ class ModuleContext:
     module: Module
     flow: Flow
     workflow: Workflow
-    cancelled: Callable[[], bool] = field(default=lambda: False)
-    # event 产出：key 为可能性；value 为附带载荷（如 MatchResult）
-    key: str | None = None
+    cancelled: Callable[[], bool] = field(default_factory=lambda: (lambda: False))
+    key: OutcomeKey | None = None
     value: Any = None
-
-    # ----- FlowContext 能力透传 -----
 
     @property
     def base_dir(self) -> Path:
@@ -144,33 +140,31 @@ class ModuleContext:
     def log(self, message: str, *args) -> None:
         self.ctx.log(message, *args)
 
-    # ----- 跳转辅助（供 on[*] 使用）-----
-
-    def next(self) -> str:
-        """流程内默认下一模块；末尾为 END。"""
+    def next(self) -> NextRef:
+        """流程内默认下一模块；末尾为 Jump.END。"""
         return self.flow.default_next_for(self.module.id)
 
-    def goto(self, module_id: str) -> str:
+    def goto(self, module_id: str) -> NextRef:
         return module_id
 
-    def again(self) -> str:
+    def again(self) -> NextRef:
         """自循环：回到当前模块。"""
         return self.module.id
 
-    def end(self) -> str:
-        return END
+    def end(self) -> Jump:
+        return Jump.END
 
-    def fail(self) -> str:
+    def fail(self) -> Jump:
         """结束当前流程并标记失败。"""
-        return FAIL
+        return Jump.FAIL
 
 
-def onward(m: ModuleContext) -> str:
+def onward(m: ModuleContext) -> NextRef:
     """常用 outcome：进入默认下一模块。"""
     return m.next()
 
 
-def abort(m: ModuleContext) -> str:
+def abort(m: ModuleContext) -> NextRef:
     """常用 outcome：失败结束当前流程。"""
     return m.fail()
 
@@ -178,7 +172,7 @@ def abort(m: ModuleContext) -> str:
 def to(module_id: str) -> OutcomeFn:
     """常用 outcome 工厂：跳到指定模块。"""
 
-    def _go(_m: ModuleContext) -> str:
+    def _go(_m: ModuleContext) -> NextRef:
         return module_id
 
     return _go
@@ -190,7 +184,7 @@ class Module:
 
     id: str
     event: EventFn
-    on: dict[str, OutcomeFn]
+    on: dict[OutcomeKey, OutcomeFn]
     name: str = ""
     enabled: bool = True
     config: ModuleConfig = field(default_factory=ModuleConfig)
@@ -199,25 +193,32 @@ class Module:
         self.config = _coerce_config(ModuleConfig, self.config)
         if not self.on:
             raise ValueError(f"模块 [{self.id}] 必须提供非空 on（可能性 → 处理函数）")
-        bad = [k for k, fn in self.on.items() if not callable(fn)]
-        if bad:
-            raise TypeError(f"模块 [{self.id}] on 的值必须是函数，非法 key: {bad}")
+        normalized: dict[OutcomeKey, OutcomeFn] = {}
+        for key, fn in self.on.items():
+            if not callable(fn):
+                raise TypeError(f"模块 [{self.id}] on 的值必须是函数，非法 key: {key}")
+            normalized[as_outcome(key)] = fn
+        self.on = normalized
+
+    def has_outcome(self, key: OutcomeKey | Any) -> bool:
+        return as_outcome(key) in self.on
+
+    def handler_for(self, key: OutcomeKey | Any) -> OutcomeFn:
+        return self.on[as_outcome(key)]
 
 
 @dataclass
 class Flow:
-    """二级：由模块组成的流程。"""
+    """二级：由模块组成的流程（不包含流程间跳转）。"""
 
     id: str
     modules: list[Module]
     entry: str
-    success: NextRef = END  # 本流程成功结束后，下一个流程 id
-    fail: NextRef | None = None  # 本流程失败后；None → 结束整个工作流
-    name: str = ""  # UI / 日志展示名；空则回退为 id
+    name: str = ""
     config: FlowConfig = field(default_factory=FlowConfig)
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
-    _next_default: dict[str, str] = field(init=False, repr=False)
+    _next_default: dict[str, NextRef] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.config = _coerce_config(FlowConfig, self.config)
@@ -227,16 +228,15 @@ class Flow:
         self._by_id = {m.id: m for m in self.modules}
         if self.entry not in self._by_id:
             raise KeyError(f"流程 [{self.id}] 入口模块不存在: {self.entry}")
-        # 列表顺序：默认下一模块；最后一个默认 END
         self._next_default = {}
         for i, m in enumerate(self.modules):
             if i + 1 < len(self.modules):
                 self._next_default[m.id] = self.modules[i + 1].id
             else:
-                self._next_default[m.id] = END
+                self._next_default[m.id] = Jump.END
 
-    def default_next_for(self, module_id: str) -> str:
-        return self._next_default.get(module_id, END)
+    def default_next_for(self, module_id: str) -> NextRef:
+        return self._next_default.get(module_id, Jump.END)
 
     @property
     def display_name(self) -> str:
@@ -251,32 +251,99 @@ class Flow:
 
 
 @dataclass
-class Workflow:
-    """三级：由流程组成的复杂流程。"""
+class FlowRouter:
+    """按 FlowStatus 决定下一流程 id 或 Jump。与 Flow / EventStatus 独立。"""
 
-    flows: list[Flow]
-    entry: str
+    on: dict[FlowStatus, NextRef] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        normalized: dict[FlowStatus, NextRef] = {}
+        for key, target in self.on.items():
+            normalized[as_flow_status(key)] = as_next(target)
+        self.on = normalized
+
+    def next(self, status: FlowStatus) -> NextRef:
+        status = as_flow_status(status)
+        if status not in self.on:
+            return Jump.END
+        return as_next(self.on[status])
+
+
+@dataclass
+class FlowNode:
+    """Workflow 中的一格：Flow + 可选路由接口。"""
+
+    flow: Flow
+    router: FlowRouter | None = None
+
+
+@dataclass
+class Workflow:
+    """三级：由 FlowNode 组成的复杂流程。"""
+
+    nodes: list[FlowNode]
+    entry: str | None = None
     id: str = "workflow"
-    name: str = ""  # UI 展示名；空则回退为 id
+    name: str = ""
     base_dir: str | None = None
     config: WorkflowConfig = field(default_factory=WorkflowConfig)
 
     _by_id: dict[str, Flow] = field(init=False, repr=False)
+    _routers: dict[str, FlowRouter] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.config = _coerce_config(WorkflowConfig, self.config)
-        ids = [f.id for f in self.flows]
+        if not self.nodes:
+            raise ValueError("Workflow.nodes 不能为空")
+
+        ids = [n.flow.id for n in self.nodes]
         if len(ids) != len(set(ids)):
             raise ValueError(f"流程 id 必须唯一: {ids}")
-        self._by_id = {f.id: f for f in self.flows}
+        self._by_id = {n.flow.id: n.flow for n in self.nodes}
+
+        if self.entry is None:
+            self.entry = self.nodes[0].flow.id
         if self.entry not in self._by_id:
             raise KeyError(f"入口流程不存在: {self.entry}，可选: {list(self._by_id)}")
+
+        self._routers = {}
+        for i, node in enumerate(self.nodes):
+            default_next: NextRef = (
+                self.nodes[i + 1].flow.id if i + 1 < len(self.nodes) else Jump.END
+            )
+            on: dict[FlowStatus, NextRef] = {}
+            if node.router is not None:
+                on.update(node.router.on)
+            on.setdefault(FlowStatus.FULFILLED, default_next)
+            on.setdefault(FlowStatus.REJECTED, Jump.END)
+            router = FlowRouter(on=on)
+            for target in router.on.values():
+                if is_terminal(target):
+                    continue
+                if str(target) not in self._by_id:
+                    raise KeyError(
+                        f"流程 [{node.flow.id}] 路由目标不存在: {target}，"
+                        f"可选: {list(self._by_id)}"
+                    )
+            self._routers[node.flow.id] = router
 
     @property
     def display_name(self) -> str:
         return self.name.strip() or self.id
 
+    @property
+    def flows(self) -> list[Flow]:
+        return [n.flow for n in self.nodes]
+
     def get(self, flow_id: str) -> Flow:
         if flow_id not in self._by_id:
             raise KeyError(f"未知流程: {flow_id}，可选: {list(self._by_id)}")
         return self._by_id[flow_id]
+
+    def router_for(self, flow_id: str) -> FlowRouter:
+        if flow_id not in self._routers:
+            raise KeyError(f"未知流程路由: {flow_id}，可选: {list(self._routers)}")
+        return self._routers[flow_id]
+
+    def resolve_next(self, flow_id: str, status: FlowStatus) -> NextRef:
+        return self.router_for(flow_id).next(status)

@@ -11,11 +11,29 @@ Workflow 流程组成的复杂流程
 ## 流程名
 
 ```python
+from vision_workflow.module import Flow, FlowNode, Workflow
+from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus, Jump
+
 Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
-Workflow(id="main", name="名将杀免费资源每日领取", entry="mail", flows=[...])
+Workflow(
+    id="main",
+    name="名将杀免费资源每日领取",
+    entry="mail",
+    nodes=[FlowNode(mail), FlowNode(dang_qing_ge)],  # router 可选
+)
 ```
 
-`name` 给 UI / 日志展示；不填则回退为 `id`。
+`name` 给 UI / 日志展示；不填则回退为 `id`。`FlowNode.router` 缺省时：`fulfilled`→顺序下一个，`rejected`→`Jump.END`。
+
+## 固定枚举（`vision_workflow.status`）
+
+```python
+EventStatus.FULFILLED / REJECTED  # 事件方法返回（别名 FULFILLED / REJECTED）
+FlowStatus.FULFILLED / REJECTED   # 流程对外状态（FlowRouter）
+Jump.END / FAIL                   # 下一跳终点哨兵（别名 END / FAIL）
+```
+
+自定义模块结果仍可用普通 str（如 `"loop"`）；核心值请用枚举，避免硬编码字符串。
 
 ## 延迟 / 重试（洋葱中间件）
 
@@ -27,12 +45,13 @@ Resolve+Delay → Retry → Event
 
 ```python
 from vision_workflow.module import ModuleConfig, FlowConfig, WorkflowConfig, Module, Flow, Workflow
+from vision_workflow.status import FULFILLED, REJECTED
 
 Module(
     id="one_click",
     event=...,
-    on={OK: onward, MISS: to("click_email")},
-    config=ModuleConfig(retry=2, retry_on=[MISS], retry_delay_ms=200, delay_ms=100),
+    on={FULFILLED: onward, REJECTED: to("click_email")},
+    config=ModuleConfig(retry=2, retry_on=[REJECTED], retry_delay_ms=200, delay_ms=100),
 )
 Flow(id="mail", ..., config=FlowConfig(delay_ms=500))
 Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_ms 时的默认
@@ -40,23 +59,24 @@ Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_
 
 ## 模块
 
-`event` 必须返回 `on` 里的某个 key，否则报错并结束当前流程。`on[key]` 是处理函数，拿到完整 `ModuleContext`，返回下一模块 id（或 `END` / `FAIL`）。
+`event` 必须返回 `on` 里的某个 key（`EventStatus` 或自定义 str），否则报错并结束当前流程。`on[key]` 返回下一模块 id，或 `Jump.END` / `Jump.FAIL`。
 
 ```python
 from vision_workflow.events import click_image
-from vision_workflow.module import MISS, OK, Module, abort, onward, to
+from vision_workflow.module import Module, abort, onward, to
+from vision_workflow.status import FULFILLED, REJECTED
 
 Module(
     id="click_email",
     event=click_image("data/ming_jiang_sha/mail/email.png"),
-    on={OK: onward, MISS: abort},  # onward=下一模块；abort=失败结束本流程
+    on={FULFILLED: onward, REJECTED: abort},  # onward=下一模块；abort=失败结束本流程
 )
 Module(
     id="one_click",
     event=...,
-    on={OK: onward, MISS: to("click_email")},  # 未找到则跳回
+    on={FULFILLED: onward, REJECTED: to("click_email")},  # 未找到则跳回
 )
-# 自循环示例：on={"loop": lambda m: m.again(), OK: onward}
+# 自循环示例：on={"loop": lambda m: m.again(), FULFILLED: onward}
 ```
 
 `ModuleContext` 透传识图 / 鼠标 / 日志，并提供 `next` / `goto` / `again` / `end` / `fail`，方便以后扩展。

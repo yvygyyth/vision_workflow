@@ -11,9 +11,10 @@ from vision_workflow.flows.parts.zhu_jiu_store.actions import (
     click_close,
     click_return_btn,
 )
-from vision_workflow.module import END, MISS, OK, Flow, Module, abort, onward
+from vision_workflow.module import Flow, Module, abort, onward
+from vision_workflow.status import FULFILLED, REJECTED
 
-_CLICK = {OK: onward, MISS: abort}
+_CLICK = {FULFILLED: onward, REJECTED: abort}
 
 FLOW = Flow(
     id="zhu_jiu_store",
@@ -31,5 +32,4 @@ FLOW = Flow(
         Module(id="close", event=click_close, on=_CLICK),
         Module(id="return-btn", event=click_return_btn, on=_CLICK),
     ],
-    success=END,
 )

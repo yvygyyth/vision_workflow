@@ -54,13 +54,16 @@ def flow_cmd(
         if json_out:
             console.print_json(
                 {
+                    "status": settled.status.value,
                     "ok": settled.ok,
                     "error": settled.error,
                     "feedback": settled.feedback,
                 }
             )
         else:
-            console.print(f"module={only} ok={settled.ok} | {settled.feedback or settled.error}")
+            console.print(
+                f"module={only} status={settled.status.value} | {settled.feedback or settled.error}"
+            )
         raise typer.Exit(code=0 if settled.ok else 1)
 
     result = runner.run(start=start)

@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Literal
 
 from vision_workflow.models.flow import MatchResult
-from vision_workflow.module import MISS, OK, EventFn, ModuleContext
+from vision_workflow.module import EventFn, ModuleContext
+from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
 # 滚轮锚点：绝对坐标，或快捷名
 ScrollAnchor = tuple[int, int] | Literal["center"]
@@ -88,14 +89,14 @@ def click_image(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> EventFn:
-    """识图并点击中心（可偏移），返回 OK / MISS。
+    """识图并点击中心（可偏移），返回 FULFILLED / REJECTED。
 
     可传入多张模板，按参数顺序优先匹配；超时内命中任一即点击。
     """
     if not images:
         raise ValueError("click_image() 至少需要一张模板图")
 
-    def _event(m: ModuleContext) -> str:
+    def _event(m: ModuleContext) -> OutcomeKey:
         hit = _wait_image(
             m,
             images,
@@ -106,10 +107,10 @@ def click_image(
             grayscale=grayscale,
         )
         if hit is None or not hit.center:
-            return MISS
+            return REJECTED
         cx, cy = hit.center
         m.mouse().at((cx + offset_x, cy + offset_y)).click().sleep(sleep).perform()
-        return OK
+        return FULFILLED
 
     return _event
 
@@ -120,17 +121,17 @@ def scroll_at(
     amount: int,
     sleep: float = 0.3,
 ) -> EventFn:
-    """在坐标或快捷锚点处滚轮，返回 OK。
+    """在坐标或快捷锚点处滚轮，返回 FULFILLED。
 
     ``amount`` >0 向上，<0 向下（pyautogui 滚轮刻度）。
     ``target``: ``(x, y)`` 或 ``"center"``（屏幕正中）。
     """
 
-    def _event(m: ModuleContext) -> str:
+    def _event(m: ModuleContext) -> OutcomeKey:
         point = resolve_anchor(target)
         m.log("滚轮 amount=%s @ %s", amount, point)
         m.mouse().at(point).scroll(amount).sleep(sleep).perform()
-        return OK
+        return FULFILLED
 
     return _event
 
@@ -147,14 +148,14 @@ def scroll_image(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> EventFn:
-    """识图定位后在该点滚轮，返回 OK / MISS。
+    """识图定位后在该点滚轮，返回 FULFILLED / REJECTED。
 
     多图按参数顺序优先；``amount`` 同 ``scroll_at``。
     """
     if not images:
         raise ValueError("scroll_image() 至少需要一张模板图")
 
-    def _event(m: ModuleContext) -> str:
+    def _event(m: ModuleContext) -> OutcomeKey:
         hit = _wait_image(
             m,
             images,
@@ -165,11 +166,11 @@ def scroll_image(
             grayscale=grayscale,
         )
         if hit is None or not hit.center:
-            return MISS
+            return REJECTED
         cx, cy = hit.center
         point = (cx + offset_x, cy + offset_y)
         m.log("滚轮 amount=%s @ %s", amount, point)
         m.mouse().at(point).scroll(amount).sleep(sleep).perform()
-        return OK
+        return FULFILLED
 
     return _event

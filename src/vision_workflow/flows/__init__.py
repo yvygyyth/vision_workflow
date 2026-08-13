@@ -3,7 +3,7 @@
 Flow / Module 仅供脚本编排（见 ``parts/``）；
 面向用户的可执行单位是 Workflow（见 ``workflows/``）。
 
-新增复杂流程：在 ``workflows/<id>/`` 导出 ``WORKFLOW``，再加入下方 ``WORKFLOWS``。
+新增复杂流程：在 ``workflows/<id>/`` 导出 ``WORKFLOW``（``nodes=[FlowNode(...)]``），再加入下方 ``WORKFLOWS``。
 """
 
 from vision_workflow.flows.workflows.main import WORKFLOW as main_workflow

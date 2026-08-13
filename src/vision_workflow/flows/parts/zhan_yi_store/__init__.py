@@ -13,10 +13,11 @@ from vision_workflow.flows.parts.zhan_yi_store.actions import (
     click_zhan_yi_store,
     scroll_store_list,
 )
-from vision_workflow.module import END, MISS, OK, Flow, Module, abort, onward
+from vision_workflow.module import Flow, Module, abort, onward
+from vision_workflow.status import FULFILLED, REJECTED
 
-_CLICK = {OK: onward, MISS: abort}
-_OK = {OK: onward}
+_CLICK = {FULFILLED: onward, REJECTED: abort}
+_FULFILLED = {FULFILLED: onward}
 
 FLOW = Flow(
     id="zhan_yi_store",
@@ -29,7 +30,7 @@ FLOW = Flow(
         Module(id="max", event=click_max, on=_CLICK),
         Module(id="buy", event=click_buy, on=_CLICK),
         Module(id="space_close", event=click_space_close, on=_CLICK),
-        Module(id="scroll", event=scroll_store_list, on=_OK),
+        Module(id="scroll", event=scroll_store_list, on=_FULFILLED),
         Module(id="ling_xi-box", event=click_ling_xi_box, on=_CLICK),
         Module(id="max2", event=click_max, on=_CLICK),
         Module(id="buy2", event=click_buy2, on=_CLICK),
@@ -37,5 +38,4 @@ FLOW = Flow(
         Module(id="close", event=click_close, on=_CLICK),
         Module(id="return-btn", event=click_return_btn, on=_CLICK),
     ],
-    success=END,
 )
