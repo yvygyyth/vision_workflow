@@ -7,11 +7,12 @@ Flow / Module 仅供脚本编排（见 ``parts/``）；
 """
 
 from vision_workflow.flows.workflows.main import WORKFLOW as main_workflow
+from vision_workflow.flows.workflows.zhan_yi_store import WORKFLOW as zhan_yi_store_workflow
 from vision_workflow.module import Workflow
 
 WORKFLOW = main_workflow  # CLI / 默认入口兼容
 
-WORKFLOWS: list[Workflow] = [main_workflow]
+WORKFLOWS: list[Workflow] = [main_workflow, zhan_yi_store_workflow]
 
 
 def get_workflow(workflow_id: str) -> Workflow:
