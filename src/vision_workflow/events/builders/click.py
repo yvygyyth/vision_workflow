@@ -81,6 +81,8 @@ class _Click:
                 grayscale=grayscale,
             )
             if hit is None or not hit.center:
+                if not m.reason:
+                    m.reason = "识图未命中" if hit is None else "识图命中但无中心点"
                 return REJECTED
             cx, cy = hit.center
             m.mouse().at((cx + ox, cy + oy)).click().sleep(sleep).perform()

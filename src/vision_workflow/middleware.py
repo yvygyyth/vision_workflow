@@ -42,6 +42,19 @@ def _next_module_label(flow: Flow, nxt: NextRef) -> str:
         return nxt
 
 
+def _event_detail(mctx: ModuleContext | None) -> str:
+    """优先用 event 写入的 reason。"""
+    if mctx is None:
+        return ""
+    return (mctx.reason or "").strip()
+
+
+def _step_feedback(mod: Module, key: object, nxt: NextRef, flow: Flow, mctx: ModuleContext | None) -> str:
+    base = f"（{mod.display_name}）{outcome_label(key)} → {_next_module_label(flow, nxt)}"
+    detail = _event_detail(mctx)
+    return f"{base} | {detail}" if detail else base
+
+
 @dataclass
 class ModuleScope:
     ctx: FlowContext
@@ -143,18 +156,18 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
         scope.next_id = nxt
 
         # 成败看状态：REJECTED 且不再继续 → 本流程失败；否则（含 REJECTED 但跳去别的模块）可继续
-        next_text = _next_module_label(scope.flow, nxt)
-        key_text = outcome_label(key)
+        feedback = _step_feedback(mod, key, nxt, scope.flow, mctx)
         if key is EventStatus.REJECTED and is_stop(nxt):
+            detail = _event_detail(mctx)
             settled = Settled.reject(
-                f"outcome [{key_text}] → stop",
+                detail or f"outcome [{outcome_label(key)}] → stop",
                 value=mctx.value,
-                feedback=f"（{mod.display_name}）{key_text} → {next_text}",
+                feedback=feedback,
             )
         else:
             settled = Settled.resolve(
                 mctx.value if mctx.value is not None else key,
-                feedback=f"（{mod.display_name}）{key_text} → {next_text}",
+                feedback=feedback,
             )
 
         if settled.ok and not is_stop(nxt):

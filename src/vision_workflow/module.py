@@ -106,6 +106,8 @@ class ModuleContext:
     cancelled: Callable[[], bool] = field(default_factory=lambda: (lambda: False))
     key: OutcomeKey | None = None
     value: Any = None
+    reason: str = ""
+    """event 可写入的可读原因（如识图未找到），供反馈/日志使用。"""
 
     @property
     def base_dir(self) -> Path:

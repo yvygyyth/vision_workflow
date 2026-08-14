@@ -52,6 +52,7 @@ def wait_image(
                 return hit
         if timeout <= 0 or time.monotonic() >= deadline:
             m.value = last
+            m.reason = f"识图未找到 [{labels}]"
             m.log("未找到 [%s]", labels)
             return None
         m.sleep(interval)
