@@ -67,15 +67,13 @@ class MainWindow(ctk.CTk):
         self.status.set_status(f"已加载 {len(choices)} 个复杂流程")
         self.logs.append(f"已加载复杂流程目录，共 {len(choices)} 项")
         try:
-            from vision_workflow.display import get_display_info
+            from vision_workflow.display import BASE_DISPLAY, get_display_info, template_scale
 
             d = get_display_info()
-            self.logs.append(
-                f"显示参数 screen={d.screen_width}x{d.screen_height} "
-                f"shot={d.screenshot_width}x{d.screenshot_height} "
-                f"dpi={d.dpi} scale={d.scale_percent:g}% "
-                f"virtual={d.virtual_width}x{d.virtual_height}"
-            )
+            scale = template_scale(d)
+            self.logs.append(BASE_DISPLAY.format_line(prefix="模板基准"))
+            self.logs.append(d.format_line(prefix="当前设备"))
+            self.logs.append(f"识图缩放 scale={scale:.4f}（相对模板基准）")
         except Exception as exc:  # noqa: BLE001
             self.logs.append(f"显示参数读取失败: {exc}")
 

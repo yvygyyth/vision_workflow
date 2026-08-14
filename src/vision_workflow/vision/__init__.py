@@ -103,6 +103,16 @@ def _match_once(
     if template_bgr is None:
         return MatchResult(found=False, image=str(path), message=f"无法读取模板: {path}")
 
+    from vision_workflow.display import cached_template_scale
+
+    scale = cached_template_scale()
+    if abs(scale - 1.0) >= 1e-3:
+        th0, tw0 = template_bgr.shape[:2]
+        nw = max(1, int(round(tw0 * scale)))
+        nh = max(1, int(round(th0 * scale)))
+        interpolation = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+        template_bgr = cv2.resize(template_bgr, (nw, nh), interpolation=interpolation)
+
     if screenshot is not None:
         hay_rgb = screenshot.convert("RGB")
         hay_bgr = cv2.cvtColor(np.array(hay_rgb), cv2.COLOR_RGB2BGR)
@@ -145,10 +155,11 @@ def _match_once(
 
     found = confidence >= options.threshold
     logger.debug(
-        "find_image %s conf=%.3f threshold=%.3f found=%s center=%s",
+        "find_image %s conf=%.3f threshold=%.3f scale=%.3f found=%s center=%s",
         path.name,
         confidence,
         options.threshold,
+        scale,
         found,
         center if found else None,
     )

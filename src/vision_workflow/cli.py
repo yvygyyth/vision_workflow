@@ -97,21 +97,19 @@ def ui_cmd() -> None:
 @app.command("info")
 def info_cmd() -> None:
     """查看当前运行配置与显示参数。"""
-    from vision_workflow.display import get_display_info
+    from vision_workflow.display import BASE_DISPLAY, get_display_info, template_scale
 
     cfg = reload_settings()
     disp = get_display_info()
+    scale = template_scale(disp)
     console.print(f"[bold]vision-workflow[/bold] v{__version__}")
     console.print(f"env       : {cfg.app.get('env')}")
     console.print(f"log_level : {cfg.logging.level}")
     console.print(f"root_dir  : {cfg.root_dir}")
     console.print(f"workflow  : {WORKFLOW.id} ({WORKFLOW.display_name})")
-    console.print(
-        f"screen    : {disp.screen_width}x{disp.screen_height} "
-        f"(shot {disp.screenshot_width}x{disp.screenshot_height})"
-    )
-    console.print(f"dpi/scale : {disp.dpi} / {disp.scale_percent:g}%")
-    console.print(f"virtual   : {disp.virtual_width}x{disp.virtual_height}")
+    console.print(BASE_DISPLAY.format_line(prefix="baseline "))
+    console.print(disp.format_line(prefix="current  "))
+    console.print(f"img_scale : {scale:.4f}")
 
 
 @app.command("version")
