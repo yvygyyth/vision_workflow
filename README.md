@@ -62,13 +62,13 @@ Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_
 `event` 必须返回 `on` 里的某个 key（`EventStatus` 或自定义 str），否则报错并结束当前流程。`on[key]` 返回下一模块 id；`None` 表示本流程结束。
 
 ```python
-from vision_workflow.events import click_image
+from vision_workflow.events import click
 from vision_workflow.module import Module, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 Module(
     id="click_email",
-    event=click_image("data/ming_jiang_sha/mail/email.png"),
+    event=click().image("data/ming_jiang_sha/mail/email.png").execute(),
     on={FULFILLED: onward, REJECTED: abort},  # onward=下一模块；abort=结束本流程（配合 REJECTED）
 )
 Module(
@@ -77,6 +77,8 @@ Module(
     on={FULFILLED: onward, REJECTED: to("click_email")},  # 未找到则跳回
 )
 # 自循环示例：on={"loop": lambda m: m.again(), FULFILLED: onward}
+# 偏移点击：click().image("x.png").offset(0, 100).execute()
+# 滚轮：scroll().at("center").amount(-8).execute()
 ```
 
 `ModuleContext` 透传识图 / 鼠标 / 日志，并提供 `next` / `goto` / `again` / `end` / `fail`，方便以后扩展。
