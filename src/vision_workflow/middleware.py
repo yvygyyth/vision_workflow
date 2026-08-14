@@ -20,12 +20,10 @@ from vision_workflow.promise import Settled
 from vision_workflow.status import (
     EventStatus,
     FlowStatus,
-    Jump,
     NextRef,
     as_next,
     as_outcome,
-    is_fail,
-    is_terminal,
+    is_stop,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +38,7 @@ class ModuleScope:
     flow: Flow
     workflow: Workflow
     cancelled: Callable[[], bool] = field(default_factory=lambda: (lambda: False))
-    next_id: NextRef = Jump.END
+    next_id: NextRef = None
     module_ctx: ModuleContext | None = None
 
 
@@ -116,7 +114,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
         label = mod.name or mod.id
 
         if not settled.ok or mctx is None or mctx.key is None:
-            scope.next_id = Jump.END
+            scope.next_id = None
             return settled
 
         key = as_outcome(mctx.key)
@@ -124,7 +122,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
             nxt = as_next(mod.handler_for(key)(mctx))
         except Exception as exc:
             logger.exception("模块 on[%s] 异常 (%s)", key, mod.id)
-            scope.next_id = Jump.END
+            scope.next_id = None
             return Settled.reject(
                 str(exc),
                 value=mctx.value,
@@ -133,11 +131,12 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
 
         scope.next_id = nxt
 
-        if is_fail(nxt):
+        # 成败看状态：REJECTED 且不再继续 → 本流程失败；否则（含 REJECTED 但跳去别的模块）可继续
+        if key is EventStatus.REJECTED and is_stop(nxt):
             settled = Settled.reject(
-                f"outcome [{key}] → {Jump.FAIL.value}",
+                f"outcome [{key}] → stop",
                 value=mctx.value,
-                feedback=f"({mod.id}) {key} → {Jump.FAIL.value}",
+                feedback=f"({mod.id}) {key} → stop",
             )
         else:
             settled = Settled.resolve(
@@ -145,7 +144,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
                 feedback=f"({mod.id}) {key} → {nxt}",
             )
 
-        if settled.ok and not is_terminal(nxt):
+        if settled.ok and not is_stop(nxt):
             delay = max(0, int(mod.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（模块后 %s）", delay, label)
@@ -207,7 +206,7 @@ def run_module_event(scope: ModuleScope) -> Settled:
 
 
 def execute_module(scope: ModuleScope) -> tuple[Settled, NextRef]:
-    """跑完洋葱栈，返回 (settled, next_module_id | Jump)。"""
+    """跑完洋葱栈，返回 (settled, next_module_id | None)。"""
     middlewares = build_module_middlewares(scope)
     settled = run_onion(scope, middlewares, lambda: run_module_event(scope))
     return settled, scope.next_id
@@ -222,7 +221,7 @@ class FlowScope:
     flow: Flow
     workflow: Workflow
     cancelled: Callable[[], bool] = field(default_factory=lambda: (lambda: False))
-    next_flow_id: NextRef = Jump.END
+    next_flow_id: NextRef = None
     last_settled: Settled | None = None
     status: FlowStatus = FlowStatus.FULFILLED
 
@@ -266,7 +265,7 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
             status.value,
             nxt,
         )
-        if status is FlowStatus.FULFILLED and not is_terminal(nxt):
+        if status is FlowStatus.FULFILLED and not is_stop(nxt):
             delay = max(0, int(scope.flow.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.display_name)

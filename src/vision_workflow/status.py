@@ -1,10 +1,11 @@
-"""固定枚举：事件状态 / 流程状态 / 控制跳转。
+"""固定枚举：事件状态 / 流程状态。
 
 两层状态分开（即便字面值相同也不混用）::
     EventStatus  — 模块 event 返回值，供 Module.on 路由到下一子模块
     FlowStatus   — 流程跑完后的对外状态，供 FlowRouter 路由到下一流程
 
-接口形态均为：状态 → 下一跳（子模块 id / 流程 id / Jump）。
+接口形态均为：状态 → 下一跳 id；返回 None 表示本层结束（无下一跳）。
+默认 FlowRouter：fulfilled → 顺序下一个 Flow，rejected → 结束（None）。
 """
 
 from __future__ import annotations
@@ -35,23 +36,13 @@ class FlowStatus(str, Enum):
         return cls.FULFILLED if ok else cls.REJECTED
 
 
-class Jump(str, Enum):
-    """下一跳中的终点哨兵（由状态→下一跳接口产出，非业务 id）。"""
-
-    END = "end"
-    FAIL = "fail"
-
-
 # 事件层常用别名
 FULFILLED = EventStatus.FULFILLED
 REJECTED = EventStatus.REJECTED
 
-# Jump 别名
-END = Jump.END
-FAIL = Jump.FAIL
-
 OutcomeKey = EventStatus | str
-NextRef = str | Jump
+# 下一跳：业务 id；None = 本层结束
+NextRef = str | None
 
 
 def as_outcome(value: Any) -> OutcomeKey:
@@ -80,25 +71,16 @@ def as_flow_status(value: FlowStatus | str | Enum) -> FlowStatus:
     return FlowStatus(str(value))
 
 
-def as_next(value: NextRef | None) -> NextRef:
-    """规范下一跳：Jump 或业务 id 字符串。"""
-    if value is None or value == "":
-        return Jump.END
-    if isinstance(value, Jump):
-        return value
+def as_next(value: NextRef | Any) -> NextRef:
+    """规范下一跳：业务 id 或 None（结束）。"""
+    if value is None:
+        return None
     if isinstance(value, Enum):
         value = value.value
-    text = str(value)
-    try:
-        return Jump(text)
-    except ValueError:
-        return text
+    text = str(value).strip()
+    return text or None
 
 
-def is_terminal(target: NextRef | None) -> bool:
-    """是否结束当前层级（模块环或流程环）。"""
-    return isinstance(as_next(target), Jump)
-
-
-def is_fail(target: NextRef | None) -> bool:
-    return as_next(target) is Jump.FAIL
+def is_stop(target: NextRef | Any) -> bool:
+    """是否结束当前层级（无下一跳）。"""
+    return as_next(target) is None

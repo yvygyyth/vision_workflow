@@ -13,7 +13,7 @@ from vision_workflow.module import (
     onward,
     to,
 )
-from vision_workflow.status import END, FULFILLED, REJECTED, EventStatus, FlowStatus, Jump
+from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus
 
 
 def _wf(
@@ -121,7 +121,7 @@ def test_flow_compose_to_workflow_default_order() -> None:
     assert result.success
     assert result.path == ["mail.a", "done_flow.d"]
     assert workflow.router_for("mail").on[FlowStatus.FULFILLED] == "done_flow"
-    assert workflow.router_for("mail").on[FlowStatus.REJECTED] is Jump.END
+    assert workflow.router_for("mail").on[FlowStatus.REJECTED] is None
 
 
 def test_flow_rejected_jumps_via_router() -> None:
@@ -151,7 +151,7 @@ def test_flow_rejected_jumps_via_router() -> None:
         routers={
             "mail": FlowRouter(
                 on={
-                    FlowStatus.FULFILLED: Jump.END,
+                    FlowStatus.FULFILLED: None,
                     FlowStatus.REJECTED: "handle_fail",
                 }
             )
@@ -363,7 +363,7 @@ def test_flow_loop_via_router() -> None:
                 router=FlowRouter(
                     on={
                         FlowStatus.FULFILLED: "loop_flow",
-                        FlowStatus.REJECTED: END,
+                        FlowStatus.REJECTED: None,
                     }
                 ),
             )

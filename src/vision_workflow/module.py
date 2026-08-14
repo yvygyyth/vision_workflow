@@ -3,14 +3,15 @@
 Module（最小节点）::
     id + event + on
     event 必须返回 on 中的某个 key（EventStatus 或自定义 str）
-    on[key] 返回下一模块 id，或 Jump.END / Jump.FAIL
+    on[key] 返回下一模块 id；None 表示本流程结束
 
 Flow::
     若干 Module 组成一个流程；跑完映射为 FlowStatus（经由 settled.ok）
 
 Workflow::
     若干 FlowNode（flow + 可选 router）组成复杂流程
-    router 按 FlowStatus 决定下一流程；缺省 fulfilled→顺序下一个，rejected→Jump.END
+    router 按 FlowStatus 决定下一流程 id；None 表示工作流结束
+    缺省接口：fulfilled → 顺序下一个，rejected → 结束
 """
 
 from __future__ import annotations
@@ -24,13 +25,12 @@ from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import MatchOptions, MatchResult
 from vision_workflow.status import (
     FlowStatus,
-    Jump,
     NextRef,
     OutcomeKey,
     as_flow_status,
     as_next,
     as_outcome,
-    is_terminal,
+    is_stop,
 )
 
 EventFn = Callable[["ModuleContext"], OutcomeKey]
@@ -140,7 +140,7 @@ class ModuleContext:
         self.ctx.log(message, *args)
 
     def next(self) -> NextRef:
-        """流程内默认下一模块；末尾为 Jump.END。"""
+        """流程内默认下一模块；末尾为 None（结束本流程）。"""
         return self.flow.default_next_for(self.module.id)
 
     def goto(self, module_id: str) -> NextRef:
@@ -150,21 +150,22 @@ class ModuleContext:
         """自循环：回到当前模块。"""
         return self.module.id
 
-    def end(self) -> Jump:
-        return Jump.END
+    def end(self) -> None:
+        """结束当前流程（成败由 event 状态决定）。"""
+        return None
 
-    def fail(self) -> Jump:
-        """结束当前流程并标记失败。"""
-        return Jump.FAIL
+    def fail(self) -> None:
+        """结束当前流程（通常配合 REJECTED）。"""
+        return None
 
 
 def onward(m: ModuleContext) -> NextRef:
-    """常用 outcome：进入默认下一模块。"""
+    """常用 outcome：进入默认下一模块；末尾则结束。"""
     return m.next()
 
 
 def abort(m: ModuleContext) -> NextRef:
-    """常用 outcome：失败结束当前流程。"""
+    """常用 outcome：结束当前流程（配合 REJECTED → 流程失败）。"""
     return m.fail()
 
 
@@ -232,10 +233,10 @@ class Flow:
             if i + 1 < len(self.modules):
                 self._next_default[m.id] = self.modules[i + 1].id
             else:
-                self._next_default[m.id] = Jump.END
+                self._next_default[m.id] = None
 
     def default_next_for(self, module_id: str) -> NextRef:
-        return self._next_default.get(module_id, Jump.END)
+        return self._next_default.get(module_id)
 
     @property
     def display_name(self) -> str:
@@ -251,7 +252,7 @@ class Flow:
 
 @dataclass
 class FlowRouter:
-    """按 FlowStatus 决定下一流程 id 或 Jump。与 Flow / EventStatus 独立。"""
+    """按 FlowStatus 决定下一流程 id；None 表示结束。与 Flow 定义独立。"""
 
     on: dict[FlowStatus, NextRef] = field(default_factory=dict)
 
@@ -264,13 +265,13 @@ class FlowRouter:
     def next(self, status: FlowStatus) -> NextRef:
         status = as_flow_status(status)
         if status not in self.on:
-            return Jump.END
+            return None
         return as_next(self.on[status])
 
 
 @dataclass
 class FlowNode:
-    """Workflow 中的一格：Flow + 可选路由接口。"""
+    """Workflow 中的一格：Flow + 可选路由接口（不传则用默认：成功下一个 / 失败结束）。"""
 
     flow: Flow
     router: FlowRouter | None = None
@@ -308,18 +309,20 @@ class Workflow:
         self._routers = {}
         for i, node in enumerate(self.nodes):
             default_next: NextRef = (
-                self.nodes[i + 1].flow.id if i + 1 < len(self.nodes) else Jump.END
+                self.nodes[i + 1].flow.id if i + 1 < len(self.nodes) else None
             )
             on: dict[FlowStatus, NextRef] = {}
             if node.router is not None:
                 on.update(node.router.on)
+            # 默认接口：成功 → 下一个；失败 → 结束
             on.setdefault(FlowStatus.FULFILLED, default_next)
-            on.setdefault(FlowStatus.REJECTED, Jump.END)
+            on.setdefault(FlowStatus.REJECTED, None)
             router = FlowRouter(on=on)
             for target in router.on.values():
-                if is_terminal(target):
+                if is_stop(target):
                     continue
-                if str(target) not in self._by_id:
+                assert target is not None
+                if target not in self._by_id:
                     raise KeyError(
                         f"流程 [{node.flow.id}] 路由目标不存在: {target}，"
                         f"可选: {list(self._by_id)}"

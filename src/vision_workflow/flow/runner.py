@@ -19,11 +19,9 @@ from vision_workflow.module import Flow, Workflow
 from vision_workflow.promise import Settled
 from vision_workflow.status import (
     EventStatus,
-    Jump,
     NextRef,
     as_next,
-    is_fail,
-    is_terminal,
+    is_stop,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,14 +60,15 @@ class WorkflowRunner:
         )
         current_flow: NextRef = flow_id
 
-        while not is_terminal(current_flow):
+        while not is_stop(current_flow):
             if self._cancelled():
                 result.success = False
                 result.message = "用户取消"
                 result.feedback = result.message
                 break
 
-            flow_key = str(current_flow)
+            assert current_flow is not None
+            flow_key = current_flow
             try:
                 flow = self.workflow.get(flow_key)
             except KeyError as exc:
@@ -107,12 +106,7 @@ class WorkflowRunner:
 
             nxt = as_next(scope.next_flow_id)
             if settled.ok:
-                if is_fail(nxt):
-                    result.success = False
-                    result.message = settled.error or "流程失败"
-                    result.feedback = settled.feedback or result.message
-                    break
-                if is_terminal(nxt):
+                if is_stop(nxt):
                     break
                 current_flow = nxt
                 continue
@@ -122,7 +116,7 @@ class WorkflowRunner:
                 settled.error or settled.feedback or f"流程失败: {flow.display_name}"
             )
             result.feedback = settled.feedback or result.message
-            if is_terminal(nxt):
+            if is_stop(nxt):
                 break
             current_flow = nxt
 
@@ -186,15 +180,16 @@ class WorkflowRunner:
         *,
         start_module: str | None,
     ) -> Settled:
-        """跑完一轮流程内模块（可被流程级 Retry 多次调用）。"""
+        """跑完一轮流程内模块。"""
         current: NextRef = start_module or flow.entry
         last = Settled.reject("空流程")
 
-        while not is_terminal(current):
+        while not is_stop(current):
             if self._cancelled():
                 return Settled.reject("用户取消", feedback="用户取消")
 
-            module_id = str(current)
+            assert current is not None
+            module_id = current
             try:
                 mod = flow.get(module_id)
             except KeyError as exc:
@@ -226,14 +221,10 @@ class WorkflowRunner:
                 )
             )
 
-            if is_fail(nxt):
-                return (
-                    settled
-                    if not settled.ok
-                    else Settled.reject(f"流程 {Jump.FAIL.value}", value=settled.value)
-                )
+            if not settled.ok:
+                return settled
 
-            if is_terminal(nxt):
+            if is_stop(nxt):
                 return settled
 
             current = nxt

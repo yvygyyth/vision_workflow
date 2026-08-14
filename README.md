@@ -12,7 +12,7 @@ Workflow 流程组成的复杂流程
 
 ```python
 from vision_workflow.module import Flow, FlowNode, Workflow
-from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus, Jump
+from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus
 
 Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
 Workflow(
@@ -23,14 +23,14 @@ Workflow(
 )
 ```
 
-`name` 给 UI / 日志展示；不填则回退为 `id`。`FlowNode.router` 缺省时：`fulfilled`→顺序下一个，`rejected`→`Jump.END`。
+`name` 给 UI / 日志展示；不填则回退为 `id`。`FlowNode.router` 缺省时：`fulfilled`→顺序下一个，`rejected`→结束（None）。
 
 ## 固定枚举（`vision_workflow.status`）
 
 ```python
 EventStatus.FULFILLED / REJECTED  # 事件方法返回（别名 FULFILLED / REJECTED）
 FlowStatus.FULFILLED / REJECTED   # 流程对外状态（FlowRouter）
-Jump.END / FAIL                   # 下一跳终点哨兵（别名 END / FAIL）
+# 下一跳：业务 id；None = 本层结束（默认接口：成功→下一个，失败→结束）
 ```
 
 自定义模块结果仍可用普通 str（如 `"loop"`）；核心值请用枚举，避免硬编码字符串。
@@ -59,7 +59,7 @@ Workflow(..., config=WorkflowConfig(delay_ms=100))  # 模块/流程未写 delay_
 
 ## 模块
 
-`event` 必须返回 `on` 里的某个 key（`EventStatus` 或自定义 str），否则报错并结束当前流程。`on[key]` 返回下一模块 id，或 `Jump.END` / `Jump.FAIL`。
+`event` 必须返回 `on` 里的某个 key（`EventStatus` 或自定义 str），否则报错并结束当前流程。`on[key]` 返回下一模块 id；`None` 表示本流程结束。
 
 ```python
 from vision_workflow.events import click_image
@@ -69,7 +69,7 @@ from vision_workflow.status import FULFILLED, REJECTED
 Module(
     id="click_email",
     event=click_image("data/ming_jiang_sha/mail/email.png"),
-    on={FULFILLED: onward, REJECTED: abort},  # onward=下一模块；abort=失败结束本流程
+    on={FULFILLED: onward, REJECTED: abort},  # onward=下一模块；abort=结束本流程（配合 REJECTED）
 )
 Module(
     id="one_click",
