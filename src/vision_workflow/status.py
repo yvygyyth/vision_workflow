@@ -80,10 +80,6 @@ def as_flow_status(value: FlowStatus | str | Enum) -> FlowStatus:
     return FlowStatus(str(value))
 
 
-# 旧名兼容
-as_status = as_flow_status
-
-
 def as_next(value: NextRef | None) -> NextRef:
     """规范下一跳：Jump 或业务 id 字符串。"""
     if value is None or value == "":
@@ -106,7 +102,3 @@ def is_terminal(target: NextRef | None) -> bool:
 
 def is_fail(target: NextRef | None) -> bool:
     return as_next(target) is Jump.FAIL
-
-
-def is_end(target: NextRef | None) -> bool:
-    return as_next(target) is Jump.END

@@ -23,7 +23,6 @@ from typing import Any, TypeVar
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import MatchOptions, MatchResult
 from vision_workflow.status import (
-    EventStatus,
     FlowStatus,
     Jump,
     NextRef,
