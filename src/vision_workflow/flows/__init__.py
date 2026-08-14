@@ -3,16 +3,19 @@
 Flow / Module 仅供脚本编排（见 ``parts/``）；
 面向用户的可执行单位是 Workflow（见 ``workflows/``）。
 
-新增复杂流程：在 ``workflows/<id>/`` 导出 ``WORKFLOW``（``nodes=[FlowNode(...)]``），再加入下方 ``WORKFLOWS``。
+- 正式组合：``workflows/<id>/`` 导出 ``WORKFLOW``
+- 单流程调试：``workflows/solo/__init__.py``（每个 Workflow 只包一个 Flow）
+
+再加入下方 ``WORKFLOWS``。
 """
 
 from vision_workflow.flows.workflows.main import WORKFLOW as main_workflow
-from vision_workflow.flows.workflows.zhan_yi_store import WORKFLOW as zhan_yi_store_workflow
+from vision_workflow.flows.workflows.solo import WORKFLOWS as solo_workflows
 from vision_workflow.module import Workflow
 
 WORKFLOW = main_workflow  # CLI / 默认入口兼容
 
-WORKFLOWS: list[Workflow] = [main_workflow, zhan_yi_store_workflow]
+WORKFLOWS: list[Workflow] = [main_workflow, *solo_workflows]
 
 
 def get_workflow(workflow_id: str) -> Workflow:
