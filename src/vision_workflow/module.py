@@ -130,9 +130,6 @@ class ModuleContext:
     def mouse(self):
         return self.ctx.mouse()
 
-    def click_image(self, image: str | Path, **find_kwargs) -> MatchResult:
-        return self.ctx.click_image(image, **find_kwargs)
-
     def sleep(self, seconds: float) -> None:
         self.ctx.sleep(seconds)
 

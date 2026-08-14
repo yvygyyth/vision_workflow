@@ -1,4 +1,4 @@
-"""流程运行时上下文：识图、鼠标、复用能力。"""
+"""流程运行时上下文：识图、鼠标、日志。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FlowContext:
-    """模块 action / judge 里使用的运行时上下文。"""
+    """模块 event 使用的运行时上下文。"""
 
     def __init__(
         self,
@@ -64,13 +64,6 @@ class FlowContext:
     def mouse(self) -> Mouse:
         """新建一条鼠标链（记得末尾 .perform()）。"""
         return Mouse()
-
-    def click_image(self, image: str | Path, **find_kwargs) -> MatchResult:
-        """复用：找到图并点击中心。"""
-        hit = self.find(image, **find_kwargs)
-        if hit.found and hit.center:
-            self.mouse().at(hit.center).click().perform()
-        return hit
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
