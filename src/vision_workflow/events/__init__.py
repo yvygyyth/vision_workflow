@@ -14,12 +14,10 @@
       support/    # 共享内部实现（识图、锚点等）
 """
 
-from vision_workflow.events.builders.click import Click, click
-from vision_workflow.events.builders.scroll import Scroll, scroll
+from vision_workflow.events.builders.click import click
+from vision_workflow.events.builders.scroll import scroll
 
 __all__ = [
-    "Click",
-    "Scroll",
     "click",
     "scroll",
 ]

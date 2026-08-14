@@ -10,7 +10,7 @@ from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
 
 @dataclass(frozen=True)
-class Click:
+class _Click:
     """链式：click().image(...).offset(...).execute()"""
 
     images: tuple[str, ...] = ()
@@ -23,13 +23,13 @@ class Click:
     region: tuple[int, int, int, int] | None = None
     grayscale: bool | None = None
 
-    def image(self, *images: str) -> Click:
+    def image(self, *images: str) -> _Click:
         """追加模板图（多张按参数顺序优先匹配）。"""
         if not images:
             raise ValueError("image() 至少需要一张模板图")
         return replace(self, images=self.images + images)
 
-    def offset(self, x: int = 0, y: int = 0) -> Click:
+    def offset(self, x: int = 0, y: int = 0) -> _Click:
         """相对命中中心的点击偏移。"""
         return replace(self, offset_x=x, offset_y=y)
 
@@ -41,7 +41,7 @@ class Click:
         interval: float | None = None,
         region: tuple[int, int, int, int] | None = None,
         grayscale: bool | None = None,
-    ) -> Click:
+    ) -> _Click:
         """识图参数。"""
         return replace(
             self,
@@ -52,7 +52,7 @@ class Click:
             grayscale=self.grayscale if grayscale is None else grayscale,
         )
 
-    def pause(self, seconds: float) -> Click:
+    def pause(self, seconds: float) -> _Click:
         """点击后等待秒数。"""
         return replace(self, sleep=seconds)
 
@@ -89,6 +89,6 @@ class Click:
         return _event
 
 
-def click() -> Click:
+def click() -> _Click:
     """开始一条识图点击链。"""
-    return Click()
+    return _Click()

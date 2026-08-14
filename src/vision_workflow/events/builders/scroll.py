@@ -17,7 +17,7 @@ from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
 
 @dataclass(frozen=True)
-class Scroll:
+class _Scroll:
     """链式：scroll().at(...)/image(...).amount(...).execute()"""
 
     wheel: int | None = None
@@ -32,21 +32,21 @@ class Scroll:
     region: tuple[int, int, int, int] | None = None
     grayscale: bool | None = None
 
-    def at(self, target: ScrollAnchor) -> Scroll:
+    def at(self, target: ScrollAnchor) -> _Scroll:
         """在坐标或快捷锚点处滚轮（与 image 二选一）。"""
         return replace(self, anchor=target, images=())
 
-    def image(self, *images: str) -> Scroll:
+    def image(self, *images: str) -> _Scroll:
         """识图定位后在该点滚轮（与 at 二选一；多图按顺序优先）。"""
         if not images:
             raise ValueError("image() 至少需要一张模板图")
         return replace(self, images=self.images + images, anchor=None)
 
-    def amount(self, value: int) -> Scroll:
+    def amount(self, value: int) -> _Scroll:
         """滚轮刻度：>0 向上，<0 向下。"""
         return replace(self, wheel=value)
 
-    def offset(self, x: int = 0, y: int = 0) -> Scroll:
+    def offset(self, x: int = 0, y: int = 0) -> _Scroll:
         """相对命中中心 / 锚点的偏移（仅 image 模式常用）。"""
         return replace(self, offset_x=x, offset_y=y)
 
@@ -58,7 +58,7 @@ class Scroll:
         interval: float | None = None,
         region: tuple[int, int, int, int] | None = None,
         grayscale: bool | None = None,
-    ) -> Scroll:
+    ) -> _Scroll:
         """识图参数（仅 image 模式）。"""
         return replace(
             self,
@@ -69,7 +69,7 @@ class Scroll:
             grayscale=self.grayscale if grayscale is None else grayscale,
         )
 
-    def pause(self, seconds: float) -> Scroll:
+    def pause(self, seconds: float) -> _Scroll:
         """滚轮后等待秒数。"""
         return replace(self, sleep=seconds)
 
@@ -118,6 +118,6 @@ class Scroll:
         return _event
 
 
-def scroll() -> Scroll:
+def scroll() -> _Scroll:
     """开始一条滚轮链。"""
-    return Scroll()
+    return _Scroll()
