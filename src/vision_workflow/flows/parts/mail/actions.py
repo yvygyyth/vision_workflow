@@ -1,11 +1,11 @@
 """邮件流程动作。"""
 
-from vision_workflow.events import click
+from vision_workflow.events import click, space_close
 from vision_workflow.module import EventFn
 
 _DIR = "data/ming_jiang_sha/mail"
 
 click_email: EventFn = click().image(f"{_DIR}/email.png").execute()
 click_one_click_receive: EventFn = click().image(f"{_DIR}/email_one_click_receive.png").execute()
-click_space_close: EventFn = click().image(f"{_DIR}/space-close.png").execute()
+click_space_close: EventFn = space_close()
 click_email_close: EventFn = click().image(f"{_DIR}/email-close.png").execute()

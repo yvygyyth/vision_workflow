@@ -1,9 +1,10 @@
-"""鼠标操作：链式调用。
+"""鼠标 / 键盘操作。
 
 示例::
 
     Mouse().move(100, 200).click().sleep(0.3).drag(300, 400).perform()
     Mouse().at(match.center).click().perform()
+    press_key("esc")
 """
 
 from __future__ import annotations
@@ -16,6 +17,22 @@ from typing import Any, Callable, Literal, Self
 logger = logging.getLogger(__name__)
 
 Button = Literal["left", "right", "middle"]
+
+
+def press_key(key: str) -> None:
+    """按下并松开一个键（如 esc、enter、space）。"""
+    api = _pyautogui()
+    logger.debug("key press: %s", key)
+    api.press(key)
+
+
+def _pyautogui():
+    try:
+        import pyautogui
+    except ImportError as exc:
+        raise RuntimeError("请安装 pyautogui: pip install pyautogui") from exc
+    pyautogui.FAILSAFE = True
+    return pyautogui
 
 
 @dataclass
@@ -156,9 +173,4 @@ class Mouse:
 
     @staticmethod
     def _api():
-        try:
-            import pyautogui
-        except ImportError as exc:
-            raise RuntimeError("请安装 pyautogui: pip install pyautogui") from exc
-        pyautogui.FAILSAFE = True
-        return pyautogui
+        return _pyautogui()
