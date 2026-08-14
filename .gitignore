@@ -11,6 +11,9 @@ build/
 venv/
 .env
 
+# 本地识图设置（UI 可改）
+match_settings.json
+
 # IDE / OS
 .idea/
 .vscode/

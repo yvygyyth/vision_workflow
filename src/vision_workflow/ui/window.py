@@ -9,9 +9,11 @@ import customtkinter as ctk
 
 from vision_workflow.flows import WORKFLOW, workflow_choices
 from vision_workflow.models.flow import FlowRunResult
+from vision_workflow.settings import MatchSettings
 from vision_workflow.ui import theme
 from vision_workflow.ui.panels.control_panel import ControlPanel
 from vision_workflow.ui.panels.log_panel import LogPanel
+from vision_workflow.ui.panels.settings_dialog import SettingsDialog
 from vision_workflow.ui.panels.status_bar import StatusBar
 from vision_workflow.ui.services.log_bridge import attach_queue_handler, drain_queue
 from vision_workflow.ui.services.workflow_worker import RunRequest, WorkflowWorker
@@ -39,6 +41,7 @@ class MainWindow(ctk.CTk):
             on_run=self._start,
             on_stop=self._stop,
             on_clear=self._clear_log,
+            on_settings=self._open_settings,
         )
         self.controls.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 8))
 
@@ -66,16 +69,47 @@ class MainWindow(ctk.CTk):
         self.controls.set_workflow_choices(choices, selected_id=WORKFLOW.id)
         self.status.set_status(f"已加载 {len(choices)} 个复杂流程")
         self.logs.append(f"已加载复杂流程目录，共 {len(choices)} 项")
-        try:
-            from vision_workflow.display import BASE_DISPLAY, get_display_info, template_scale
+        self._log_match_settings()
 
+    def _log_match_settings(self) -> None:
+        try:
+            from vision_workflow.display import (
+                active_baseline,
+                get_display_info,
+                match_scales,
+                template_scale,
+            )
+            from vision_workflow.settings import get_match_settings
+
+            cfg = get_match_settings()
             d = get_display_info()
             scale = template_scale(d)
-            self.logs.append(BASE_DISPLAY.format_line(prefix="模板基准"))
+            scales = match_scales(scale)
+            self.logs.append(active_baseline().format_line(prefix="模板基准"))
             self.logs.append(d.format_line(prefix="当前设备"))
-            self.logs.append(f"识图缩放 scale={scale:.4f}（相对模板基准）")
+            multi = "开" if cfg.multi_scale else "关"
+            self.logs.append(
+                f"识图设置 baseline={cfg.baseline_label()} "
+                f"multi={multi} [{cfg.scale_min:g},{cfg.scale_max:g}] "
+                f"base={scale:.4f} → {[round(s, 4) for s in scales]}"
+            )
         except Exception as exc:  # noqa: BLE001
             self.logs.append(f"显示参数读取失败: {exc}")
+
+    def _open_settings(self) -> None:
+        if self.worker.busy:
+            self.status.set_status("运行中不可改设置", ok=False)
+            return
+        SettingsDialog(self, on_saved=self._on_settings_saved)
+
+    def _on_settings_saved(self, settings: MatchSettings) -> None:
+        multi = "开" if settings.multi_scale else "关"
+        self.logs.append(
+            f"已保存识图设置 baseline={settings.baseline_label()} "
+            f"multi={multi} [{settings.scale_min:g},{settings.scale_max:g}]"
+        )
+        self._log_match_settings()
+        self.status.set_status("设置已保存")
 
     def _start(self) -> None:
         if self.worker.busy:
