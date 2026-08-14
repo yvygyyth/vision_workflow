@@ -42,6 +42,13 @@ DEFAULT_START_DELAY_MS = 2000
 """点开始后默认等待毫秒数。"""
 
 
+def _log_label(*, id: str, name: str, description: str) -> str:
+    """日志用标题：优先 name，有 description 则附上。"""
+    title = name.strip() or id
+    desc = description.strip()
+    return f"{title} — {desc}" if desc else title
+
+
 @dataclass
 class ModuleConfig:
     """模块级 config：延迟 / 重试。"""
@@ -188,6 +195,7 @@ class Module:
     event: EventFn
     on: dict[OutcomeKey, OutcomeFn]
     name: str = ""
+    description: str = ""
     enabled: bool = True
     config: ModuleConfig = field(default_factory=ModuleConfig)
 
@@ -201,6 +209,14 @@ class Module:
                 raise TypeError(f"模块 [{self.id}] on 的值必须是函数，非法 key: {key}")
             normalized[as_outcome(key)] = fn
         self.on = normalized
+
+    @property
+    def display_name(self) -> str:
+        return self.name.strip() or self.id
+
+    @property
+    def log_label(self) -> str:
+        return _log_label(id=self.id, name=self.name, description=self.description)
 
     def has_outcome(self, key: OutcomeKey | Any) -> bool:
         return as_outcome(key) in self.on
@@ -217,6 +233,7 @@ class Flow:
     modules: list[Module]
     entry: str
     name: str = ""
+    description: str = ""
     config: FlowConfig = field(default_factory=FlowConfig)
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
@@ -243,6 +260,10 @@ class Flow:
     @property
     def display_name(self) -> str:
         return self.name.strip() or self.id
+
+    @property
+    def log_label(self) -> str:
+        return _log_label(id=self.id, name=self.name, description=self.description)
 
     def get(self, module_id: str) -> Module:
         if module_id not in self._by_id:
@@ -287,6 +308,7 @@ class Workflow:
     entry: str | None = None
     id: str = "workflow"
     name: str = ""
+    description: str = ""
     base_dir: str | None = None
     config: WorkflowConfig = field(default_factory=WorkflowConfig)
 
@@ -334,6 +356,10 @@ class Workflow:
     @property
     def display_name(self) -> str:
         return self.name.strip() or self.id
+
+    @property
+    def log_label(self) -> str:
+        return _log_label(id=self.id, name=self.name, description=self.description)
 
     @property
     def flows(self) -> list[Flow]:

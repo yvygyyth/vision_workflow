@@ -67,7 +67,7 @@ class WorkflowWorker:
             )
             logger.info(
                 "开始执行 复杂流程=%s 入口=%s",
-                workflow.display_name,
+                workflow.log_label,
                 workflow.entry,
             )
             # 始终从复杂流程自身入口开始，不暴露子流程选择

@@ -9,6 +9,7 @@ from vision_workflow.module import FlowNode, Workflow
 WORKFLOW = Workflow(
     id="main",
     name="名将杀免费资源每日领取",
+    description="依次领取邮件、丹青阁、煮酒店铺、战役商店资源",
     entry="mail",
     nodes=[
         FlowNode(mail),

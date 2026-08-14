@@ -11,6 +11,7 @@ def _solo(flow: Flow) -> Workflow:
     return Workflow(
         id=flow.id,
         name=flow.display_name,
+        description=flow.description or f"单独调试：{flow.display_name}",
         entry=flow.id,
         nodes=[FlowNode(flow)],
     )

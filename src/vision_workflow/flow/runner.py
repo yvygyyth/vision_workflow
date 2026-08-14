@@ -102,7 +102,7 @@ class WorkflowRunner:
                 result.feedback = str(exc)
                 break
 
-            logger.info("流程开始 (%s)", flow.display_name)
+            logger.info("流程开始 (%s)", flow.log_label)
             start_for_attempt = module_start if flow_key == flow_id else None
             module_start = None
             first_shot = {"pending": start_for_attempt, "used": False}
@@ -138,7 +138,7 @@ class WorkflowRunner:
 
             result.success = False
             result.message = (
-                settled.error or settled.feedback or f"流程失败: {flow.display_name}"
+                settled.error or settled.feedback or f"流程失败: {flow.log_label}"
             )
             result.feedback = settled.feedback or result.message
             if is_stop(nxt):

@@ -75,7 +75,7 @@ def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddlewa
     retry_delay_ms = max(0, int(retry_delay_ms))
 
     def mw(scope: ModuleScope, call_next: CallNext) -> Settled:
-        label = scope.module.name or scope.module.id
+        label = scope.module.log_label
         retry_on = {as_outcome(k) for k in scope.module.config.retry_on}
         last = Settled.reject("未执行")
         attempts = retries + 1
@@ -111,7 +111,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
         settled = call_next()
         mctx = scope.module_ctx
         mod = scope.module
-        label = mod.name or mod.id
+        label = mod.log_label
 
         if not settled.ok or mctx is None or mctx.key is None:
             scope.next_id = None
@@ -169,7 +169,7 @@ def build_module_middlewares(scope: ModuleScope) -> list[ModuleMiddleware]:
 def run_module_event(scope: ModuleScope) -> Settled:
     """核心：跑 event，校验返回值必须是 on 的某个 key。"""
     mod = scope.module
-    label = mod.name or mod.id
+    label = mod.log_label
     mctx = ModuleContext(
         ctx=scope.ctx,
         module=mod,
@@ -261,14 +261,14 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
         scope.next_flow_id = nxt
         logger.info(
             "流程结束 (%s) status=%s → %s",
-            scope.flow.display_name,
+            scope.flow.log_label,
             status.value,
             nxt,
         )
         if status is FlowStatus.FULFILLED and not is_stop(nxt):
             delay = max(0, int(scope.flow.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
-                logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.display_name)
+                logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.log_label)
                 scope.ctx.sleep(delay / 1000.0)
         return settled
 
