@@ -66,6 +66,18 @@ class MainWindow(ctk.CTk):
         self.controls.set_workflow_choices(choices, selected_id=WORKFLOW.id)
         self.status.set_status(f"已加载 {len(choices)} 个复杂流程")
         self.logs.append(f"已加载复杂流程目录，共 {len(choices)} 项")
+        try:
+            from vision_workflow.display import get_display_info
+
+            d = get_display_info()
+            self.logs.append(
+                f"显示参数 screen={d.screen_width}x{d.screen_height} "
+                f"shot={d.screenshot_width}x{d.screenshot_height} "
+                f"dpi={d.dpi} scale={d.scale_percent:g}% "
+                f"virtual={d.virtual_width}x{d.virtual_height}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.logs.append(f"显示参数读取失败: {exc}")
 
     def _start(self) -> None:
         if self.worker.busy:
