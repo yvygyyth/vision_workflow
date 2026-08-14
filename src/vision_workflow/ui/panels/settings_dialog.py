@@ -9,9 +9,12 @@ import customtkinter as ctk
 from vision_workflow.settings import MatchSettings, get_match_settings, save_match_settings
 from vision_workflow.ui import theme
 
+# 模板基准只读，与代码默认一致
+_FIXED_BASELINE = MatchSettings()
+
 
 class SettingsDialog(ctk.CTkToplevel):
-    """模块化设置页：基准分辨率 / 多尺度上下限 / 是否开启多尺度。"""
+    """设置页：基准只读；可改多尺度上下限、档数与开关。"""
 
     def __init__(
         self,
@@ -21,7 +24,7 @@ class SettingsDialog(ctk.CTkToplevel):
     ) -> None:
         super().__init__(master)
         self.title("识图设置")
-        self.geometry("420x360")
+        self.geometry("420x380")
         self.resizable(False, False)
         self.configure(fg_color=theme.BG)
         self._on_saved = on_saved
@@ -42,17 +45,27 @@ class SettingsDialog(ctk.CTkToplevel):
 
         cfg = get_match_settings()
 
-        self._baseline_var = ctk.StringVar(value=cfg.baseline_label())
         self._min_var = ctk.StringVar(value=str(cfg.scale_min))
         self._max_var = ctk.StringVar(value=str(cfg.scale_max))
+        self._samples_var = ctk.StringVar(value=str(cfg.scale_samples))
         self._multi_var = ctk.BooleanVar(value=cfg.multi_scale)
 
-        self._add_row(frame, 1, "模板基准分辨率", self._baseline_var, hint="如 2560x1440")
+        ctk.CTkLabel(frame, text="模板基准分辨率", font=theme.FONT_UI, text_color=theme.TEXT).grid(
+            row=1, column=0, sticky="w", padx=(16, 8), pady=8
+        )
+        ctk.CTkLabel(
+            frame,
+            text=_FIXED_BASELINE.baseline_label(),
+            font=theme.FONT_UI,
+            text_color=theme.MUTED,
+        ).grid(row=1, column=1, sticky="w", padx=(0, 16), pady=8)
+
         self._add_row(frame, 2, "多尺度下限", self._min_var, hint="相对基准换算，如 0.9")
         self._add_row(frame, 3, "多尺度上限", self._max_var, hint="相对基准换算，如 1.1")
+        self._add_row(frame, 4, "分几档", self._samples_var, hint="含两端，至少 2，默认 5")
 
         ctk.CTkLabel(frame, text="开启多尺度", font=theme.FONT_UI, text_color=theme.TEXT).grid(
-            row=4, column=0, sticky="w", padx=(16, 8), pady=8
+            row=5, column=0, sticky="w", padx=(16, 8), pady=8
         )
         self._multi_switch = ctk.CTkSwitch(
             frame,
@@ -62,13 +75,13 @@ class SettingsDialog(ctk.CTkToplevel):
             offvalue=False,
             progress_color=theme.ACCENT,
         )
-        self._multi_switch.grid(row=4, column=1, sticky="w", padx=(0, 16), pady=8)
+        self._multi_switch.grid(row=5, column=1, sticky="w", padx=(0, 16), pady=8)
 
         self._error = ctk.CTkLabel(frame, text="", font=theme.FONT_UI, text_color=theme.ERR)
-        self._error.grid(row=5, column=0, columnspan=2, sticky="w", padx=16, pady=(4, 0))
+        self._error.grid(row=6, column=0, columnspan=2, sticky="w", padx=16, pady=(4, 0))
 
         btns = ctk.CTkFrame(frame, fg_color="transparent")
-        btns.grid(row=6, column=0, columnspan=2, sticky="ew", padx=16, pady=(12, 14))
+        btns.grid(row=7, column=0, columnspan=2, sticky="ew", padx=16, pady=(12, 14))
         btns.grid_columnconfigure(0, weight=1)
         btns.grid_columnconfigure(1, weight=1)
 
@@ -122,12 +135,12 @@ class SettingsDialog(ctk.CTkToplevel):
 
     def _save(self) -> None:
         try:
-            w, h = _parse_resolution(self._baseline_var.get())
             settings = MatchSettings(
-                baseline_width=w,
-                baseline_height=h,
+                baseline_width=_FIXED_BASELINE.baseline_width,
+                baseline_height=_FIXED_BASELINE.baseline_height,
                 scale_min=float(self._min_var.get().strip()),
                 scale_max=float(self._max_var.get().strip()),
+                scale_samples=int(self._samples_var.get().strip()),
                 multi_scale=bool(self._multi_var.get()),
             ).validate()
         except Exception as exc:  # noqa: BLE001
@@ -138,14 +151,3 @@ class SettingsDialog(ctk.CTkToplevel):
         if self._on_saved:
             self._on_saved(saved)
         self.destroy()
-
-
-def _parse_resolution(text: str) -> tuple[int, int]:
-    raw = text.strip().lower().replace("×", "x").replace("*", "x")
-    if "x" not in raw:
-        raise ValueError("基准分辨率格式应为 宽x高，如 2560x1440")
-    a, b = raw.split("x", 1)
-    w, h = int(a.strip()), int(b.strip())
-    if w <= 0 or h <= 0:
-        raise ValueError("分辨率宽高必须为正整数")
-    return w, h

@@ -120,7 +120,8 @@ def info_cmd() -> None:
     console.print(
         f"match     : baseline={match_cfg.baseline_label()} "
         f"multi={'on' if match_cfg.multi_scale else 'off'} "
-        f"[{match_cfg.scale_min:g}, {match_cfg.scale_max:g}]"
+        f"[{match_cfg.scale_min:g}, {match_cfg.scale_max:g}] "
+        f"samples={match_cfg.scale_samples}"
     )
     console.print(f"img_scale : {scale:.4f} → {[round(s, 4) for s in scales]}")
 

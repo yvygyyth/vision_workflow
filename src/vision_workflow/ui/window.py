@@ -91,6 +91,7 @@ class MainWindow(ctk.CTk):
             self.logs.append(
                 f"识图设置 baseline={cfg.baseline_label()} "
                 f"multi={multi} [{cfg.scale_min:g},{cfg.scale_max:g}] "
+                f"samples={cfg.scale_samples} "
                 f"base={scale:.4f} → {[round(s, 4) for s in scales]}"
             )
         except Exception as exc:  # noqa: BLE001
@@ -106,7 +107,8 @@ class MainWindow(ctk.CTk):
         multi = "开" if settings.multi_scale else "关"
         self.logs.append(
             f"已保存识图设置 baseline={settings.baseline_label()} "
-            f"multi={multi} [{settings.scale_min:g},{settings.scale_max:g}]"
+            f"multi={multi} [{settings.scale_min:g},{settings.scale_max:g}] "
+            f"samples={settings.scale_samples}"
         )
         self._log_match_settings()
         self.status.set_status("设置已保存")

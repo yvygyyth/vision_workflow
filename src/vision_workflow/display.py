@@ -47,7 +47,6 @@ _DEFAULT_BASE_W = 2560
 _DEFAULT_BASE_H = 1440
 TEMPLATE_SCALE_MIN = 0.90
 TEMPLATE_SCALE_MAX = 1.10
-_TEMPLATE_SCALE_SAMPLES = 5
 
 
 def _baseline_from_settings() -> DisplayInfo:
@@ -155,7 +154,7 @@ def match_scales(base: float | None = None) -> list[float]:
     hi = center * float(cfg.scale_max)
     if hi < lo:
         lo, hi = hi, lo
-    n = max(2, int(_TEMPLATE_SCALE_SAMPLES))
+    n = max(2, int(cfg.scale_samples))
     if abs(hi - lo) < 1e-9:
         return [center]
     return [lo + (hi - lo) * i / (n - 1) for i in range(n)]
