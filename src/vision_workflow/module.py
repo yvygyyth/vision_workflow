@@ -70,6 +70,8 @@ class WorkflowConfig:
 
     delay_ms: int = 0
     """默认延迟（毫秒）：模块/流程未单独配置 delay_ms 时使用。"""
+    start_delay_ms: int = 0
+    """点开始后、正式执行前的等待（毫秒）。"""
 
 
 def _coerce_config(cls: type[_ConfigT], value: _ConfigT | Mapping[str, Any] | None) -> _ConfigT:

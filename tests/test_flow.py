@@ -9,6 +9,7 @@ from vision_workflow.module import (
     Module,
     ModuleConfig,
     Workflow,
+    WorkflowConfig,
     abort,
     onward,
     to,
@@ -317,6 +318,28 @@ def test_module_and_flow_config_delay() -> None:
     assert result.success
     assert result.path == ["f1.a", "f1.b", "f2.c"]
     assert sleeps == [0.03, 0.04]
+
+
+def test_workflow_start_delay_ms() -> None:
+    sleeps: list[float] = []
+    workflow = _wf(
+        Flow(
+            id="f",
+            entry="a",
+            modules=[Module(id="a", event=lambda m: FULFILLED, on={FULFILLED: onward})],
+        )
+    )
+    workflow.config = WorkflowConfig(start_delay_ms=120)
+    runner = WorkflowRunner(workflow)
+
+    def _spy(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    runner.ctx.sleep = _spy  # type: ignore[method-assign]
+    result = runner.run()
+    assert result.success
+    assert result.path == ["f.a"]
+    assert abs(sum(sleeps) - 0.12) < 1e-9
 
 
 def test_config_dict_coercion() -> None:

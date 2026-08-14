@@ -50,6 +50,29 @@ class WorkflowRunner:
     def _cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
 
+    def _wait_start_delay(self, result: FlowRunResult) -> bool:
+        """启动前延迟；可取消。返回 False 表示已取消并写好 result。"""
+        delay_ms = max(0, int(self.workflow.config.start_delay_ms))
+        if delay_ms <= 0:
+            return True
+        logger.info("启动延迟 %sms", delay_ms)
+        remaining = delay_ms / 1000.0
+        while remaining > 0:
+            if self._cancelled():
+                result.success = False
+                result.message = "用户取消"
+                result.feedback = result.message
+                return False
+            step = min(0.05, remaining)
+            self.ctx.sleep(step)
+            remaining -= step
+        if self._cancelled():
+            result.success = False
+            result.message = "用户取消"
+            result.feedback = result.message
+            return False
+        return True
+
     def run(self, start: str | None = None) -> FlowRunResult:
         start_token = start or self.entry
         flow_id, module_start = self._parse_start(start_token)
@@ -58,6 +81,8 @@ class WorkflowRunner:
             flow_name=self.workflow.display_name,
             success=True,
         )
+        if not self._wait_start_delay(result):
+            return result
         current_flow: NextRef = flow_id
 
         while not is_stop(current_flow):
