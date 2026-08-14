@@ -42,14 +42,11 @@ class DisplayInfo:
         )
 
 
-# 默认模板基准 / 多尺度（可被 match_settings.json 覆盖）
-_DEFAULT_BASE_W = 2560
-_DEFAULT_BASE_H = 1440
-TEMPLATE_SCALE_MIN = 0.90
-TEMPLATE_SCALE_MAX = 1.10
+# 识图默认（min/max/samples/baseline）统一在 settings.MatchSettings，勿在此再维护一份
 
 
-def _baseline_from_settings() -> DisplayInfo:
+def active_baseline() -> DisplayInfo:
+    """当前生效的模板基准（来自设置；基准宽高以 MatchSettings 代码默认为准）。"""
     from vision_workflow.settings import get_match_settings
 
     s = get_match_settings()
@@ -64,24 +61,6 @@ def _baseline_from_settings() -> DisplayInfo:
         dpi=96,
         scale_percent=100.0,
     )
-
-
-# 兼容旧引用：启动时的默认值；运行时请用 active_baseline()
-BASE_DISPLAY = DisplayInfo(
-    screen_width=_DEFAULT_BASE_W,
-    screen_height=_DEFAULT_BASE_H,
-    screenshot_width=_DEFAULT_BASE_W,
-    screenshot_height=_DEFAULT_BASE_H,
-    virtual_width=_DEFAULT_BASE_W,
-    virtual_height=_DEFAULT_BASE_H,
-    dpi=96,
-    scale_percent=100.0,
-)
-
-
-def active_baseline() -> DisplayInfo:
-    """当前生效的模板基准（来自设置）。"""
-    return _baseline_from_settings()
 
 
 def get_display_info() -> DisplayInfo:
