@@ -38,6 +38,9 @@ OutcomeFn = Callable[["ModuleContext"], NextRef]
 
 _ConfigT = TypeVar("_ConfigT")
 
+DEFAULT_START_DELAY_MS = 2000
+"""点开始后默认等待毫秒数。"""
+
 
 @dataclass
 class ModuleConfig:
@@ -70,7 +73,7 @@ class WorkflowConfig:
 
     delay_ms: int = 0
     """默认延迟（毫秒）：模块/流程未单独配置 delay_ms 时使用。"""
-    start_delay_ms: int = 0
+    start_delay_ms: int = DEFAULT_START_DELAY_MS
     """点开始后、正式执行前的等待（毫秒）。"""
 
 

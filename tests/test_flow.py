@@ -2,6 +2,7 @@
 
 from vision_workflow.flow import WorkflowRunner
 from vision_workflow.module import (
+    DEFAULT_START_DELAY_MS,
     Flow,
     FlowConfig,
     FlowNode,
@@ -27,6 +28,7 @@ def _wf(
         id="w",
         entry=entry or flows[0].id,
         nodes=[FlowNode(f, router=routers.get(f.id)) for f in flows],
+        config=WorkflowConfig(start_delay_ms=0),
     )
 
 
@@ -321,6 +323,7 @@ def test_module_and_flow_config_delay() -> None:
 
 
 def test_workflow_start_delay_ms() -> None:
+    assert WorkflowConfig().start_delay_ms == DEFAULT_START_DELAY_MS
     sleeps: list[float] = []
     workflow = _wf(
         Flow(
@@ -391,6 +394,7 @@ def test_flow_loop_via_router() -> None:
                 ),
             )
         ],
+        config=WorkflowConfig(start_delay_ms=0),
     )
     result = WorkflowRunner(workflow).run()
     assert hits["n"] == 3

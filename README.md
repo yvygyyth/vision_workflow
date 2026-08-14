@@ -54,8 +54,7 @@ Module(
     config=ModuleConfig(retry=2, retry_on=[REJECTED], retry_delay_ms=200, delay_ms=100),
 )
 Flow(id="mail", ..., config=FlowConfig(delay_ms=500))
-Workflow(..., config=WorkflowConfig(delay_ms=100, start_delay_ms=3000))
-# delay_ms：模块/流程未写时的默认间隔；start_delay_ms：点开始后正式执行前等待
+Workflow(..., config=WorkflowConfig(delay_ms=100))  # start_delay_ms 默认 DEFAULT_START_DELAY_MS（2s）
 ```
 
 ## 模块
