@@ -24,11 +24,22 @@ from vision_workflow.status import (
     as_next,
     as_outcome,
     is_stop,
+    outcome_label,
 )
 
 logger = logging.getLogger(__name__)
 
 CallNext = Callable[[], Settled]
+
+
+def _next_module_label(flow: Flow, nxt: NextRef) -> str:
+    if is_stop(nxt):
+        return "结束"
+    assert nxt is not None
+    try:
+        return flow.get(nxt).display_name
+    except KeyError:
+        return nxt
 
 
 @dataclass
@@ -121,27 +132,29 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
         try:
             nxt = as_next(mod.handler_for(key)(mctx))
         except Exception as exc:
-            logger.exception("模块 on[%s] 异常 (%s)", key, mod.id)
+            logger.exception("模块 on[%s] 异常 (%s)", outcome_label(key), mod.log_label)
             scope.next_id = None
             return Settled.reject(
                 str(exc),
                 value=mctx.value,
-                feedback=f"({mod.id}) on[{key}] 异常",
+                feedback=f"（{mod.display_name}）on[{outcome_label(key)}] 异常",
             )
 
         scope.next_id = nxt
 
         # 成败看状态：REJECTED 且不再继续 → 本流程失败；否则（含 REJECTED 但跳去别的模块）可继续
+        next_text = _next_module_label(scope.flow, nxt)
+        key_text = outcome_label(key)
         if key is EventStatus.REJECTED and is_stop(nxt):
             settled = Settled.reject(
-                f"outcome [{key}] → stop",
+                f"outcome [{key_text}] → stop",
                 value=mctx.value,
-                feedback=f"({mod.id}) {key} → stop",
+                feedback=f"（{mod.display_name}）{key_text} → {next_text}",
             )
         else:
             settled = Settled.resolve(
                 mctx.value if mctx.value is not None else key,
-                feedback=f"({mod.id}) {key} → {nxt}",
+                feedback=f"（{mod.display_name}）{key_text} → {next_text}",
             )
 
         if settled.ok and not is_stop(nxt):
@@ -183,25 +196,25 @@ def run_module_event(scope: ModuleScope) -> Settled:
     try:
         raw = mod.event(mctx)
     except Exception as exc:
-        logger.exception("模块 event 异常 (%s)", mod.id)
-        settled = Settled.reject(str(exc), feedback=f"({mod.id}) event 异常")
+        logger.exception("模块 event 异常 (%s)", mod.log_label)
+        settled = Settled.reject(str(exc), feedback=f"（{mod.display_name}）event 异常")
         logger.info("模块结束 (%s) status=%s", label, EventStatus.REJECTED.value)
         return settled
 
     mctx.key = as_outcome(raw)
 
     if not mod.has_outcome(mctx.key):
-        msg = f"未知结果 [{mctx.key}]，可选: {list(mod.on)}"
+        msg = f"未知结果 [{outcome_label(mctx.key)}]，可选: {list(mod.on)}"
         logger.error("模块 [%s] %s", label, msg)
-        settled = Settled.reject(msg, value=mctx.value, feedback=f"({mod.id}) {msg}")
+        settled = Settled.reject(msg, value=mctx.value, feedback=f"（{mod.display_name}）{msg}")
         logger.info("模块结束 (%s) status=%s", label, EventStatus.REJECTED.value)
         return settled
 
     settled = Settled.resolve(
         mctx.value if mctx.value is not None else mctx.key,
-        feedback=f"({mod.id}) outcome={mctx.key}",
+        feedback=f"（{mod.display_name}）outcome={outcome_label(mctx.key)}",
     )
-    logger.info("模块结束 (%s) key=%s", label, mctx.key)
+    logger.info("模块结束 (%s) key=%s", label, outcome_label(mctx.key))
     return settled
 
 

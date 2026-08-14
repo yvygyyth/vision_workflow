@@ -78,7 +78,7 @@ class WorkflowRunner:
         flow_id, module_start = self._parse_start(start_token)
 
         result = FlowRunResult(
-            flow_name=self.workflow.display_name,
+            flow_name=self.workflow.log_label,
             success=True,
         )
         if not self._wait_start_delay(result):
@@ -225,6 +225,7 @@ class WorkflowRunner:
                 return Settled.reject(msg, feedback=msg)
 
             step_id = f"{flow.id}.{mod.id}"
+            step_label = f"{flow.display_name}/{mod.display_name}"
             result.path.append(step_id)
             scope = ModuleScope(
                 ctx=self.ctx,
@@ -239,6 +240,7 @@ class WorkflowRunner:
             result.steps.append(
                 StepRunResult(
                     step_id=step_id,
+                    step_label=step_label,
                     success=settled.ok,
                     message=settled.error if not settled.ok else EventStatus.FULFILLED.value,
                     feedback=settled.feedback,

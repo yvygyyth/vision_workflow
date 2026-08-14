@@ -116,13 +116,17 @@ class MainWindow(ctk.CTk):
         if result is None:
             self.status.set_status("无结果", ok=False)
             return
-        path = " → ".join(result.path) if result.path else "(empty)"
+        path_labels = [
+            s.step_label or s.step_id for s in result.steps if s.step_label or s.step_id
+        ]
+        path = " → ".join(path_labels) if path_labels else "(empty)"
+        ok_text = "成功" if result.success else "失败"
         self.logs.append(
-            f"结果 [{result.flow_name}] success={result.success} | {result.feedback or result.message}"
+            f"结果 [{result.flow_name}] {ok_text} | {result.feedback or result.message}"
         )
-        self.logs.append(f"path: {path}")
+        self.logs.append(f"路径: {path}")
         self.status.set_status(
-            result.feedback or result.message or ("成功" if result.success else "失败"),
+            result.feedback or result.message or ok_text,
             ok=result.success,
         )
 

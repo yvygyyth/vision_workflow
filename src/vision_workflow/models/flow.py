@@ -26,6 +26,7 @@ class MatchResult(BaseModel):
 
 class StepRunResult(BaseModel):
     step_id: str  # flow_id.module_id
+    step_label: str = ""  # 可读：流程名/模块名
     success: bool = True
     message: str = ""
     feedback: str = ""

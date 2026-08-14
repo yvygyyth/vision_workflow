@@ -44,6 +44,19 @@ OutcomeKey = EventStatus | str
 # 下一跳：业务 id；None = 本层结束
 NextRef = str | None
 
+_OUTCOME_LABELS: dict[EventStatus, str] = {
+    EventStatus.FULFILLED: "成功",
+    EventStatus.REJECTED: "失败",
+}
+
+
+def outcome_label(value: Any) -> str:
+    """日志/反馈用的 outcome 文案（避免 f-string 打出 EventStatus.XXX）。"""
+    key = as_outcome(value)
+    if isinstance(key, EventStatus):
+        return _OUTCOME_LABELS.get(key, key.value)
+    return str(key)
+
 
 def as_outcome(value: Any) -> OutcomeKey:
     """规范事件 outcome key：已知则收成 EventStatus，否则保留自定义 str。"""
