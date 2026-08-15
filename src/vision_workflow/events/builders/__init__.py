@@ -1,1 +1,1 @@
-"""链式事件 builder：每新增一种事件，在此目录加一个文件即可。"""
+"""事件 builder：move / click / scroll / do。"""

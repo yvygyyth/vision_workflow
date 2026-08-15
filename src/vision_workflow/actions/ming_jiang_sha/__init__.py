@@ -1,8 +1,8 @@
 """名将杀二级封装：Esc 语义 + common 模板点击。
 
-与 ``events.builders`` 的通用链区分::
+与 ``events`` 的通用链区分::
 
-    from vision_workflow.events import click, scroll
+    from vision_workflow.events import move, click, do
     from vision_workflow.actions.ming_jiang_sha import space_close, go_back, buy, click_max
 """
 

@@ -1,23 +1,23 @@
-"""common 图点击：跨流程复用的 UI（与 parts 专属 click 区分）。"""
+"""common 图点击：跨流程复用的 UI（与 parts 专属动作区分）。"""
 
 from __future__ import annotations
 
 from vision_workflow.actions.ming_jiang_sha.paths import COMMON_DIR
-from vision_workflow.events.builders.click import click
+from vision_workflow.events import click, do, move
 from vision_workflow.events.support.find import wait_image
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
-click_max: EventFn = click().image(f"{COMMON_DIR}/max.png").execute()
-click_ming_jiang_ce: EventFn = click().image(f"{COMMON_DIR}/ming_jiang_ce.png").execute()
-click_ling_xi_box: EventFn = click().image(f"{COMMON_DIR}/ling_xi-box.png").execute()
+click_max: EventFn = do(move().image(f"{COMMON_DIR}/max.png"), click())
+click_ming_jiang_ce: EventFn = do(move().image(f"{COMMON_DIR}/ming_jiang_ce.png"), click())
+click_ling_xi_box: EventFn = do(move().image(f"{COMMON_DIR}/ling_xi-box.png"), click())
 
 _BUY_BELOW_PX = 10
 _BUY_IMAGE = f"{COMMON_DIR}/buy.png"
 
 
 def click_buy(*, pause: float = 0.2, below_px: int = _BUY_BELOW_PX) -> EventFn:
-    """购买按钮：识 common/buy.png（顶边花纹），点击其底边正中再往下 below_px。"""
+    """购买：识 buy.png 顶边花纹，移到底边中点下方 below_px 再点击。"""
 
     def _event(m: ModuleContext) -> OutcomeKey:
         hit = wait_image(
@@ -37,11 +37,10 @@ def click_buy(*, pause: float = 0.2, below_px: int = _BUY_BELOW_PX) -> EventFn:
         cx = x + w // 2
         cy = y + h + below_px
         m.log("click_buy @ (%s,%s) box=%s below=%s", cx, cy, hit.box, below_px)
-        m.mouse().at((cx, cy)).click().sleep(pause).perform()
+        m.mouse().move(cx, cy).click().sleep(pause).perform()
         return FULFILLED
 
     return _event
 
 
-# 默认实例，可直接当 Module.event 用
 buy: EventFn = click_buy()
