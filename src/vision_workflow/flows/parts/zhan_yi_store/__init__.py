@@ -1,13 +1,11 @@
 """子流程：战役商店。"""
 
 from vision_workflow.events import go_back, space_close
+from vision_workflow.events.common import click_ling_xi_box, click_max, click_ming_jiang_ce
 from vision_workflow.flows.parts.zhan_yi_store.actions import (
     click_buy,
     click_buy2,
     click_entry,
-    click_ling_xi_box,
-    click_max,
-    click_ming_jiang_ce,
     click_zhan_yi_store,
     scroll_store_list,
 )

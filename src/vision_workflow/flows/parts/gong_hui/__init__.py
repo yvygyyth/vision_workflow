@@ -1,14 +1,11 @@
 """子流程：公会店铺。"""
 
 from vision_workflow.events import go_back, space_close
+from vision_workflow.events.common import click_ling_xi_box, click_max, click_ming_jiang_ce
 from vision_workflow.flows.parts.gong_hui.actions import (
     click_buy,
-    click_close,
     click_entry,
-    click_ling_xi_box,
-    click_ming_jiang_ce,
     click_gong_hui_store,
-    click_max
 )
 from vision_workflow.module import Flow, Module, abort, onward
 from vision_workflow.status import FULFILLED, REJECTED
@@ -31,7 +28,7 @@ FLOW = Flow(
         Module(id="ling_xi-box", name="灵犀宝匣", description="选中灵犀宝匣商品", event=click_ling_xi_box, on=_CLICK),
         Module(id="buy2", name="购买灵犀宝匣", description="确认购买灵犀宝匣", event=click_buy, on=_CLICK),
         Module(id="space_close2", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
-        Module(id="close", name="关闭店铺", description="关闭青梅店铺", event=click_close, on=_CLICK),
+        Module(id="close", name="关闭店铺", description="Esc 关闭公会店铺", event=go_back(), on=_OK),
         Module(id="return-btn", name="返回", description="Esc 返回主界面", event=go_back(), on=_OK),
     ],
 )
