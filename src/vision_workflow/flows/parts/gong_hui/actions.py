@@ -9,4 +9,3 @@ click_entry: EventFn = click().image(
     f"{_DIR}/gong-hui-ru-kou.png", f"{_DIR}/gong-hui-ru-kou-2.png"
 ).execute()
 click_gong_hui_store: EventFn = click().image(f"{_DIR}/gong-hui-store.png").execute()
-click_buy: EventFn = click().image(f"{_DIR}/buy.png").execute()

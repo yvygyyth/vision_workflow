@@ -7,4 +7,3 @@ _DIR = "data/ming_jiang_sha/zhu_jiu_store"
 
 click_entry: EventFn = click().image(f"{_DIR}/entry.png").execute()
 click_qing_mei_store: EventFn = click().image(f"{_DIR}/qing_mei-store.png").execute()
-click_buy: EventFn = click().image(f"{_DIR}/buy.png").execute()
