@@ -7,7 +7,7 @@
     do(move().image("a.png"), click())           # 识图移动再点击
     do(move().to(100, 200), click())             # 绝对移动再点击
     do(move().image("a.png"), move().by(0, 100), click())  # 识图后相对偏移再点
-    do(move().at("center"), scroll(-200))        # 移到中心再滚轮
+    do(move().at("center"), scroll(-120).times(8))  # 移到中心再滚轮（多次小滚）
     move().by(10, 0).execute()                   # 只相对移动
 """
 
