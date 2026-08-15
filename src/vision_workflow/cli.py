@@ -97,21 +97,33 @@ def ui_cmd() -> None:
 @app.command("info")
 def info_cmd() -> None:
     """查看当前运行配置与显示参数。"""
-    from vision_workflow.display import get_display_info
+    from vision_workflow.display import (
+        active_baseline,
+        get_display_info,
+        match_scales,
+        template_scale,
+    )
+    from vision_workflow.settings import get_match_settings
 
     cfg = reload_settings()
+    match_cfg = get_match_settings()
     disp = get_display_info()
+    scale = template_scale(disp)
+    scales = match_scales(scale)
     console.print(f"[bold]vision-workflow[/bold] v{__version__}")
     console.print(f"env       : {cfg.app.get('env')}")
     console.print(f"log_level : {cfg.logging.level}")
     console.print(f"root_dir  : {cfg.root_dir}")
     console.print(f"workflow  : {WORKFLOW.id} ({WORKFLOW.display_name})")
+    console.print(active_baseline().format_line(prefix="baseline "))
+    console.print(disp.format_line(prefix="current  "))
     console.print(
-        f"screen    : {disp.screen_width}x{disp.screen_height} "
-        f"(shot {disp.screenshot_width}x{disp.screenshot_height})"
+        f"match     : baseline={match_cfg.baseline_label()} "
+        f"multi={'on' if match_cfg.multi_scale else 'off'} "
+        f"[{match_cfg.scale_min:g}, {match_cfg.scale_max:g}] "
+        f"samples={match_cfg.scale_samples}"
     )
-    console.print(f"dpi/scale : {disp.dpi} / {disp.scale_percent:g}%")
-    console.print(f"virtual   : {disp.virtual_width}x{disp.virtual_height}")
+    console.print(f"img_scale : {scale:.4f} → {[round(s, 4) for s in scales]}")
 
 
 @app.command("version")

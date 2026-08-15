@@ -1,8 +1,10 @@
-"""当前设备显示参数（供跨分辨率识图缩放等使用）。"""
+"""当前设备显示参数与模板基准（跨分辨率识图缩放）。"""
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import Any
 
 
@@ -31,6 +33,35 @@ class DisplayInfo:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    def format_line(self, *, prefix: str = "显示参数") -> str:
+        return (
+            f"{prefix} screen={self.screen_width}x{self.screen_height} "
+            f"shot={self.screenshot_width}x{self.screenshot_height} "
+            f"dpi={self.dpi} scale={self.scale_percent:g}% "
+            f"virtual={self.virtual_width}x{self.virtual_height}"
+        )
+
+
+# 识图默认（min/max/samples/baseline）统一在 settings.MatchSettings，勿在此再维护一份
+
+
+def active_baseline() -> DisplayInfo:
+    """当前生效的模板基准（来自设置；基准宽高以 MatchSettings 代码默认为准）。"""
+    from vision_workflow.settings import get_match_settings
+
+    s = get_match_settings()
+    w, h = s.baseline_width, s.baseline_height
+    return DisplayInfo(
+        screen_width=w,
+        screen_height=h,
+        screenshot_width=w,
+        screenshot_height=h,
+        virtual_width=w,
+        virtual_height=h,
+        dpi=96,
+        scale_percent=100.0,
+    )
+
 
 def get_display_info() -> DisplayInfo:
     """读取本机当前显示参数（Windows 下尽量用真实像素 + 有效 DPI）。"""
@@ -52,6 +83,64 @@ def get_display_info() -> DisplayInfo:
         dpi=dpi,
         scale_percent=scale,
     )
+
+
+def template_scale(
+    current: DisplayInfo | None = None,
+    *,
+    baseline: DisplayInfo | None = None,
+) -> float:
+    """当前设备相对模板基准的识图缩放比。
+
+    以截图像素为主（已含系统缩放对抓屏的影响），再乘 DPI/缩放比作补充。
+    """
+    cur = current or get_display_info()
+    base = baseline or active_baseline()
+    if base.screenshot_width <= 0 or base.screenshot_height <= 0:
+        return 1.0
+
+    sx = cur.screenshot_width / base.screenshot_width
+    sy = cur.screenshot_height / base.screenshot_height
+    size_scale = math.sqrt(max(sx, 1e-9) * max(sy, 1e-9))
+
+    dpi_scale = 1.0
+    if base.scale_percent > 0:
+        dpi_scale = cur.scale_percent / base.scale_percent
+
+    # 截图像素已反映物理像素时，dpi_scale≈1；若逻辑分辨率相同但缩放不同，dpi 仍能拉开差距
+    # 为避免双重放大：仅当截图宽高比与基准几乎一致且尺寸接近时，更信任 size；差距大时用 size
+    if abs(sx - 1.0) < 0.02 and abs(sy - 1.0) < 0.02 and abs(dpi_scale - 1.0) > 0.02:
+        return float(dpi_scale)
+    return float(size_scale)
+
+
+@lru_cache(maxsize=1)
+def cached_template_scale() -> float:
+    """进程内缓存一次；分辨率中途变更需清缓存。"""
+    return template_scale()
+
+
+def match_scales(base: float | None = None) -> list[float]:
+    """多尺度列表；关闭 multi_scale 时只返回基准换算 scale。"""
+    from vision_workflow.settings import get_match_settings
+
+    center = cached_template_scale() if base is None else float(base)
+    cfg = get_match_settings()
+    if not cfg.multi_scale:
+        return [center]
+
+    lo = center * float(cfg.scale_min)
+    hi = center * float(cfg.scale_max)
+    if hi < lo:
+        lo, hi = hi, lo
+    n = max(2, int(cfg.scale_samples))
+    if abs(hi - lo) < 1e-9:
+        return [center]
+    return [lo + (hi - lo) * i / (n - 1) for i in range(n)]
+
+
+def clear_display_cache() -> None:
+    cached_template_scale.cache_clear()
 
 
 def _ensure_dpi_aware() -> None:

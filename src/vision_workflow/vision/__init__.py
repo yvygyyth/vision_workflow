@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from vision_workflow.models.flow import MatchOptions, MatchResult
 
@@ -121,34 +121,57 @@ def _match_once(
         grab = ImageGrab.grab(bbox=bbox)
         hay_bgr = cv2.cvtColor(np.array(grab.convert("RGB")), cv2.COLOR_RGB2BGR)
 
-    th, tw = template_bgr.shape[:2]
-    hh, hw = hay_bgr.shape[:2]
-    if th > hh or tw > hw:
+    from vision_workflow.display import match_scales
+
+    hay = (
+        cv2.cvtColor(hay_bgr, cv2.COLOR_BGR2GRAY)
+        if options.grayscale
+        else hay_bgr
+    )
+    hh, hw = hay.shape[:2]
+
+    best: dict[str, Any] | None = None
+    for scale in match_scales():
+        tpl_bgr = _resize_template(cv2, template_bgr, scale)
+        tpl = (
+            cv2.cvtColor(tpl_bgr, cv2.COLOR_BGR2GRAY)
+            if options.grayscale
+            else tpl_bgr
+        )
+        th, tw = tpl.shape[:2]
+        if th > hh or tw > hw or th < 1 or tw < 1:
+            continue
+
+        result = cv2.matchTemplate(hay, tpl, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        confidence = float(max_val)
+        if best is None or confidence > best["confidence"]:
+            x, y = int(max_loc[0] + offset_x), int(max_loc[1] + offset_y)
+            best = {
+                "confidence": confidence,
+                "scale": scale,
+                "box": (x, y, tw, th),
+                "center": (x + tw // 2, y + th // 2),
+            }
+
+    if best is None:
         return MatchResult(
             found=False,
             image=str(path),
-            message=f"模板({tw}x{th}) 大于搜索区域({hw}x{hh})",
+            message="多尺度下模板均大于搜索区域或无效",
         )
 
-    if options.grayscale:
-        hay = cv2.cvtColor(hay_bgr, cv2.COLOR_BGR2GRAY)
-        tpl = cv2.cvtColor(template_bgr, cv2.COLOR_BGR2GRAY)
-    else:
-        hay, tpl = hay_bgr, template_bgr
-
-    result = cv2.matchTemplate(hay, tpl, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, max_loc = cv2.minMaxLoc(result)
-    confidence = float(max_val)
-    x, y = int(max_loc[0] + offset_x), int(max_loc[1] + offset_y)
-    box = (x, y, tw, th)
-    center = (x + tw // 2, y + th // 2)
-
+    confidence = best["confidence"]
+    scale = best["scale"]
+    box = best["box"]
+    center = best["center"]
     found = confidence >= options.threshold
     logger.debug(
-        "find_image %s conf=%.3f threshold=%.3f found=%s center=%s",
+        "find_image %s conf=%.3f threshold=%.3f scale=%.3f found=%s center=%s",
         path.name,
         confidence,
         options.threshold,
+        scale,
         found,
         center if found else None,
     )
@@ -160,3 +183,13 @@ def _match_once(
         center=center if found else None,
         message="matched" if found else f"confidence {confidence:.3f} < {options.threshold}",
     )
+
+
+def _resize_template(cv2: Any, template_bgr: Any, scale: float) -> Any:
+    if abs(scale - 1.0) < 1e-3:
+        return template_bgr
+    th0, tw0 = template_bgr.shape[:2]
+    nw = max(1, int(round(tw0 * scale)))
+    nh = max(1, int(round(th0 * scale)))
+    interpolation = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+    return cv2.resize(template_bgr, (nw, nh), interpolation=interpolation)
