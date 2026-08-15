@@ -11,4 +11,3 @@ click_qing_mei_store: EventFn = click().image(f"{_DIR}/qing_mei-store.png").exec
 click_ming_jiang_ce: EventFn = click().image(f"{_COMMON}/ming_jiang_ce.png").execute()
 click_buy: EventFn = click().image(f"{_DIR}/buy.png").execute()
 click_ling_xi_box: EventFn = click().image(f"{_COMMON}/ling_xi-box.png").execute()
-click_close: EventFn = click().image(f"{_COMMON}/store-close.png").execute()

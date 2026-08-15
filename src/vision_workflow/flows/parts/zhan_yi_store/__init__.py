@@ -4,7 +4,6 @@ from vision_workflow.events import go_back, space_close
 from vision_workflow.flows.parts.zhan_yi_store.actions import (
     click_buy,
     click_buy2,
-    click_close,
     click_entry,
     click_ling_xi_box,
     click_max,
@@ -35,7 +34,7 @@ FLOW = Flow(
         Module(id="max2", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
         Module(id="buy2", name="购买灵犀宝匣", description="确认购买灵犀宝匣", event=click_buy2, on=_CLICK),
         Module(id="space_close2", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
-        Module(id="close", name="关闭商店", description="关闭战役商店", event=click_close, on=_CLICK),
+        Module(id="close", name="关闭商店", description="Esc 关闭战役商店", event=go_back(), on=_OK),
         Module(id="return-btn", name="返回", description="Esc 返回主界面", event=go_back(), on=_OK),
     ],
 )
