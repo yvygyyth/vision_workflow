@@ -79,8 +79,7 @@ Module(
 # 自循环示例：on={"loop": lambda m: m.again(), FULFILLED: onward}
 # 偏移点击：click().image("x.png").offset(0, 100).execute()
 # 滚轮：scroll().at("center").amount(-8).execute()
-# 关弹窗：space_close()  # Esc
-# 返回上一步：go_back()  # Esc
+# 关弹窗 / 返回：from vision_workflow.actions.ming_jiang_sha import space_close, go_back
 ```
 
 `ModuleContext` 透传识图 / 鼠标 / 日志，并提供 `next` / `goto` / `again` / `end` / `fail`，方便以后扩展。

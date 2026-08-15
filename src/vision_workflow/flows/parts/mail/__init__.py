@@ -1,6 +1,6 @@
 """子流程：收邮件。"""
 
-from vision_workflow.events import go_back, space_close
+from vision_workflow.actions.ming_jiang_sha import go_back, space_close
 from vision_workflow.flows.parts.mail.actions import (
     click_email,
     click_one_click_receive,

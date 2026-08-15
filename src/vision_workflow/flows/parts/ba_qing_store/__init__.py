@@ -1,7 +1,6 @@
 """子流程：霸青商店。"""
 
-from vision_workflow.events import go_back, space_close
-from vision_workflow.events.common import buy, click_max
+from vision_workflow.actions.ming_jiang_sha import buy, click_max, go_back, space_close
 from vision_workflow.flows.parts.ba_qing_store.actions import (
     click_copper_tab,
     click_entry_icon,

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from vision_workflow.actions.ming_jiang_sha.paths import COMMON_DIR
 from vision_workflow.events.builders.click import click
-from vision_workflow.events.common.paths import COMMON_DIR
 from vision_workflow.events.support.find import wait_image
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey

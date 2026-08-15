@@ -1,7 +1,13 @@
 """子流程：公会店铺。"""
 
-from vision_workflow.events import go_back, space_close
-from vision_workflow.events.common import buy, click_ling_xi_box, click_max, click_ming_jiang_ce
+from vision_workflow.actions.ming_jiang_sha import (
+    buy,
+    click_ling_xi_box,
+    click_max,
+    click_ming_jiang_ce,
+    go_back,
+    space_close,
+)
 from vision_workflow.flows.parts.gong_hui.actions import (
     click_entry,
     click_gong_hui_store,
