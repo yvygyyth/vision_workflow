@@ -29,7 +29,7 @@ FLOW = Flow(
             description="已在战斗则本 Flow 结束，否则去准备",
             event=check_battle_interface,
             on={
-                "in_battle": lambda m: m.end(),
+                FULFILLED: lambda m: m.end(),
                 "need_prepare": to("try_start"),
                 REJECTED: abort,
             },

@@ -10,7 +10,7 @@ from vision_workflow.events import click, do, input_text, move
 from vision_workflow.events.support.find import wait_image
 from vision_workflow.input import Mouse
 from vision_workflow.module import EventFn, ModuleContext
-from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
+from vision_workflow.status import FULFILLED, OutcomeKey, REJECTED
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +60,11 @@ def _probe(m: ModuleContext, image: str, *, timeout: float = 1.0):
 
 
 def check_battle_interface(m: ModuleContext) -> OutcomeKey:
-    """已在战斗界面 → in_battle；否则 need_prepare。"""
+    """已在战斗界面 → fulfilled（结束本 Flow）；否则 need_prepare。"""
     hit = _probe(m, _BATTLE, timeout=1.0)
     if hit is not None and hit.found:
-        logger.info("check_battle_interface → in_battle")
-        return "in_battle"
+        logger.info("check_battle_interface → fulfilled")
+        return FULFILLED
     logger.info("check_battle_interface → need_prepare")
     return "need_prepare"
 
