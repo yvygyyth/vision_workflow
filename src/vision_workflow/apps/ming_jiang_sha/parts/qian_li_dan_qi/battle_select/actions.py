@@ -37,9 +37,9 @@ _SHOP = (
     _POCKET_EVENT,
 )
 _EVENT = (
-    _ZHU_GE_LIANG,
     _FEI_FEI,
     _SHI_CHANG_SHI,
+    _ZHU_GE_LIANG,
 )
 # 铜币 ≥ 此值才尝试点巴清商店
 _BA_QING_COPPER_MIN = 30
@@ -65,9 +65,9 @@ class EventChoice(str, Enum):
 
 
 _EVENT_CANDIDATES: tuple[tuple[str, EventChoice], ...] = (
-    (_ZHU_GE_LIANG, EventChoice.ZHU_GE_LIANG),
     (_FEI_FEI, EventChoice.FEI_FEI),
     (_SHI_CHANG_SHI, EventChoice.SHI_CHANG_SHI),
+    (_ZHU_GE_LIANG, EventChoice.ZHU_GE_LIANG),
 )
 _EVENT_IMAGE: dict[EventChoice, str] = dict(_EVENT_CANDIDATES)
 
@@ -174,7 +174,7 @@ def confirm_ba_qing_entered(m: ModuleContext) -> OutcomeKey:
 
 
 def choose_event(m: ModuleContext) -> OutcomeKey:
-    """在诸葛亮 / 妃妃 / 十常侍中点第一个找到的；写入 pending 供进场核验。"""
+    """在妃妃 / 十常侍 / 诸葛亮中点第一个找到的；写入 pending 供进场核验。"""
     for path, choice in _EVENT_CANDIDATES:
         hit = _find_in_choice(m, path, timeout=0.8)
         if hit.found and _click_center(hit, label=choice.value):
@@ -183,7 +183,7 @@ def choose_event(m: ModuleContext) -> OutcomeKey:
             logger.info("choose_event → %s", choice.value)
             return choice
 
-    m.reason = "事件分支未找到 zhu_ge_liang/fei_fei/shi_chang_shi"
+    m.reason = "事件分支未找到 fei_fei/shi_chang_shi/zhu_ge_liang"
     logger.error("choose_event 失败：%s", m.reason)
     return REJECTED
 
