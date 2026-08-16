@@ -11,6 +11,11 @@ from vision_workflow.apps.ming_jiang_sha.common.actions import (
 from vision_workflow.apps.ming_jiang_sha.parts.gong_hui.actions import (
     click_entry,
     click_gong_hui_store,
+    click_wen_ding_ling,
+    click_tian_ming_ling,
+    click_tian_fa_ling,
+    click_jun_ling_zhuang,
+        
 )
 from vision_workflow.module import Flow, Module, abort, onward
 from vision_workflow.status import FULFILLED, REJECTED
@@ -34,6 +39,22 @@ FLOW = Flow(
         Module(id="max2", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
         Module(id="buy2", name="购买灵犀宝匣", description="确认购买灵犀宝匣", event=confirm, on=_CLICK),
         Module(id="space_close2", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
+        Module(id="wen_ding_ling", name="问鼎令", description="选中问鼎令商品", event=click_wen_ding_ling, on=_CLICK),
+        Module(id="max3", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
+        Module(id="buy3", name="购买问鼎令", description="确认购买问鼎令", event=confirm, on=_CLICK),
+        Module(id="space_close3", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
+        Module(id="tian_ming_ling", name="天命令", description="选中天命令商品", event=click_tian_ming_ling, on=_CLICK),
+        Module(id="max4", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
+        Module(id="buy4", name="购买天命令", description="确认购买天命令", event=confirm, on=_CLICK),
+        Module(id="space_close4", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
+        Module(id="tian_fa_ling", name="天罚令", description="选中天罚令商品", event=click_tian_fa_ling, on=_CLICK),
+        Module(id="max5", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
+        Module(id="buy5", name="购买天罚令", description="确认购买天罚令", event=confirm, on=_CLICK),
+        Module(id="space_close5", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
+        Module(id="jun_ling_zhuang", name="军令状", description="选中军令状商品", event=click_jun_ling_zhuang, on=_CLICK),
+        Module(id="max6", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
+        Module(id="buy6", name="购买军令状", description="确认购买军令状", event=confirm, on=_CLICK),
+        Module(id="space_close6", name="关闭弹窗", description="Esc 再次关闭购买结果弹窗", event=space_close(), on=_OK),
         Module(id="close", name="关闭店铺", description="Esc 关闭公会店铺", event=go_back(), on=_OK),
         Module(id="return-btn", name="返回", description="Esc 返回主界面", event=go_back(), on=_OK),
     ],

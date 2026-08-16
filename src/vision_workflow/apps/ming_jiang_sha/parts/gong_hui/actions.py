@@ -11,3 +11,7 @@ click_entry: EventFn = do(
     click(),
 )
 click_gong_hui_store: EventFn = do(move().image(f"{_DIR}/gong-hui-store.png"), click())
+click_wen_ding_ling: EventFn = do(move().image(f"{_DIR}/wen_ding_ling.png"), click())
+click_tian_ming_ling: EventFn = do(move().image(f"{_DIR}/tian_ming_ling.png"), click())
+click_tian_fa_ling: EventFn = do(move().image(f"{_DIR}/tian_fa_ling.png"), click())
+click_jun_ling_zhuang: EventFn = do(move().image(f"{_DIR}/jun_ling_zhuang.png"), click())
