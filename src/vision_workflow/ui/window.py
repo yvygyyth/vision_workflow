@@ -15,6 +15,7 @@ from vision_workflow.ui.panels.control_panel import ControlPanel
 from vision_workflow.ui.panels.log_panel import LogPanel
 from vision_workflow.ui.panels.settings_dialog import SettingsDialog
 from vision_workflow.ui.panels.status_bar import StatusBar
+from vision_workflow.ui.services.hotkeys import TOGGLE_LABEL, GlobalHotkeys
 from vision_workflow.ui.services.log_bridge import attach_queue_handler, drain_queue
 from vision_workflow.ui.services.workflow_worker import RunRequest, WorkflowWorker
 
@@ -52,6 +53,11 @@ class MainWindow(ctk.CTk):
         self.status.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
 
         self.worker = WorkflowWorker(on_finished=self._on_worker_finished)
+        self._hotkeys = GlobalHotkeys(
+            on_toggle=self._toggle_run,
+            schedule=lambda fn: self.after(0, fn),
+        )
+        self._hotkeys.start()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self.after(80, self._pump)
@@ -69,6 +75,7 @@ class MainWindow(ctk.CTk):
         self.controls.set_workflow_choices(choices, selected_id=WORKFLOW.id)
         self.status.set_status(f"已加载 {len(choices)} 个复杂流程")
         self.logs.append(f"已加载复杂流程目录，共 {len(choices)} 项")
+        self.logs.append(f"全局快捷键：{TOGGLE_LABEL} = 运行/停止（游戏前台也可用）")
         self._log_match_settings()
 
     def _log_match_settings(self) -> None:
@@ -112,6 +119,12 @@ class MainWindow(ctk.CTk):
         )
         self._log_match_settings()
         self.status.set_status("设置已保存")
+
+    def _toggle_run(self) -> None:
+        if self.worker.busy:
+            self._stop()
+        else:
+            self._start()
 
     def _start(self) -> None:
         if self.worker.busy:
@@ -185,6 +198,7 @@ class MainWindow(ctk.CTk):
         self.after(80, self._pump)
 
     def _on_close(self) -> None:
+        self._hotkeys.stop()
         if self.worker.busy:
             self.worker.stop()
         root = logging.getLogger()

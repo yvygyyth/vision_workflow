@@ -7,6 +7,7 @@ from collections.abc import Callable
 import customtkinter as ctk
 
 from vision_workflow.ui import theme
+from vision_workflow.ui.services.hotkeys import TOGGLE_LABEL
 
 
 class ControlPanel(ctk.CTkFrame):
@@ -35,7 +36,7 @@ class ControlPanel(ctk.CTkFrame):
 
         self.subtitle_label = ctk.CTkLabel(
             self,
-            text="选择复杂流程后运行",
+            text=f"选择复杂流程后运行 · {TOGGLE_LABEL} 运行/停止",
             font=theme.FONT_UI,
             text_color=theme.MUTED,
         )
@@ -60,7 +61,7 @@ class ControlPanel(ctk.CTkFrame):
 
         self.btn_run = ctk.CTkButton(
             self,
-            text="运行",
+            text=f"运行 ({TOGGLE_LABEL})",
             command=on_run,
             height=36,
             fg_color=theme.ACCENT,
@@ -71,7 +72,7 @@ class ControlPanel(ctk.CTkFrame):
 
         self.btn_stop = ctk.CTkButton(
             self,
-            text="停止",
+            text=f"停止 ({TOGGLE_LABEL})",
             command=on_stop,
             height=36,
             fg_color="#F3E8E6",
