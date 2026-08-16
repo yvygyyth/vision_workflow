@@ -13,7 +13,7 @@ _SEARCH = f"{_DIR}/search.png"
 _START = f"{_DIR}/start.png"
 _BATTLE = f"{_DIR}/battle_interface.png"
 # 相对「搜索」中心向左到输入框（会走 move 显示缩放）
-_SEARCH_INPUT_OFFSET_X = -160
+
 
 click_select_wu_jiang: EventFn = do(
     move().image(f"{_DIR}/select_wu_jiang.png"), click()
@@ -21,7 +21,7 @@ click_select_wu_jiang: EventFn = do(
 
 focus_search_input: EventFn = do(
     move().image(_SEARCH),
-    move().by(_SEARCH_INPUT_OFFSET_X, 0),
+    move().by(-160, 0),
     click().pause(0.3),
 )
 
