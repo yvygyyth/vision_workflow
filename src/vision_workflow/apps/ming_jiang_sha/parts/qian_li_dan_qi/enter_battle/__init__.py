@@ -37,7 +37,7 @@ FLOW = Flow(
         Module(
             id="try_start",
             name="开始",
-            description="可开战则点开始，否则转选将；点完后回到 check_battle 复核",
+            description="点开始；进战则复核，点了仍不进战则转选将",
             event=try_click_start,
             on={
                 FULFILLED: to("check_battle"),

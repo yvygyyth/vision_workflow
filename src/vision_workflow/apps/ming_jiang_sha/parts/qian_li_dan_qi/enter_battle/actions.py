@@ -70,7 +70,7 @@ def check_battle_interface(m: ModuleContext) -> OutcomeKey:
 
 
 def try_click_start(m: ModuleContext) -> OutcomeKey:
-    """有「开始」则点击；没有则 need_select。"""
+    """有「开始」则点击；点完若仍未进战斗 → need_select（避免误匹配/未选将死循环）。"""
     hit = _probe(m, _START, timeout=1.5)
     if hit is None or not hit.center:
         m.reason = "未出现开始按钮，进入武将选择"
@@ -84,4 +84,13 @@ def try_click_start(m: ModuleContext) -> OutcomeKey:
     except Exception as exc:
         m.reason = f"点击开始失败: {exc}"
         return REJECTED
-    return FULFILLED
+
+    time.sleep(0.5)
+    battle = _probe(m, _BATTLE, timeout=1.5)
+    if battle is not None and battle.found:
+        logger.info("try_click_start → fulfilled（已进战斗）")
+        return FULFILLED
+
+    m.reason = "点击开始后仍未进入战斗，进入武将选择"
+    logger.info("try_click_start → need_select（开始无效）")
+    return "need_select"
