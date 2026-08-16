@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     GeneralPriority,
@@ -16,6 +18,8 @@ from vision_workflow.events import click, do, move
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 from vision_workflow.vision import grab_region, image_to_text
+
+logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/fight"
 
@@ -59,7 +63,7 @@ def choose_reward_title(m: ModuleContext) -> OutcomeKey:
         titles.append(text)
         shown = text if text else "(空)"
         lines.append(f"{i}:{shown}")
-        m.log("【赠礼OCR】槽位%s → %s", i, shown)
+        logger.info("【赠礼OCR】槽位%s → %s", i, shown)
 
     state = get_battle_state(m.ctx)
     slot = pick_reward_slot(titles, state)
@@ -70,7 +74,7 @@ def choose_reward_title(m: ModuleContext) -> OutcomeKey:
     left, top, width, height = REWARD_TITLE_REGIONS[slot]
     cx = left + width // 2
     cy = top + height // 2
-    m.log(
+    logger.info(
         "【赠礼选择】槽位%s → %s key=%s 点击 (%s,%s)",
         slot + 1,
         entry.name,
@@ -97,7 +101,12 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
         hit = m.find(path, timeout=0.0)
         if hit.found and hit.center is not None:
             available[kind] = hit.center
-            m.log("【赠礼选项】可用 %s @ %s (%.2f)", kind.value, hit.center, hit.confidence)
+            logger.info(
+                "【赠礼选项】可用 %s @ %s (%.2f)",
+                kind.value,
+                hit.center,
+                hit.confidence,
+            )
 
     if not available:
         m.reason = "未识别到信物/并肩作战/武将牌/资助/驰援"
@@ -110,7 +119,7 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
 
     cx, cy = available[kind]
     general = entry.name if entry else "?"
-    m.log("【赠礼类别】%s → %s 点击 (%s,%s)", general, kind.value, cx, cy)
+    logger.info("【赠礼类别】%s → %s 点击 (%s,%s)", general, kind.value, cx, cy)
     m.reason = f"{general} → {kind.value}"
     m.value = {"general": entry, "kind": kind, "available": list(available)}
 

@@ -119,7 +119,7 @@ def _coerce_config(cls: type[_ConfigT], value: _ConfigT | Mapping[str, Any] | No
 
 @dataclass
 class ModuleContext:
-    """传给 event 与 on[*] 的运行时上下文，便于扩展自循环等。"""
+    """传给 event 与 on[*] 的运行时上下文（识图 / vars / 导航；键鼠、日志、sleep 请用独立 API）。"""
 
     ctx: FlowContext
     module: Module
@@ -129,7 +129,7 @@ class ModuleContext:
     key: OutcomeKey | None = None
     value: Any = None
     reason: str = ""
-    """event 可写入的可读原因（如识图未找到），供反馈/日志使用。"""
+    """event 可写入的可读原因（如识图未找到），供反馈使用。"""
 
     @property
     def base_dir(self) -> Path:
@@ -169,15 +169,6 @@ class ModuleContext:
             grayscale=grayscale,
             match=match,
         )
-
-    def mouse(self):
-        return self.ctx.mouse()
-
-    def sleep(self, seconds: float) -> None:
-        self.ctx.sleep(seconds)
-
-    def log(self, message: str, *args) -> None:
-        self.ctx.log(message, *args)
 
     def next(self) -> NextRef:
         """流程内默认下一模块；末尾为 None（结束本流程）。"""

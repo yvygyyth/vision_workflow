@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from pathlib import Path
 
 from vision_workflow.flow.context import FlowContext
@@ -64,7 +65,7 @@ class WorkflowRunner:
                 result.feedback = result.message
                 return False
             step = min(0.05, remaining)
-            self.ctx.sleep(step)
+            time.sleep(step)
             remaining -= step
         if self._cancelled():
             result.success = False

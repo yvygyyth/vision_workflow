@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 
+from vision_workflow.input import Mouse
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -43,9 +47,9 @@ class _Scroll:
         gap = self.gap
         sleep = self.sleep
 
-        def _event(m: ModuleContext) -> OutcomeKey:
-            m.log("滚轮 amount=%s times=%s", amount, count)
-            chain = m.mouse()
+        def _event(_m: ModuleContext) -> OutcomeKey:
+            logger.info("滚轮 amount=%s times=%s", amount, count)
+            chain = Mouse()
             for i in range(count):
                 chain = chain.scroll(amount)
                 if i < count - 1 and gap > 0:

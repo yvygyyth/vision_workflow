@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from vision_workflow.apps.ming_jiang_sha.common.paths import COMMON_DIR
 from vision_workflow.events import click, do, move
 from vision_workflow.events.support.find import wait_image
+from vision_workflow.input import Mouse
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
+
+logger = logging.getLogger(__name__)
 
 click_max: EventFn = do(move().image(f"{COMMON_DIR}/max.png"), click())
 click_ming_jiang_ce: EventFn = do(move().image(f"{COMMON_DIR}/ming_jiang_ce.png"), click())
@@ -36,8 +41,8 @@ def click_confirm(*, pause: float = 0.2, below_px: int = _CONFIRM_BELOW_PX) -> E
         x, y, w, h = hit.box
         cx = x + w // 2
         cy = y + h + below_px
-        m.log("click_confirm @ (%s,%s) box=%s below=%s", cx, cy, hit.box, below_px)
-        m.mouse().move(cx, cy).click().sleep(pause).perform()
+        logger.info("click_confirm @ (%s,%s) box=%s below=%s", cx, cy, hit.box, below_px)
+        Mouse().move(cx, cy).click().sleep(pause).perform()
         return FULFILLED
 
     return _event

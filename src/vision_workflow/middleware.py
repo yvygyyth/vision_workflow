@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -122,7 +123,7 @@ def retry_middleware(*, retries: int, retry_delay_ms: int = 0) -> ModuleMiddlewa
                 reason,
             )
             if retry_delay_ms > 0 and not scope.cancelled():
-                scope.ctx.sleep(retry_delay_ms / 1000.0)
+                time.sleep(retry_delay_ms / 1000.0)
         return last
 
     return mw
@@ -174,7 +175,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
             delay = max(0, int(mod.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（模块后 %s）", delay, label)
-                scope.ctx.sleep(delay / 1000.0)
+                time.sleep(delay / 1000.0)
         return settled
 
     return mw
@@ -295,7 +296,7 @@ def flow_resolve_and_delay_middleware() -> FlowMiddleware:
             delay = max(0, int(scope.flow.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.log_label)
-                scope.ctx.sleep(delay / 1000.0)
+                time.sleep(delay / 1000.0)
         return settled
 
     return mw

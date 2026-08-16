@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 
 from vision_workflow.models.flow import MatchResult
 from vision_workflow.module import ModuleContext
+
+logger = logging.getLogger(__name__)
 
 
 def find_kw(
@@ -47,12 +50,12 @@ def wait_image(
             last = hit
             if hit.found:
                 if len(images) > 1:
-                    m.log("命中 [%s]", Path(path).name)
+                    logger.info("命中 [%s]", Path(path).name)
                 m.value = hit
                 return hit
         if timeout <= 0 or time.monotonic() >= deadline:
             m.value = last
             m.reason = f"识图未找到 [{labels}]"
-            m.log("未找到 [%s]", labels)
+            logger.info("未找到 [%s]", labels)
             return None
-        m.sleep(interval)
+        time.sleep(interval)

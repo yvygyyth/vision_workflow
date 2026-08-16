@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from vision_workflow.input import Button
+from vision_workflow.input import Button, Mouse
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey
 
@@ -29,8 +29,8 @@ class _Click:
         clicks = self.clicks
         sleep = self.sleep
 
-        def _event(m: ModuleContext) -> OutcomeKey:
-            chain = m.mouse().click(button=button, clicks=clicks)
+        def _event(_m: ModuleContext) -> OutcomeKey:
+            chain = Mouse().click(button=button, clicks=clicks)
             if sleep > 0:
                 chain = chain.sleep(sleep)
             chain.perform()

@@ -1,20 +1,15 @@
-"""流程运行时上下文：识图、鼠标、日志。"""
+"""流程运行时上下文：识图、vars / params。"""
 
 from __future__ import annotations
 
-import logging
-import time
 from pathlib import Path
 
-from vision_workflow.input import Mouse
 from vision_workflow.models.flow import MatchOptions, MatchResult
 from vision_workflow.vision import find_image_with_options
 
-logger = logging.getLogger(__name__)
-
 
 class FlowContext:
-    """模块 event 使用的运行时上下文。"""
+    """模块 event 使用的运行时上下文（识图 / vars / params；不含键鼠、日志、sleep）。"""
 
     def __init__(
         self,
@@ -64,13 +59,3 @@ class FlowContext:
         if grayscale is not None:
             opts.grayscale = grayscale
         return find_image_with_options(self.resolve(image), opts)
-
-    def mouse(self) -> Mouse:
-        """新建一条鼠标链（记得末尾 .perform()）。"""
-        return Mouse()
-
-    def sleep(self, seconds: float) -> None:
-        time.sleep(seconds)
-
-    def log(self, message: str, *args) -> None:
-        logger.info(message, *args)

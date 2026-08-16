@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass, replace
 from typing import Literal
 
 from vision_workflow.input import input_text as do_input_text
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey
+
+logger = logging.getLogger(__name__)
 
 _Method = Literal["auto", "write", "paste"]
 
@@ -44,11 +48,11 @@ class _InputText:
         method = self.method
         sleep = self.sleep
 
-        def _event(m: ModuleContext) -> OutcomeKey:
-            m.log("input_text len=%s method=%s", len(text), method)
+        def _event(_m: ModuleContext) -> OutcomeKey:
+            logger.info("input_text len=%s method=%s", len(text), method)
             do_input_text(text, interval=key_interval, method=method)
             if sleep > 0:
-                m.sleep(sleep)
+                time.sleep(sleep)
             return FULFILLED
 
         return _event

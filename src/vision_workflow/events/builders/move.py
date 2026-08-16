@@ -8,6 +8,7 @@ from typing import Literal
 from vision_workflow.display import cached_template_scale
 from vision_workflow.events.support.anchor import PointAnchor, resolve_anchor
 from vision_workflow.events.support.find import wait_image
+from vision_workflow.input import Mouse
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
@@ -110,7 +111,7 @@ class _Move:
         fit = self.fit_display
 
         def _event(m: ModuleContext) -> OutcomeKey:
-            mouse = m.mouse()
+            mouse = Mouse()
             if mode == "abs":
                 sx, sy = _fit_xy(x, y, fit=fit)
                 mouse.move(sx, sy, duration=duration)

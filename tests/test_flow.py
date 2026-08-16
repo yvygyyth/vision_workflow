@@ -1,5 +1,7 @@
 """Module / Flow / Workflow 测试。"""
 
+from unittest.mock import patch
+
 from vision_workflow.flow import WorkflowRunner
 from vision_workflow.module import (
     DEFAULT_START_DELAY_MS,
@@ -56,7 +58,7 @@ def test_module_on_defaults_to_next() -> None:
                 Module(id="a", event=lambda m: FULFILLED, on={FULFILLED: to("b")}),
                 Module(
                     id="b",
-                    event=lambda m: (m.log("b") or FULFILLED),
+                    event=lambda m: FULFILLED,
                     on={FULFILLED: lambda m: m.end()},
                 ),
             ],
@@ -315,15 +317,12 @@ def test_module_and_flow_config_delay() -> None:
             modules=[Module(id="c", event=lambda m: FULFILLED, on={FULFILLED: onward})],
         ),
     )
-    runner = WorkflowRunner(workflow)
-    original = runner.ctx.sleep
 
     def _spy(seconds: float) -> None:
         sleeps.append(seconds)
-        original(seconds)
 
-    runner.ctx.sleep = _spy  # type: ignore[method-assign]
-    result = runner.run()
+    with patch("vision_workflow.middleware.time.sleep", side_effect=_spy):
+        result = WorkflowRunner(workflow).run()
     assert result.success
     assert result.path == ["f1.a", "f1.b", "f2.c"]
     assert sleeps == [0.03, 0.04]
@@ -340,13 +339,12 @@ def test_workflow_start_delay_ms() -> None:
         )
     )
     workflow.config = WorkflowConfig(start_delay_ms=120)
-    runner = WorkflowRunner(workflow)
 
     def _spy(seconds: float) -> None:
         sleeps.append(seconds)
 
-    runner.ctx.sleep = _spy  # type: ignore[method-assign]
-    result = runner.run()
+    with patch("vision_workflow.flow.runner.time.sleep", side_effect=_spy):
+        result = WorkflowRunner(workflow).run()
     assert result.success
     assert result.path == ["f.a"]
     assert abs(sum(sleeps) - 0.12) < 1e-9

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.input import Mouse
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
+
+logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/battle_select"
 
@@ -34,44 +39,44 @@ def _probe_in_choice(m: ModuleContext, image: str) -> bool:
     return bool(_find_in_choice(m, image).found)
 
 
-def _click_center(m: ModuleContext, hit, *, label: str) -> bool:
+def _click_center(hit, *, label: str) -> bool:
     if not hit.center:
         return False
     cx, cy = hit.center
-    m.log("点击 %s @ (%s,%s)", label, cx, cy)
-    m.mouse().move(cx, cy).click().sleep(0.2).perform()
+    logger.info("点击 %s @ (%s,%s)", label, cx, cy)
+    Mouse().move(cx, cy).click().sleep(0.2).perform()
     return True
 
 
 def detect_choice(m: ModuleContext) -> OutcomeKey:
     """判定本轮三选一类型：战斗 > 商店 > 事件；未识别则 REJECTED（交给模块重试）。"""
     if _probe_in_choice(m, _CHALLENGE):
-        m.log("detect_choice → battle")
+        logger.info("detect_choice → battle")
         return "battle"
 
     for path in _SHOP:
         if _probe_in_choice(m, path):
-            m.log("detect_choice → shop (%s)", path.rsplit("/", 1)[-1])
+            logger.info("detect_choice → shop (%s)", path.rsplit("/", 1)[-1])
             return "shop"
 
     for path in _EVENT:
         if _probe_in_choice(m, path):
-            m.log("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
+            logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
     m.reason = "选择区内未识别到战斗/商店/事件"
-    m.log("detect_choice → rejected")
+    logger.info("detect_choice → rejected")
     return REJECTED
 
 
 def choose_battle(m: ModuleContext) -> OutcomeKey:
     """优先点「驰援/助战」类 challenge_help；否则点选择区内第一个 challenge。"""
     help_hit = _find_in_choice(m, _CHALLENGE_HELP, timeout=0.8)
-    if help_hit.found and _click_center(m, help_hit, label="challenge_help"):
+    if help_hit.found and _click_center(help_hit, label="challenge_help"):
         return FULFILLED
 
     challenge_hit = _find_in_choice(m, _CHALLENGE, timeout=0.8)
-    if challenge_hit.found and _click_center(m, challenge_hit, label="challenge"):
+    if challenge_hit.found and _click_center(challenge_hit, label="challenge"):
         return FULFILLED
 
     m.reason = "战斗分支未找到 challenge_help / challenge"
@@ -79,8 +84,8 @@ def choose_battle(m: ModuleContext) -> OutcomeKey:
 
 
 def _stub(name: str) -> EventFn:
-    def event(m: ModuleContext) -> OutcomeKey:
-        m.log("%s placeholder", name)
+    def event(_m: ModuleContext) -> OutcomeKey:
+        logger.info("%s placeholder", name)
         return FULFILLED
 
     return event
