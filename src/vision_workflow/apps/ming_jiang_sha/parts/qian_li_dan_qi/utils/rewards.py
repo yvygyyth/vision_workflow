@@ -1,6 +1,6 @@
 """赠礼优先表与选槽逻辑。
 
-点「xx赠礼」只选武将槽；具体信物 / 驰援等是点开之后的下一步。
+点「xx赠礼」只选武将槽；具体信物 / 资助 / 驰援等是点开之后的下一步。
 """
 
 from __future__ import annotations
@@ -15,12 +15,14 @@ class RewardKind(StrEnum):
 
     TOKEN = "信物"
     JOINT = "共同作战"
-    HELP = "驰援"
+    HELP = "资助"
+    BUFF = "驰援"
     CARD = "武将牌"
 
 
 # 主路径都不满足时：按类别回退（越靠前越优先）
 FALLBACK_KIND_ORDER: tuple[RewardKind, ...] = (
+    RewardKind.BUFF,
     RewardKind.HELP,
     RewardKind.TOKEN,
     RewardKind.CARD,
@@ -101,7 +103,7 @@ def pick_reward_slot(
     """根据 OCR 标题与局内状态选出要点的槽位下标（0-based）。
 
     1. 按 PRIORITY 表顺序：本屏有该武将，且仍有未拿关键奖励 → 选他
-    2. 否则回退：本屏选项按 驰援>信物>武将牌>共同作战，同档靠左
+    2. 否则回退：本屏选项按 驰援>资助>信物>武将牌>共同作战，同档靠左
     """
     names = [parse_general_name(t) for t in titles]
     if not names:

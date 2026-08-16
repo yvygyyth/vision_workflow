@@ -35,6 +35,7 @@ REWARD_KIND_TEMPLATES: dict[RewardKind, str] = {
     RewardKind.JOINT: f"{_DIR}/joint.png",
     RewardKind.CARD: f"{_DIR}/card.png",
     RewardKind.HELP: f"{_DIR}/help.png",
+    RewardKind.BUFF: f"{_DIR}/buff.png",
 }
 
 click_cancel: EventFn = do(move().image(f"{_DIR}/cancel.png"), click())
@@ -85,7 +86,7 @@ def choose_reward_title(m: ModuleContext) -> OutcomeKey:
 
 
 def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
-    """识图信物/并肩/武将牌/驰援，按 ctx.vars 里的武将 + 背包点最高优先项。"""
+    """识图信物/并肩/武将牌/资助/驰援，按 ctx.vars 里的武将 + 背包点最高优先项。"""
     state = get_battle_state(m.ctx)
     entry = m.vars.get(PENDING_GENERAL_KEY)
     if not isinstance(entry, GeneralPriority):
@@ -99,7 +100,7 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
             m.log("【赠礼选项】可用 %s @ %s (%.2f)", kind.value, hit.center, hit.confidence)
 
     if not available:
-        m.reason = "未识别到信物/并肩作战/武将牌/驰援"
+        m.reason = "未识别到信物/并肩作战/武将牌/资助/驰援"
         return REJECTED
 
     kind = pick_reward_kind(available.keys(), entry, state)
@@ -118,7 +119,9 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
         state.mark_reward(kind)
         if kind is RewardKind.TOKEN:
             state.critical_tokens.add("关键信物")
-        elif kind is RewardKind.HELP:
+        elif kind is RewardKind.BUFF:
             state.buffs.add("驰援")
+        elif kind is RewardKind.HELP:
+            state.buffs.add("资助")
         m.vars.pop(PENDING_GENERAL_KEY, None)
     return key if key is not None else FULFILLED

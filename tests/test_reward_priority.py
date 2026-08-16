@@ -27,15 +27,15 @@ def test_pick_primary_table_order_when_needed() -> None:
 def test_pick_skips_obtained_key_rewards() -> None:
     state = BattleState()
     state.mark_reward(RewardKind.TOKEN)
-    state.mark_reward(RewardKind.HELP)
+    state.mark_reward(RewardKind.BUFF)
     slot = pick_reward_slot(["马超赠礼", "吕布赠礼", "陆逊赠礼"], state)
     assert slot == 2
 
 
-def test_pick_fallback_prefers_help_then_left() -> None:
+def test_pick_fallback_prefers_buff_then_left() -> None:
     state = BattleState()
     state.mark_reward(RewardKind.TOKEN)
-    state.mark_reward(RewardKind.HELP)
+    state.mark_reward(RewardKind.BUFF)
     state.mark_reward(RewardKind.CARD)
     slot = pick_reward_slot(["陆逊赠礼", "吕布赠礼", "马超赠礼"], state)
     assert slot == 1
@@ -56,21 +56,24 @@ def test_resolve_general_priority_known_and_unknown() -> None:
     assert unknown.key_rewards == ()
 
 
+def test_reward_kind_labels() -> None:
+    assert RewardKind.HELP == "资助"
+    assert RewardKind.BUFF == "驰援"
+
+
 def test_pick_reward_kind_prefers_pending_key_then_fallback() -> None:
     state = BattleState()
-    entry = GeneralPriority("马超", (RewardKind.TOKEN, RewardKind.HELP))
-    # 屏上有驰援和信物 → 马超关键先信物
+    entry = GeneralPriority("马超", (RewardKind.TOKEN, RewardKind.BUFF))
     assert (
-        pick_reward_kind({RewardKind.HELP, RewardKind.TOKEN}, entry, state)
+        pick_reward_kind({RewardKind.BUFF, RewardKind.TOKEN}, entry, state)
         == RewardKind.TOKEN
     )
     state.mark_reward(RewardKind.TOKEN)
     assert (
-        pick_reward_kind({RewardKind.HELP, RewardKind.TOKEN}, entry, state)
-        == RewardKind.HELP
+        pick_reward_kind({RewardKind.BUFF, RewardKind.TOKEN}, entry, state)
+        == RewardKind.BUFF
     )
-    # 关键都有了 → 回退序仍可选屏上项
-    state.mark_reward(RewardKind.HELP)
+    state.mark_reward(RewardKind.BUFF)
     assert (
         pick_reward_kind({RewardKind.JOINT, RewardKind.CARD}, entry, state)
         == RewardKind.CARD
