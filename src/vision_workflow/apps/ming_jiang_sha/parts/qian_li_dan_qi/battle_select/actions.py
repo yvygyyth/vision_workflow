@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/battle_select"
 
 # 三选一图标区（相对模板基准分辨率；识图时自动 fit）
-CHOICE_REGION: tuple[int, int, int, int] = (1130, 350, 1300, 780)
+CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
 
 _CHALLENGE = f"{_DIR}/challenge.png"
 _CHALLENGE_HELP = f"{_DIR}/challenge_help.png"
