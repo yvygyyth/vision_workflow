@@ -17,6 +17,7 @@ _SHOP = (
     f"{_DIR}/ba_qing_store.png",
     f"{_DIR}/rest.png",
     f"{_DIR}/lv_bu_wei_store.png",
+    f"{_DIR}/pocket_event.png",
 )
 _EVENT = (
     f"{_DIR}/zhu_ge_liangf.png",

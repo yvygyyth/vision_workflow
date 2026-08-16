@@ -216,3 +216,14 @@ def _resize_template(cv2: Any, template_bgr: Any, scale: float) -> Any:
     nh = max(1, int(round(th0 * scale)))
     interpolation = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
     return cv2.resize(template_bgr, (nw, nh), interpolation=interpolation)
+
+
+from vision_workflow.vision.capture import grab_region
+from vision_workflow.vision.ocr import image_to_text
+
+__all__ = [
+    "find_image",
+    "find_image_with_options",
+    "grab_region",
+    "image_to_text",
+]

@@ -1,6 +1,6 @@
 """Workflow lifecycle 管局内状态；Flow lifecycle 仍可用。"""
 
-from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.state import (
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     VARS_KEY,
     bind_battle_state,
     clear_battle_state,

@@ -31,6 +31,10 @@ dev = [
     "poethepoet>=0.32",
     "pyinstaller>=6.0",
 ]
+ocr = [
+    "rapidocr>=3.0",
+    "onnxruntime>=1.17",
+]
 
 [project.scripts]
 vision-workflow = "vision_workflow.cli:app"
