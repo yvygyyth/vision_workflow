@@ -2,6 +2,7 @@
 
 from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store import FLOW as ba_qing_store
 from vision_workflow.apps.ming_jiang_sha.parts.dang_qing_ge import FLOW as dang_qing_ge
+from vision_workflow.apps.ming_jiang_sha.parts.gong_hui import FLOW as gong_hui
 from vision_workflow.apps.ming_jiang_sha.parts.mail import FLOW as mail
 from vision_workflow.apps.ming_jiang_sha.parts.zhan_yi_store import FLOW as zhan_yi_store
 from vision_workflow.apps.ming_jiang_sha.parts.zhu_jiu_store import FLOW as zhu_jiu_store
@@ -10,7 +11,7 @@ from vision_workflow.module import FlowNode, Workflow
 WORKFLOW = Workflow(
     id="daily_free_resources",
     name="名将杀免费资源每日领取",
-    description="依次领取邮件、丹青阁、煮酒店铺、战役商店、霸青商店资源",
+    description="依次领取邮件、丹青阁、煮酒店铺、战役商店、霸青商店、公会店铺资源",
     entry="mail",
     nodes=[
         FlowNode(mail),
@@ -18,5 +19,6 @@ WORKFLOW = Workflow(
         FlowNode(zhu_jiu_store),
         FlowNode(zhan_yi_store),
         FlowNode(ba_qing_store),
+        FlowNode(gong_hui),
     ],
 )
