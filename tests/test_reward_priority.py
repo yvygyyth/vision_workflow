@@ -1,6 +1,7 @@
 """赠礼优先表选槽 / 选类别。"""
 
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
+    DEFAULT_KEY_REWARDS,
     BattleState,
     GeneralPriority,
     RewardKind,
@@ -20,7 +21,8 @@ def test_parse_general_name_strips_suffix() -> None:
 
 def test_pick_primary_table_order_when_needed() -> None:
     state = BattleState()
-    slot = pick_reward_slot(["吕布赠礼", "马超赠礼", "陆逊赠礼"], state)
+    # PRIORITY 中吕布在马超前
+    slot = pick_reward_slot(["马超赠礼", "吕布赠礼", "陆逊赠礼"], state)
     assert slot == 1
 
 
@@ -28,32 +30,34 @@ def test_pick_skips_obtained_key_rewards() -> None:
     state = BattleState()
     state.mark_reward(RewardKind.TOKEN)
     state.mark_reward(RewardKind.BUFF)
-    slot = pick_reward_slot(["马超赠礼", "吕布赠礼", "陆逊赠礼"], state)
+    # 吕布/马超关键已拿完；鲁肃仍要资助
+    slot = pick_reward_slot(["马超赠礼", "吕布赠礼", "鲁肃赠礼"], state)
     assert slot == 2
 
 
-def test_pick_fallback_prefers_buff_then_left() -> None:
+def test_pick_fallback_among_table_when_all_key_done() -> None:
     state = BattleState()
-    state.mark_reward(RewardKind.TOKEN)
-    state.mark_reward(RewardKind.BUFF)
-    state.mark_reward(RewardKind.CARD)
+    for kind in RewardKind:
+        state.mark_reward(kind)
     slot = pick_reward_slot(["陆逊赠礼", "吕布赠礼", "马超赠礼"], state)
-    assert slot == 1
+    assert slot == 0
 
 
 def test_pick_unknown_defaults_leftmost() -> None:
     state = BattleState()
-    slot = pick_reward_slot(["张飞赠礼", "关羽赠礼", "刘备赠礼"], state)
+    for kind in RewardKind:
+        state.mark_reward(kind)
+    slot = pick_reward_slot(["张飞赠礼", "赵云赠礼", "刘备赠礼"], state)
     assert slot == 0
 
 
 def test_resolve_general_priority_known_and_unknown() -> None:
     known = resolve_general_priority("马超")
     assert known.name == "马超"
-    assert RewardKind.TOKEN in known.key_rewards
+    assert known.key_rewards == (RewardKind.BUFF,)
     unknown = resolve_general_priority("张飞")
     assert unknown.name == "张飞"
-    assert unknown.key_rewards == ()
+    assert unknown.key_rewards == DEFAULT_KEY_REWARDS
 
 
 def test_reward_kind_labels() -> None:

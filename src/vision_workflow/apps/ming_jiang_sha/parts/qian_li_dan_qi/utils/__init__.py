@@ -7,11 +7,12 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.bag import (
     refresh_copper_coins,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.priority import (
+    DEFAULT_KEY_REWARDS,
+    FALLBACK_KIND_ORDER,
     PRIORITY,
     TOKEN_PRIORITY,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards import (
-    FALLBACK_KIND_ORDER,
     GeneralPriority,
     RewardKind,
     parse_general_name,
@@ -30,6 +31,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.state import
 
 __all__ = [
     "COPPER_REGION",
+    "DEFAULT_KEY_REWARDS",
     "FALLBACK_KIND_ORDER",
     "PRIORITY",
     "TOKEN_PRIORITY",

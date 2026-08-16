@@ -20,16 +20,6 @@ class RewardKind(StrEnum):
     CARD = "武将牌"
 
 
-# 主路径都不满足时：按类别回退（越靠前越优先）
-FALLBACK_KIND_ORDER: tuple[RewardKind, ...] = (
-    RewardKind.BUFF,
-    RewardKind.HELP,
-    RewardKind.TOKEN,
-    RewardKind.CARD,
-    RewardKind.JOINT,
-)
-
-
 @dataclass(frozen=True)
 class GeneralPriority:
     """优先表一行：武将名 + 关键奖励（越靠前越优先）。"""
@@ -49,6 +39,22 @@ def _priority_table() -> list[GeneralPriority]:
     )
 
     return PRIORITY
+
+
+def _fallback_kind_order() -> tuple[RewardKind, ...]:
+    from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.priority import (
+        FALLBACK_KIND_ORDER,
+    )
+
+    return FALLBACK_KIND_ORDER
+
+
+def _default_key_rewards() -> tuple[RewardKind, ...]:
+    from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.priority import (
+        DEFAULT_KEY_REWARDS,
+    )
+
+    return DEFAULT_KEY_REWARDS
 
 
 def parse_general_name(ocr_text: str) -> str:
@@ -72,11 +78,11 @@ def _entry_by_name(name: str) -> GeneralPriority | None:
 
 
 def resolve_general_priority(name: str) -> GeneralPriority:
-    """查优先表；不在表内则返回空关键奖励的占位项。"""
+    """查优先表；不在表内则用 ``DEFAULT_KEY_REWARDS``。"""
     entry = _entry_by_name(name)
     if entry is not None:
         return entry
-    return GeneralPriority(name=name or "未知", key_rewards=())
+    return GeneralPriority(name=name or "未知", key_rewards=_default_key_rewards())
 
 
 def _needed_key_rewards(entry: GeneralPriority, state: _RewardBag) -> list[RewardKind]:
@@ -84,13 +90,14 @@ def _needed_key_rewards(entry: GeneralPriority, state: _RewardBag) -> list[Rewar
 
 
 def _fallback_kind_rank(entry: GeneralPriority | None) -> int:
-    """回退用：关键奖励里最靠前的类别秩；未知武将最差。"""
+    """回退用：关键奖励里最靠前的类别秩；无关键奖励最差。"""
+    order = _fallback_kind_order()
     if entry is None or not entry.key_rewards:
-        return len(FALLBACK_KIND_ORDER)
-    best = len(FALLBACK_KIND_ORDER)
+        return len(order)
+    best = len(order)
     for kind in entry.key_rewards:
         try:
-            best = min(best, FALLBACK_KIND_ORDER.index(kind))
+            best = min(best, order.index(kind))
         except ValueError:
             continue
     return best
@@ -103,7 +110,7 @@ def pick_reward_slot(
     """根据 OCR 标题与局内状态选出要点的槽位下标（0-based）。
 
     1. 按 PRIORITY 表顺序：本屏有该武将，且仍有未拿关键奖励 → 选他
-    2. 否则回退：本屏选项按 驰援>资助>信物>武将牌>共同作战，同档靠左
+    2. 否则回退：本屏选项按 FALLBACK_KIND_ORDER，同档靠左
     """
     names = [parse_general_name(t) for t in titles]
     if not names:
@@ -119,6 +126,8 @@ def pick_reward_slot(
     best_key = (_fallback_kind_rank(None), 0)
     for slot, name in enumerate(names):
         entry = _entry_by_name(name)
+        if entry is None and name:
+            entry = resolve_general_priority(name)
         key = (_fallback_kind_rank(entry), slot)
         if key < best_key:
             best_key = key
@@ -133,7 +142,7 @@ def pick_reward_kind(
 ) -> RewardKind | None:
     """在本屏可选项里选出要拿的奖励类别。
 
-    顺序：当前武将 ``key_rewards``（优先未拿到的）→ 全局回退序。
+    顺序：当前武将 ``key_rewards``（优先未拿到的）→ ``FALLBACK_KIND_ORDER``。
     """
     avail = set(available)
     if not avail:
@@ -142,7 +151,7 @@ def pick_reward_kind(
     order: list[RewardKind] = []
     if entry is not None:
         order.extend(entry.key_rewards)
-    for kind in FALLBACK_KIND_ORDER:
+    for kind in _fallback_kind_order():
         if kind not in order:
             order.append(kind)
 
