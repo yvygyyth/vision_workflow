@@ -1,4 +1,4 @@
-"""子流程：霸青商店。"""
+﻿"""子流程：巴清商店。"""
 
 from vision_workflow.apps.ming_jiang_sha.common.actions import confirm, click_max, go_back, space_close
 from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store.actions import (
@@ -19,11 +19,11 @@ _OK = {FULFILLED: onward}
 
 FLOW = Flow(
     id="ba_qing_store",
-    name="霸青商店",
-    description="领取霸青商店免费兵力、灵犀宝匣与名将册",
+    name="巴清商店",
+    description="领取巴清商店免费兵力、灵犀宝匣与名将册",
     entry="entry_icon",
     modules=[
-        Module(id="entry_icon", name="打开霸青商店", description="点击入口图标", event=click_entry_icon, on=_CLICK),
+        Module(id="entry_icon", name="打开巴清商店", description="点击入口图标", event=click_entry_icon, on=_CLICK),
         Module(id="gold_tab", name="金币页签", description="切换到金币页签", event=click_gold_tab, on=_CLICK),
         Module(id="free_bingli", name="免费兵力", description="选中免费兵力", event=click_free_bingli, on=_CLICK),
         Module(id="buy_0", name="0 购买", description="点击 0 购买", event=confirm, on=_CLICK),

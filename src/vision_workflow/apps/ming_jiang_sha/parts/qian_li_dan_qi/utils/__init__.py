@@ -8,6 +8,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.bag import (
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.priority import (
     PRIORITY,
+    TOKEN_PRIORITY,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards import (
     FALLBACK_KIND_ORDER,
@@ -31,6 +32,7 @@ __all__ = [
     "COPPER_REGION",
     "FALLBACK_KIND_ORDER",
     "PRIORITY",
+    "TOKEN_PRIORITY",
     "GeneralPriority",
     "RewardKind",
     "VARS_KEY",

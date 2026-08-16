@@ -1,4 +1,4 @@
-"""霸青商店流程动作。"""
+﻿"""巴清商店流程动作。"""
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.events import click, do, move, scroll
