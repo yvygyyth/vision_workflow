@@ -8,9 +8,22 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards impo
 )
 
 PRIORITY: list[GeneralPriority] = [
-    GeneralPriority("马超", (RewardKind.BUFF,)),
+    GeneralPriority("王异", (RewardKind.TOKEN)),
+    GeneralPriority("荀彧", (RewardKind.TOKEN)),
+    GeneralPriority("甘宁", (RewardKind.TOKEN, RewardKind.BUFF)),
+    GeneralPriority("刘表", (RewardKind.TOKEN, RewardKind.BUFF)),
+    GeneralPriority("萧何", (RewardKind.TOKEN)),
+    GeneralPriority("曹操", (RewardKind.TOKEN)),
+    GeneralPriority("韩信", (RewardKind.TOKEN)),
     GeneralPriority("吕布", (RewardKind.TOKEN)),
+    GeneralPriority("马超", (RewardKind.BUFF)),
+    GeneralPriority("吕雉", (RewardKind.TOKEN)),
+    GeneralPriority("关羽", (RewardKind.TOKEN)),
+    GeneralPriority("左慈", (RewardKind.TOKEN)),
+    GeneralPriority("周勃", (RewardKind.TOKEN)),
     GeneralPriority("鲁肃", (RewardKind.HELP, RewardKind.BUFF)),
+    GeneralPriority("庞统", (RewardKind.TOKEN)),
+    GeneralPriority("华佗", (RewardKind.TOKEN)),
 ]
 
 # 巴清商店关键信物（越靠前越优先；店里有才会出现，不必再查背包）
@@ -22,9 +35,11 @@ TOKEN_PRIORITY: list[str] = [
     "典籍",
     "《孟德新书》",
     "象棋",
+    "《九章律》",
     "鸠杯",
     "飞将翎",
     "纱锦囊"
+    "皇后之玺",
     "薄曲",
     "青囊书",
     "凤毛",
