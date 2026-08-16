@@ -6,7 +6,7 @@ from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
-_DIR = f"{DATA_ROOT}/qian_li_dan_qi/battle"
+_DIR = f"{DATA_ROOT}/qian_li_dan_qi/battle_select"
 
 # 三选一图标区（相对模板基准分辨率；识图时自动 fit）
 CHOICE_REGION: tuple[int, int, int, int] = (1130, 350, 1300, 780)
