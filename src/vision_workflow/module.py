@@ -81,9 +81,19 @@ class FlowLifecycle:
     """流程级生命周期钩子。"""
 
     on_enter: FlowHook | None = None
-    """本 Flow 模块开始跑之前调用（如绑定局内状态）。"""
+    """本 Flow 模块开始跑之前调用。"""
     on_exit: FlowHook | None = None
-    """本 Flow 结束后必定调用（成功 / 失败 / 取消；如清理局内状态）。"""
+    """本 Flow 结束后必定调用（成功 / 失败 / 取消）。"""
+
+
+@dataclass
+class WorkflowLifecycle:
+    """工作流级生命周期钩子（整次 run 进/出一次）。"""
+
+    on_enter: FlowHook | None = None
+    """启动延迟之后、跑第一个 Flow 之前调用（如绑定局内背包状态）。"""
+    on_exit: FlowHook | None = None
+    """整次工作流结束时必定调用（成功 / 失败 / 取消；如清理背包状态）。"""
 
 
 @dataclass
@@ -145,6 +155,7 @@ class ModuleContext:
         timeout: float | None = None,
         interval: float | None = None,
         region: tuple[int, int, int, int] | None = None,
+        region_fit: bool | None = None,
         grayscale: bool | None = None,
         match: MatchOptions | None = None,
     ) -> MatchResult:
@@ -154,6 +165,7 @@ class ModuleContext:
             timeout=timeout,
             interval=interval,
             region=region,
+            region_fit=region_fit,
             grayscale=grayscale,
             match=match,
         )
@@ -341,6 +353,8 @@ class Workflow:
     description: str = ""
     base_dir: str | None = None
     config: WorkflowConfig = field(default_factory=WorkflowConfig)
+    lifecycle: WorkflowLifecycle = field(default_factory=WorkflowLifecycle)
+    """整次 run 的进入 / 退出钩子。"""
 
     _by_id: dict[str, Flow] = field(init=False, repr=False)
     _nodes_by_id: dict[str, FlowNode] = field(init=False, repr=False)
@@ -348,6 +362,7 @@ class Workflow:
 
     def __post_init__(self) -> None:
         self.config = _coerce_config(WorkflowConfig, self.config)
+        self.lifecycle = _coerce_config(WorkflowLifecycle, self.lifecycle)
         if not self.nodes:
             raise ValueError("Workflow.nodes 不能为空")
 

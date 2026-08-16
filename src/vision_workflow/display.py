@@ -120,6 +120,29 @@ def cached_template_scale() -> float:
     return template_scale()
 
 
+def fit_region(
+    region: tuple[int, int, int, int],
+    *,
+    fit: bool = True,
+) -> tuple[int, int, int, int]:
+    """将基准分辨率下标定的 region 换算到当前显示。
+
+    region: (left, top, width, height)。fit=False 时原样返回。
+    """
+    if not fit:
+        return region
+    scale = cached_template_scale()
+    if abs(scale - 1.0) < 1e-6:
+        return region
+    left, top, width, height = region
+    return (
+        int(round(left * scale)),
+        int(round(top * scale)),
+        int(round(width * scale)),
+        int(round(height * scale)),
+    )
+
+
 def match_scales(base: float | None = None) -> list[float]:
     """多尺度列表；关闭 multi_scale 时只返回基准换算 scale。"""
     from vision_workflow.settings import get_match_settings

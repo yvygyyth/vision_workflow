@@ -22,6 +22,7 @@ def find_image(
     timeout: float = 0.0,
     interval: float = 0.5,
     region: tuple[int, int, int, int] | None = None,
+    region_fit: bool = True,
     grayscale: bool = True,
     screenshot: "Image.Image | None" = None,
 ) -> MatchResult:
@@ -39,6 +40,9 @@ def find_image(
         轮询间隔。
     region:
         (left, top, width, height)；None 表示全屏。
+        相对模板基准分辨率标定；截屏时默认按显示缩放（region_fit）。
+    region_fit:
+        截屏时是否缩放 region；传入 screenshot 时按图素坐标，不缩放。
     grayscale:
         是否灰度匹配（更快、对色彩不敏感）。
     screenshot:
@@ -53,6 +57,7 @@ def find_image(
         timeout=timeout,
         interval=interval,
         region=region,
+        region_fit=region_fit,
         grayscale=grayscale,
     )
     deadline = time.monotonic() + max(options.timeout, 0.0)
@@ -79,9 +84,25 @@ def find_image_with_options(
         timeout=options.timeout,
         interval=options.interval,
         region=options.region,
+        region_fit=options.region_fit,
         grayscale=options.grayscale,
         screenshot=screenshot,
     )
+
+
+def _resolve_region(
+    options: MatchOptions,
+    *,
+    screenshot: "Image.Image | None",
+) -> tuple[int, int, int, int] | None:
+    """截屏匹配时对 region 做显示缩放；给定 screenshot 时按图素坐标。"""
+    if not options.region:
+        return None
+    if screenshot is not None:
+        return options.region
+    from vision_workflow.display import fit_region
+
+    return fit_region(options.region, fit=options.region_fit)
 
 
 def _match_once(
@@ -103,19 +124,21 @@ def _match_once(
     if template_bgr is None:
         return MatchResult(found=False, image=str(path), message=f"无法读取模板: {path}")
 
+    region = _resolve_region(options, screenshot=screenshot)
+
     if screenshot is not None:
         hay_rgb = screenshot.convert("RGB")
         hay_bgr = cv2.cvtColor(np.array(hay_rgb), cv2.COLOR_RGB2BGR)
         offset_x, offset_y = 0, 0
-        if options.region:
-            left, top, width, height = options.region
+        if region:
+            left, top, width, height = region
             hay_bgr = hay_bgr[top : top + height, left : left + width]
             offset_x, offset_y = left, top
     else:
         bbox = None
         offset_x, offset_y = 0, 0
-        if options.region:
-            left, top, width, height = options.region
+        if region:
+            left, top, width, height = region
             bbox = (left, top, left + width, top + height)
             offset_x, offset_y = left, top
         grab = ImageGrab.grab(bbox=bbox)

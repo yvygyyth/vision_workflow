@@ -1,4 +1,7 @@
-"""千里单骑战斗局内状态：挂在 FlowContext.vars，随 Flow.lifecycle.on_exit 清理。"""
+"""千里单骑局内状态：挂在 FlowContext.vars。
+
+由 Workflow.lifecycle 绑定 / 清理（跨 battle_select / fight 保留）。
+"""
 
 from __future__ import annotations
 
@@ -25,20 +28,25 @@ class BattleState:
 
 
 def bind_battle_state(ctx: FlowContext) -> BattleState:
-    """lifecycle.on_enter：新建一局状态。"""
+    """Workflow.on_enter：新建一局状态。"""
     state = BattleState()
     ctx.vars[VARS_KEY] = state
     return state
 
 
-def get_battle_state(ctx: FlowContext) -> BattleState:
-    """读取当前局状态；尚未 bind 时惰性创建。"""
+def ensure_battle_state(ctx: FlowContext) -> BattleState:
+    """已有则保留，没有再创建。"""
     state = ctx.vars.get(VARS_KEY)
-    if not isinstance(state, BattleState):
-        return bind_battle_state(ctx)
-    return state
+    if isinstance(state, BattleState):
+        return state
+    return bind_battle_state(ctx)
+
+
+def get_battle_state(ctx: FlowContext) -> BattleState:
+    """读取当前局状态；尚未创建时惰性 ensure。"""
+    return ensure_battle_state(ctx)
 
 
 def clear_battle_state(ctx: FlowContext) -> None:
-    """lifecycle.on_exit：丢掉本局状态。"""
+    """Workflow.on_exit：丢掉本局状态。"""
     ctx.vars.pop(VARS_KEY, None)

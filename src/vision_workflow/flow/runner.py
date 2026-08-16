@@ -83,6 +83,28 @@ class WorkflowRunner:
         )
         if not self._wait_start_delay(result):
             return result
+
+        try:
+            if self.workflow.lifecycle.on_enter is not None:
+                self.workflow.lifecycle.on_enter(self.ctx)
+            return self._run_flows(result, flow_id=flow_id, module_start=module_start)
+        finally:
+            if self.workflow.lifecycle.on_exit is not None:
+                try:
+                    self.workflow.lifecycle.on_exit(self.ctx)
+                except Exception:
+                    logger.exception(
+                        "工作流 lifecycle.on_exit 失败 (%s)",
+                        self.workflow.log_label,
+                    )
+
+    def _run_flows(
+        self,
+        result: FlowRunResult,
+        *,
+        flow_id: str,
+        module_start: str | None,
+    ) -> FlowRunResult:
         current_flow: NextRef = flow_id
 
         while not is_stop(current_flow):

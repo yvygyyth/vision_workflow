@@ -1,62 +1,94 @@
-"""Flow lifecycle 与局内状态生命周期。"""
+"""Workflow lifecycle 管局内状态；Flow lifecycle 仍可用。"""
 
-from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle.state import (
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.state import (
     VARS_KEY,
     bind_battle_state,
     clear_battle_state,
+    ensure_battle_state,
     get_battle_state,
 )
 from vision_workflow.flow import WorkflowRunner
 from vision_workflow.module import (
     Flow,
-    FlowLifecycle,
     FlowNode,
+    FlowRouter,
     Module,
     Workflow,
     WorkflowConfig,
+    WorkflowLifecycle,
     onward,
 )
-from vision_workflow.status import FULFILLED, REJECTED
+from vision_workflow.status import FULFILLED, REJECTED, FlowStatus
 
 
-def test_flow_lifecycle_clears_battle_state() -> None:
+def test_workflow_lifecycle_manages_battle_state() -> None:
     seen: dict = {}
 
-    def event(m):
+    def select_event(m):
         state = get_battle_state(m.ctx)
-        state.critical_tokens.add("关键信物")
-        state.buffs.add("驰援")
         state.copper_coins = 42
-        seen["during"] = VARS_KEY in m.ctx.vars
+        state.critical_tokens.add("关键信物")
+        seen["select"] = True
         return FULFILLED
 
-    flow = Flow(
-        id="battle",
+    def fight_event(m):
+        state = get_battle_state(m.ctx)
+        seen["fight_copper"] = state.copper_coins
+        seen["fight_tokens"] = set(state.critical_tokens)
+        return FULFILLED
+
+    select = Flow(
+        id="battle_select",
         entry="a",
-        lifecycle=FlowLifecycle(
-            on_enter=bind_battle_state,
-            on_exit=clear_battle_state,
-        ),
-        modules=[Module(id="a", event=event, on={FULFILLED: onward})],
+        modules=[Module(id="a", event=select_event, on={FULFILLED: onward})],
+    )
+    fight = Flow(
+        id="fight",
+        entry="b",
+        modules=[Module(id="b", event=fight_event, on={FULFILLED: onward})],
     )
     workflow = Workflow(
         id="w",
         config=WorkflowConfig(start_delay_ms=0),
-        nodes=[FlowNode(flow)],
+        lifecycle=WorkflowLifecycle(
+            on_enter=bind_battle_state,
+            on_exit=clear_battle_state,
+        ),
+        nodes=[
+            FlowNode(
+                select,
+                router=FlowRouter(on={FlowStatus.FULFILLED: "fight"}),
+            ),
+            FlowNode(fight),
+        ],
     )
     runner = WorkflowRunner(workflow)
     assert runner.run().success
-    assert seen["during"] is True
+    assert seen["select"] is True
+    assert seen["fight_copper"] == 42
+    assert seen["fight_tokens"] == {"关键信物"}
     assert VARS_KEY not in runner.ctx.vars
 
 
-def test_flow_lifecycle_on_exit_runs_on_reject() -> None:
+def test_ensure_does_not_reset_existing_state() -> None:
+    from pathlib import Path
+
+    from vision_workflow.flow.context import FlowContext
+
+    ctx = FlowContext(base_dir=Path("."))
+    first = ensure_battle_state(ctx)
+    first.copper_coins = 7
+    second = ensure_battle_state(ctx)
+    assert second is first
+    assert second.copper_coins == 7
+
+
+def test_workflow_lifecycle_on_exit_runs_on_reject() -> None:
     exited: list[bool] = []
 
     flow = Flow(
         id="f",
         entry="a",
-        lifecycle={"on_exit": lambda ctx: exited.append(True)},
         modules=[
             Module(id="a", event=lambda m: REJECTED, on={REJECTED: onward}),
         ],
@@ -64,6 +96,7 @@ def test_flow_lifecycle_on_exit_runs_on_reject() -> None:
     workflow = Workflow(
         id="w",
         config=WorkflowConfig(start_delay_ms=0),
+        lifecycle={"on_exit": lambda ctx: exited.append(True)},
         nodes=[FlowNode(flow)],
     )
     result = WorkflowRunner(workflow).run()

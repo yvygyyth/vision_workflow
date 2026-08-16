@@ -12,6 +12,9 @@ class MatchOptions(BaseModel):
     timeout: float = Field(default=0.0, ge=0.0)
     interval: float = Field(default=0.5, ge=0.05)
     region: tuple[int, int, int, int] | None = None
+    """(left, top, width, height)；相对模板基准分辨率标定，截屏匹配时默认按显示缩放。"""
+    region_fit: bool = True
+    """截屏匹配时是否对 region 做显示缩放；传入 screenshot 时忽略（按图素坐标裁剪）。"""
     grayscale: bool = True
 
 

@@ -41,6 +41,7 @@ class FlowContext:
         timeout: float | None = None,
         interval: float | None = None,
         region: tuple[int, int, int, int] | None = None,
+        region_fit: bool | None = None,
         grayscale: bool | None = None,
         match: MatchOptions | None = None,
     ) -> MatchResult:
@@ -58,6 +59,8 @@ class FlowContext:
             opts.interval = interval
         if region is not None:
             opts.region = region
+        if region_fit is not None:
+            opts.region_fit = region_fit
         if grayscale is not None:
             opts.grayscale = grayscale
         return find_image_with_options(self.resolve(image), opts)
