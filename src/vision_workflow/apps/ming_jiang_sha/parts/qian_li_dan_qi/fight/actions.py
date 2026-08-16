@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/fight"
 
+CANCEL_IMAGE = f"{_DIR}/cancel.png"
+
 # FlowContext.vars：选择武将后暂存，供下一步选类别
 PENDING_GENERAL_KEY = "pending_reward_general"
 
@@ -42,7 +44,7 @@ REWARD_KIND_TEMPLATES: dict[RewardKind, str] = {
     RewardKind.BUFF: f"{_DIR}/buff.png",
 }
 
-click_cancel: EventFn = do(move().image(f"{_DIR}/cancel.png"), click())
+click_cancel: EventFn = do(move().image(CANCEL_IMAGE), click())
 # 勿用 (0,0)：PyAutoGUI 角落 FailSafe 会导致后续操作抛异常
 move_aside: EventFn = do(move().to(80, 80).raw())
 click_setting: EventFn = do(move().image(f"{_DIR}/setting.png"), click())
@@ -52,6 +54,11 @@ click_challenge_end: EventFn = do(
     click(),
 )
 click_next_step: EventFn = do(move().image(f"{_DIR}/next_step.png"), click())
+
+
+def cancel_visible(m: ModuleContext, *, timeout: float = 0.8) -> bool:
+    """战斗「取消」按钮是否在画面上。"""
+    return bool(m.find(CANCEL_IMAGE, timeout=timeout, threshold=0.8).found)
 
 
 def choose_reward_title(m: ModuleContext) -> OutcomeKey:

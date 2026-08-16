@@ -6,6 +6,9 @@ import logging
 import time
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions import (
+    cancel_visible,
+)
 from vision_workflow.events import click, do, move
 from vision_workflow.module import ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey, REJECTED
@@ -14,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/shi_chang_shi"
 _ATTACK = f"{_DIR}/attack.png"
-_CANCEL = f"{DATA_ROOT}/qian_li_dan_qi/fight/cancel.png"
 _ATTACK_ROUNDS_KEY = "shi_chang_shi_attack_rounds"
 _MAX_ATTACK_ROUNDS = 8
 _AFTER_ATTACK_SEC = 0.5
@@ -37,8 +39,7 @@ def click_attack(m: ModuleContext) -> OutcomeKey:
 
 def check_cancel_ready(m: ModuleContext) -> OutcomeKey:
     """取消按钮已出现 → fulfilled；否则 need_attack 再点图。"""
-    hit = m.find(_CANCEL, timeout=0.8, threshold=0.8)
-    if hit.found:
+    if cancel_visible(m):
         m.vars.pop(_ATTACK_ROUNDS_KEY, None)
         m.reason = "取消已出现，进入开打"
         logger.info("check_cancel_ready → fulfilled")
