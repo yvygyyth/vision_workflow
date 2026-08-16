@@ -69,7 +69,16 @@ WORKFLOW = Workflow(
             ),
         ),
         FlowNode(ba_qing_store, router=_BACK_TO_SELECT),
-        FlowNode(pocket_event, router=_BACK_TO_SELECT),
+        FlowNode(
+            pocket_event,
+            router=FlowRouter(
+                on={
+                    FlowStatus.FULFILLED: "battle_select",
+                    "in_battle": "in_battle",
+                    FlowStatus.REJECTED: None,
+                }
+            ),
+        ),
         FlowNode(zhu_ge_liang, router=_BACK_TO_SELECT),
         FlowNode(fei_fei, router=_BACK_TO_SELECT),
         FlowNode(

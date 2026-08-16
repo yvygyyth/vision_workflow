@@ -7,6 +7,9 @@ import random
 import time
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions import (
+    cancel_visible,
+)
 from vision_workflow.input import Mouse
 from vision_workflow.module import ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey
@@ -18,8 +21,11 @@ _DIR = f"{DATA_ROOT}/qian_li_dan_qi/pocket_event"
 # 资源文件名拼写保持与磁盘一致
 _EVENT_PATTERN = f"{_DIR}/event_patterm.png"
 
-# 点完后稍等 UI 刷新，再找下一轮花纹
+# 点完后稍等 UI 刷新
 _AFTER_CLICK_SEC = 0.6
+
+# Flow 出口：出现取消 → 进 in_battle
+ENTER_BATTLE = "in_battle"
 
 
 def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
@@ -47,4 +53,16 @@ def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
     Mouse().move(cx, cy).click().sleep(0.2).perform()
     time.sleep(_AFTER_CLICK_SEC)
     m.reason = f"点击花纹 1/{len(hits)}"
-    return "again"
+    return "clicked"
+
+
+def check_cancel_ready(m: ModuleContext) -> OutcomeKey:
+    """点花纹后：有取消 → in_battle；没有 → 继续点花纹。"""
+    if cancel_visible(m):
+        m.reason = "取消已出现，进入战斗"
+        logger.info("check_cancel_ready → in_battle")
+        return ENTER_BATTLE
+
+    m.reason = "取消未出现，继续点花纹"
+    logger.info("check_cancel_ready → continue")
+    return "continue"
