@@ -16,7 +16,7 @@ from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus
 
 Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
 Workflow(
-    id="main",
+    id="daily_free_resources",
     name="名将杀免费资源每日领取",
     entry="mail",
     nodes=[FlowNode(mail), FlowNode(dang_qing_ge)],  # router 可选

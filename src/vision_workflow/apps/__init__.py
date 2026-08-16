@@ -7,10 +7,12 @@ CLI / UI 只从本包取 ``WORKFLOWS``。
 """
 
 from vision_workflow.apps.ming_jiang_sha import WORKFLOWS as ming_jiang_sha_workflows
-from vision_workflow.apps.ming_jiang_sha.workflows.main import WORKFLOW as main_workflow
+from vision_workflow.apps.ming_jiang_sha.workflows.daily_free_resources import (
+    WORKFLOW as daily_free_resources,
+)
 from vision_workflow.module import Workflow
 
-WORKFLOW = main_workflow  # CLI / 默认入口兼容
+WORKFLOW = daily_free_resources  # CLI / 默认入口
 
 WORKFLOWS: list[Workflow] = [*ming_jiang_sha_workflows]
 

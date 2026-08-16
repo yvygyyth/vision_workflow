@@ -8,7 +8,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.zhu_jiu_store import FLOW as zhu_
 from vision_workflow.module import FlowNode, Workflow
 
 WORKFLOW = Workflow(
-    id="main",
+    id="daily_free_resources",
     name="名将杀免费资源每日领取",
     description="依次领取邮件、丹青阁、煮酒店铺、战役商店、霸青商店资源",
     entry="mail",

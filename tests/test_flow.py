@@ -258,8 +258,8 @@ def test_config_workflow_load() -> None:
     assert isinstance(wf.get("mail").config, FlowConfig)
     assert wf.router_for("mail").on[FlowStatus.FULFILLED] == "dang_qing_ge"
     assert len(WORKFLOWS) >= 1
-    assert WORKFLOWS[0].id == "main"
-    assert ("名将杀免费资源每日领取", "main") in workflow_choices()
+    assert WORKFLOWS[0].id == "daily_free_resources"
+    assert ("名将杀免费资源每日领取", "daily_free_resources") in workflow_choices()
 
 
 def test_module_retry_on_miss() -> None:
