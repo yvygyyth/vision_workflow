@@ -31,6 +31,15 @@ def press_key(key: str) -> None:
     api.press(key)
 
 
+def hotkey(*keys: str) -> None:
+    """组合键，如 ``hotkey("ctrl", "a")``。"""
+    if not keys:
+        raise ValueError("hotkey 至少需要一个键")
+    api = _pyautogui()
+    logger.debug("hotkey: %s", "+".join(keys))
+    api.hotkey(*keys)
+
+
 def input_text(
     text: str,
     *,
@@ -59,19 +68,55 @@ def input_text(
 
 
 def _paste_via_clipboard(text: str) -> None:
-    """写入系统剪贴板后 Ctrl+V。"""
-    import tkinter as tk
+    """Win32 写剪贴板后 Ctrl+V（避免 tkinter 抢焦点导致游戏卡住）。"""
+    _set_clipboard_text(text)
+    time.sleep(0.05)
+    _pyautogui().hotkey("ctrl", "v")
 
-    root = tk.Tk()
-    root.withdraw()
+
+def _set_clipboard_text(text: str) -> None:
+    """用 Win32 API 写入 Unicode 文本到剪贴板，不创建窗口。"""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+
+    kernel32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+    kernel32.GlobalAlloc.restype = wintypes.HGLOBAL
+    kernel32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalLock.restype = ctypes.c_void_p
+    kernel32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+    kernel32.GlobalFree.argtypes = [wintypes.HGLOBAL]
+    user32.OpenClipboard.argtypes = [wintypes.HWND]
+    user32.OpenClipboard.restype = wintypes.BOOL
+    user32.EmptyClipboard.restype = wintypes.BOOL
+    user32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+    user32.SetClipboardData.restype = wintypes.HANDLE
+    user32.CloseClipboard.restype = wintypes.BOOL
+
+    data = text.encode("utf-16-le") + b"\x00\x00"
+    if not user32.OpenClipboard(None):
+        raise RuntimeError(f"OpenClipboard 失败 err={ctypes.get_last_error()}")
     try:
-        root.clipboard_clear()
-        root.clipboard_append(text)
-        root.update()
+        user32.EmptyClipboard()
+        handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+        if not handle:
+            raise RuntimeError("GlobalAlloc 失败")
+        locked = kernel32.GlobalLock(handle)
+        if not locked:
+            kernel32.GlobalFree(handle)
+            raise RuntimeError(f"GlobalLock 失败 err={ctypes.get_last_error()}")
+        ctypes.memmove(locked, data, len(data))
+        kernel32.GlobalUnlock(handle)
+        if not user32.SetClipboardData(CF_UNICODETEXT, handle):
+            kernel32.GlobalFree(handle)
+            raise RuntimeError(f"SetClipboardData 失败 err={ctypes.get_last_error()}")
     finally:
-        root.destroy()
-    api = _pyautogui()
-    api.hotkey("ctrl", "v")
+        user32.CloseClipboard()
 
 
 def _pyautogui():
@@ -207,7 +252,9 @@ class Mouse:
     ) -> tuple[int, int]:
         if relative:
             if self._x is None or self._y is None:
-                raise RuntimeError("相对坐标需要先设置基准点（at/move）")
+                # do(move().image(), move().by()) 会新建 Mouse 链；退回当前光标
+                pos = self._api().position()
+                self._x, self._y = int(pos[0]), int(pos[1])
             return self._x + int(x or 0), self._y + int(y or 0)
 
         if x is not None and y is not None:
