@@ -117,6 +117,11 @@ class ModuleContext:
     def vars(self) -> dict:
         return self.ctx.vars
 
+    @property
+    def params(self) -> dict:
+        """当前 Flow 合并后的入参（Flow 默认 ⊕ FlowNode 传入）。"""
+        return self.ctx.params
+
     def resolve(self, image: str | Path) -> Path:
         return self.ctx.resolve(image)
 
@@ -236,6 +241,8 @@ class Flow:
     entry: str
     name: str = ""
     description: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+    """硬编码默认入参；运行时与 FlowNode.params 合并（传入优先）。"""
     config: FlowConfig = field(default_factory=FlowConfig)
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
@@ -243,6 +250,7 @@ class Flow:
 
     def __post_init__(self) -> None:
         self.config = _coerce_config(FlowConfig, self.config)
+        self.params = dict(self.params or {})
         ids = [m.id for m in self.modules]
         if len(ids) != len(set(ids)):
             raise ValueError(f"流程 [{self.id}] 模块 id 必须唯一: {ids}")
@@ -300,6 +308,11 @@ class FlowNode:
 
     flow: Flow
     router: FlowRouter | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+    """本次编排传入的入参，覆盖 Flow.params 同名键。"""
+
+    def __post_init__(self) -> None:
+        self.params = dict(self.params or {})
 
 
 @dataclass
@@ -315,6 +328,7 @@ class Workflow:
     config: WorkflowConfig = field(default_factory=WorkflowConfig)
 
     _by_id: dict[str, Flow] = field(init=False, repr=False)
+    _nodes_by_id: dict[str, FlowNode] = field(init=False, repr=False)
     _routers: dict[str, FlowRouter] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -326,6 +340,7 @@ class Workflow:
         if len(ids) != len(set(ids)):
             raise ValueError(f"流程 id 必须唯一: {ids}")
         self._by_id = {n.flow.id: n.flow for n in self.nodes}
+        self._nodes_by_id = {n.flow.id: n for n in self.nodes}
 
         if self.entry is None:
             self.entry = self.nodes[0].flow.id
@@ -371,6 +386,17 @@ class Workflow:
         if flow_id not in self._by_id:
             raise KeyError(f"未知流程: {flow_id}，可选: {list(self._by_id)}")
         return self._by_id[flow_id]
+
+    def node_for(self, flow_id: str) -> FlowNode:
+        if flow_id not in self._nodes_by_id:
+            raise KeyError(f"未知流程节点: {flow_id}，可选: {list(self._nodes_by_id)}")
+        return self._nodes_by_id[flow_id]
+
+    def merged_params_for(self, flow_id: str) -> dict[str, Any]:
+        """Flow 默认参数 ⊕ FlowNode 传入（传入优先）。"""
+        flow = self.get(flow_id)
+        node = self.node_for(flow_id)
+        return {**flow.params, **node.params}
 
     def router_for(self, flow_id: str) -> FlowRouter:
         if flow_id not in self._routers:

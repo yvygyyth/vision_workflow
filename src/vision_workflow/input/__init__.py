@@ -8,6 +8,8 @@
     Mouse().at(match.center).click().perform()
     Mouse().at((960, 540)).scroll(-8).perform()
     press_key("esc")
+    input_text("hello")
+    input_text("张飞")  # 非 ASCII 自动走剪贴板粘贴
 """
 
 from __future__ import annotations
@@ -27,6 +29,49 @@ def press_key(key: str) -> None:
     api = _pyautogui()
     logger.debug("key press: %s", key)
     api.press(key)
+
+
+def input_text(
+    text: str,
+    *,
+    interval: float = 0.0,
+    method: Literal["auto", "write", "paste"] = "auto",
+) -> None:
+    """输入字符串。
+
+    - ``write``：逐键敲击（适合 ASCII）
+    - ``paste``：剪贴板 + Ctrl+V（适合中文等）
+    - ``auto``：纯 ASCII 用 write，否则 paste
+    """
+    if text == "":
+        return
+    mode = method
+    if mode == "auto":
+        mode = "write" if text.isascii() else "paste"
+    logger.debug("input_text method=%s len=%s", mode, len(text))
+    if mode == "write":
+        _pyautogui().write(text, interval=interval)
+        return
+    if mode == "paste":
+        _paste_via_clipboard(text)
+        return
+    raise ValueError(f"未知 input_text method: {method!r}")
+
+
+def _paste_via_clipboard(text: str) -> None:
+    """写入系统剪贴板后 Ctrl+V。"""
+    import tkinter as tk
+
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        root.clipboard_clear()
+        root.clipboard_append(text)
+        root.update()
+    finally:
+        root.destroy()
+    api = _pyautogui()
+    api.hotkey("ctrl", "v")
 
 
 def _pyautogui():

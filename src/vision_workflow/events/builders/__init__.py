@@ -1,1 +1,1 @@
-"""事件 builder：move / click / scroll / do。"""
+"""事件 builder：move / click / scroll / input_text / do。"""
