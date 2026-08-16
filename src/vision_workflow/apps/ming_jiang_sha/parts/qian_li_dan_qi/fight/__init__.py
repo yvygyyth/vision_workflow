@@ -7,12 +7,14 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions impo
     click_challenge_end,
     click_next_step,
     click_setting,
+    log_reward_titles,
     move_aside,
 )
 from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
+_OK = {FULFILLED: onward}
 
 FLOW = Flow(
     id="fight",
@@ -64,6 +66,7 @@ FLOW = Flow(
             description="最长约 10 分钟、每 5 秒轮询 challenge_end 并点击",
             event=click_challenge_end,
             on=_CLICK,
+            config=ModuleConfig(delay_ms=1000),
         ),
         Module(
             id="next_step",
@@ -75,10 +78,17 @@ FLOW = Flow(
         Module(
             id="settle_confirm",
             name="确认",
-            description="再次点击下一步提示",
+            description="结算确认；点完后进入赠礼三选一",
             event=click_next_step,
             on=_CLICK,
             config=ModuleConfig(delay_ms=1500),
+        ),
+        Module(
+            id="log_reward_titles",
+            name="识别赠礼标题",
+            description="确认后 OCR 左/中/右三个赠礼标题区",
+            event=log_reward_titles,
+            on=_OK,
         ),
     ],
 )
