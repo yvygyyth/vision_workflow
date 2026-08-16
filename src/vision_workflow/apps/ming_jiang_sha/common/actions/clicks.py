@@ -12,17 +12,17 @@ click_max: EventFn = do(move().image(f"{COMMON_DIR}/max.png"), click())
 click_ming_jiang_ce: EventFn = do(move().image(f"{COMMON_DIR}/ming_jiang_ce.png"), click())
 click_ling_xi_box: EventFn = do(move().image(f"{COMMON_DIR}/ling_xi-box.png"), click())
 
-_BUY_BELOW_PX = 10
-_BUY_IMAGE = f"{COMMON_DIR}/buy.png"
+_CONFIRM_BELOW_PX = 10
+_CONFIRM_IMAGE = f"{COMMON_DIR}/confirm.png"
 
 
-def click_buy(*, pause: float = 0.2, below_px: int = _BUY_BELOW_PX) -> EventFn:
-    """购买：识 buy.png 顶边花纹，移到底边中点下方 below_px 再点击。"""
+def click_confirm(*, pause: float = 0.2, below_px: int = _CONFIRM_BELOW_PX) -> EventFn:
+    """通用确认框：识 confirm.png 顶边花纹，移到底边中点下方 below_px 再点击。"""
 
     def _event(m: ModuleContext) -> OutcomeKey:
         hit = wait_image(
             m,
-            (_BUY_IMAGE,),
+            (_CONFIRM_IMAGE,),
             threshold=0.8,
             timeout=3.0,
             interval=0.5,
@@ -36,11 +36,11 @@ def click_buy(*, pause: float = 0.2, below_px: int = _BUY_BELOW_PX) -> EventFn:
         x, y, w, h = hit.box
         cx = x + w // 2
         cy = y + h + below_px
-        m.log("click_buy @ (%s,%s) box=%s below=%s", cx, cy, hit.box, below_px)
+        m.log("click_confirm @ (%s,%s) box=%s below=%s", cx, cy, hit.box, below_px)
         m.mouse().move(cx, cy).click().sleep(pause).perform()
         return FULFILLED
 
     return _event
 
 
-buy: EventFn = click_buy()
+confirm: EventFn = click_confirm()

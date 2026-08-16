@@ -89,7 +89,7 @@ def test_module_unknown_key_ends_flow() -> None:
 
 def test_module_miss_abort_ends_flow() -> None:
     def event(m):
-        m.reason = "识图未找到 [buy.png]"
+        m.reason = "识图未找到 [confirm.png]"
         return REJECTED
 
     workflow = _wf(
@@ -110,7 +110,7 @@ def test_module_miss_abort_ends_flow() -> None:
     result = WorkflowRunner(workflow).run()
     assert not result.success
     assert result.path == ["f.a"]
-    assert "识图未找到 [buy.png]" in (result.feedback or "")
+    assert "识图未找到 [confirm.png]" in (result.feedback or "")
     assert "购买" in (result.feedback or "")
 
 

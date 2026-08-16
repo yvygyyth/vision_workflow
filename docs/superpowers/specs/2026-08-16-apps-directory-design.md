@@ -23,7 +23,7 @@ src/vision_workflow/
       __init__.py               # 本应用 WORKFLOWS
       common/
         paths.py
-        actions/                # space_close / go_back / buy / click_*
+        actions/                # space_close / go_back / confirm / click_*
       parts/                    # 各 Flow
       workflows/                # main / solo
 data/ming_jiang_sha/            # 模板资源仍在仓库根
@@ -33,7 +33,7 @@ data/ming_jiang_sha/            # 模板资源仍在仓库根
 
 ```python
 from vision_workflow.apps import WORKFLOWS, get_workflow, workflow_choices
-from vision_workflow.apps.ming_jiang_sha.common.actions import go_back, buy
+from vision_workflow.apps.ming_jiang_sha.common.actions import go_back, confirm
 from vision_workflow.apps.ming_jiang_sha.parts.mail import FLOW as mail
 ```
 
