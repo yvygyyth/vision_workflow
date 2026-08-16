@@ -1,7 +1,6 @@
 """子流程：霸青商店。"""
 
-from vision_workflow.events import go_back, space_close
-from vision_workflow.events.common import buy, click_max
+from vision_workflow.actions.ming_jiang_sha import buy, click_max, go_back, space_close
 from vision_workflow.flows.parts.ba_qing_store.actions import (
     click_copper_tab,
     click_entry_icon,
@@ -36,7 +35,7 @@ FLOW = Flow(
         Module(id="space_close2", name="关闭弹窗", description="Esc 关闭购买结果弹窗", event=space_close(), on=_OK),
         Module(id="space_close3", name="关闭弹窗", description="Esc 再关一次", event=space_close(), on=_OK),
         Module(id="jinlan_tab", name="锦囊页签", description="切换到锦囊页签", event=click_jinlan_tab, on=_CLICK),
-        Module(id="scroll", name="下滑列表", description="向下滚动 200", event=scroll_down, on=_OK),
+        Module(id="scroll", name="下滑列表", description="向下滚动列表", event=scroll_down, on=_OK),
         Module(id="ming_jiang_ce", name="名将册", description="选中名将册", event=click_ming_jiang_ce, on=_CLICK),
         Module(id="buy_200", name="200 购买", description="点击 200 购买", event=buy, on=_CLICK),
         Module(id="space_close4", name="关闭弹窗", description="Esc 关闭购买结果弹窗", event=space_close(), on=_OK),

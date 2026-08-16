@@ -1,7 +1,12 @@
 """子流程：煮酒店铺。"""
 
-from vision_workflow.events import go_back, space_close
-from vision_workflow.events.common import buy, click_ling_xi_box, click_ming_jiang_ce
+from vision_workflow.actions.ming_jiang_sha import (
+    buy,
+    click_ling_xi_box,
+    click_ming_jiang_ce,
+    go_back,
+    space_close,
+)
 from vision_workflow.flows.parts.zhu_jiu_store.actions import (
     click_entry,
     click_qing_mei_store,

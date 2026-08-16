@@ -1,9 +1,12 @@
 """鼠标 / 键盘操作。
 
+移动与点击分离：先 move/at，再 click/scroll（不带坐标）。
+
 示例::
 
-    Mouse().move(100, 200).click().sleep(0.3).drag(300, 400).perform()
+    Mouse().move(100, 200).click().sleep(0.3).perform()
     Mouse().at(match.center).click().perform()
+    Mouse().at((960, 540)).scroll(-8).perform()
     press_key("esc")
 """
 
@@ -51,11 +54,10 @@ class Mouse:
     _y: int | None = field(default=None, repr=False)
 
     def at(self, point: tuple[int, int] | None) -> Self:
-        """设置当前基准坐标（通常来自识图中心）。"""
+        """移动到坐标（只 move）。"""
         if point is None:
             raise ValueError("at() 需要有效坐标")
-        self._x, self._y = int(point[0]), int(point[1])
-        return self
+        return self.move(int(point[0]), int(point[1]))
 
     def move(
         self,
@@ -65,7 +67,7 @@ class Mouse:
         relative: bool = False,
         duration: float = 0.15,
     ) -> Self:
-        """移动到绝对坐标，或相对当前点偏移。"""
+        """移动到绝对坐标，或相对当前点偏移。不点击。"""
 
         def run() -> None:
             nx, ny = self._resolve_xy(x, y, relative=relative)
@@ -75,18 +77,14 @@ class Mouse:
         self._ops.append(_Op("move", {"x": x, "y": y, "relative": relative}, run))
         return self
 
-    def click(
-        self,
-        button: Button = "left",
-        clicks: int = 1,
-        *,
-        x: int | None = None,
-        y: int | None = None,
-    ) -> Self:
+    def click(self, button: Button = "left", clicks: int = 1) -> Self:
+        """在当前位置点击（不移动）。需先 move/at，或接受当前系统光标位置。"""
+
         def run() -> None:
-            nx, ny = self._resolve_xy(x, y, relative=False)
-            self._x, self._y = nx, ny
-            self._api().click(x=nx, y=ny, clicks=clicks, button=button)
+            api = self._api()
+            api.click(clicks=clicks, button=button)
+            pos = api.position()
+            self._x, self._y = int(pos[0]), int(pos[1])
 
         self._ops.append(_Op("click", {"button": button, "clicks": clicks}, run))
         return self
@@ -106,9 +104,11 @@ class Mouse:
         duration: float = 0.3,
         button: Button = "left",
     ) -> Self:
+        """从当前位置拖到目标（起点需已 move/at）。"""
+
         def run() -> None:
             if self._x is None or self._y is None:
-                raise RuntimeError("drag 前需要先有起点坐标（at/move/click）")
+                raise RuntimeError("drag 前需要先 move/at 到起点")
             sx, sy = self._x, self._y
             ex, ey = self._resolve_xy(x, y, relative=relative)
             api = self._api()
@@ -119,10 +119,11 @@ class Mouse:
         self._ops.append(_Op("drag", {"x": x, "y": y, "relative": relative}, run))
         return self
 
-    def scroll(self, amount: int, *, x: int | None = None, y: int | None = None) -> Self:
+    def scroll(self, amount: int) -> Self:
+        """在当前位置滚轮（不移动）。需先 move/at，或接受当前系统光标位置。"""
+
         def run() -> None:
-            nx, ny = self._resolve_xy(x, y, relative=False)
-            self._api().scroll(amount, x=nx, y=ny)
+            self._api().scroll(amount)
 
         self._ops.append(_Op("scroll", {"amount": amount}, run))
         return self
@@ -161,7 +162,7 @@ class Mouse:
     ) -> tuple[int, int]:
         if relative:
             if self._x is None or self._y is None:
-                raise RuntimeError("相对坐标需要先设置基准点（at/move/click）")
+                raise RuntimeError("相对坐标需要先设置基准点（at/move）")
             return self._x + int(x or 0), self._y + int(y or 0)
 
         if x is not None and y is not None:

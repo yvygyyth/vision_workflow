@@ -1,96 +1,44 @@
-"""识图点击事件：链式配置，execute() 得到 Module.event。"""
+"""点击事件：只在当前位置点击，不移动、不识图。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from vision_workflow.events.support.find import wait_image
+from vision_workflow.input import Button
 from vision_workflow.module import EventFn, ModuleContext
-from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
+from vision_workflow.status import FULFILLED, OutcomeKey
 
 
 @dataclass(frozen=True)
 class _Click:
-    """链式：click().image(...).offset(...).execute()"""
-
-    images: tuple[str, ...] = ()
-    offset_x: int = 0
-    offset_y: int = 0
-    threshold: float = 0.8
-    timeout: float = 3.0
-    interval: float = 0.5
+    button: Button = "left"
+    clicks: int = 1
     sleep: float = 0.2
-    region: tuple[int, int, int, int] | None = None
-    grayscale: bool | None = None
 
-    def image(self, *images: str) -> _Click:
-        """追加模板图（多张按参数顺序优先匹配）。"""
-        if not images:
-            raise ValueError("image() 至少需要一张模板图")
-        return replace(self, images=self.images + images)
+    def button_as(self, button: Button) -> _Click:
+        return replace(self, button=button)
 
-    def offset(self, x: int = 0, y: int = 0) -> _Click:
-        """相对命中中心的点击偏移。"""
-        return replace(self, offset_x=x, offset_y=y)
-
-    def match(
-        self,
-        *,
-        threshold: float | None = None,
-        timeout: float | None = None,
-        interval: float | None = None,
-        region: tuple[int, int, int, int] | None = None,
-        grayscale: bool | None = None,
-    ) -> _Click:
-        """识图参数。"""
-        return replace(
-            self,
-            threshold=self.threshold if threshold is None else threshold,
-            timeout=self.timeout if timeout is None else timeout,
-            interval=self.interval if interval is None else interval,
-            region=self.region if region is None else region,
-            grayscale=self.grayscale if grayscale is None else grayscale,
-        )
+    def times(self, clicks: int) -> _Click:
+        return replace(self, clicks=clicks)
 
     def pause(self, seconds: float) -> _Click:
-        """点击后等待秒数。"""
         return replace(self, sleep=seconds)
 
     def execute(self) -> EventFn:
-        """固化为 Module.event 可调用对象。"""
-        if not self.images:
-            raise ValueError("click 需要先 .image(...) 指定模板")
-
-        images = self.images
-        ox, oy = self.offset_x, self.offset_y
-        threshold = self.threshold
-        timeout = self.timeout
-        interval = self.interval
+        button = self.button
+        clicks = self.clicks
         sleep = self.sleep
-        region = self.region
-        grayscale = self.grayscale
 
         def _event(m: ModuleContext) -> OutcomeKey:
-            hit = wait_image(
-                m,
-                images,
-                threshold=threshold,
-                timeout=timeout,
-                interval=interval,
-                region=region,
-                grayscale=grayscale,
-            )
-            if hit is None or not hit.center:
-                if not m.reason:
-                    m.reason = "识图未命中" if hit is None else "识图命中但无中心点"
-                return REJECTED
-            cx, cy = hit.center
-            m.mouse().at((cx + ox, cy + oy)).click().sleep(sleep).perform()
+            chain = m.mouse().click(button=button, clicks=clicks)
+            if sleep > 0:
+                chain = chain.sleep(sleep)
+            chain.perform()
             return FULFILLED
 
         return _event
 
 
-def click() -> _Click:
-    """开始一条识图点击链。"""
-    return _Click()
+def click(*, button: Button = "left", clicks: int = 1) -> _Click:
+    """当前位置点击。"""
+    return _Click(button=button, clicks=clicks)

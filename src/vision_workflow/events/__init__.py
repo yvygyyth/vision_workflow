@@ -2,32 +2,23 @@
 
 用法::
 
-    from vision_workflow.events import click, scroll, space_close, go_back
-    from vision_workflow.events.common import click_max, buy  # 共用模板
+    from vision_workflow.events import move, click, scroll, do
 
-    click().image("a.png").offset(0, 100).execute()   # 本流程专属图
-    scroll().at("center").amount(-8).execute()
-    space_close()  # Esc 关弹窗
-    go_back()      # Esc 返回上一步
-    click_max      # common/max.png
-    buy            # common/buy.png，点模板底边下方 10px
-
-目录约定::
-
-    events/
-      builders/   # 通用能力：click / scroll / Esc…
-      common/     # 名将杀共用图点击（data/.../common）
-      support/    # 共享内部实现
+    do(move().image("a.png"), click())           # 识图移动再点击
+    do(move().to(100, 200), click())             # 绝对移动再点击
+    do(move().image("a.png"), move().by(0, 100), click())  # 识图后相对偏移再点
+    do(move().at("center"), scroll(-120).times(8))  # 移到中心再滚轮（多次小滚）
+    move().by(10, 0).execute()                   # 只相对移动
 """
 
 from vision_workflow.events.builders.click import click
-from vision_workflow.events.builders.go_back import go_back
+from vision_workflow.events.builders.compose import do
+from vision_workflow.events.builders.move import move
 from vision_workflow.events.builders.scroll import scroll
-from vision_workflow.events.builders.space_close import space_close
 
 __all__ = [
+    "move",
     "click",
     "scroll",
-    "space_close",
-    "go_back",
+    "do",
 ]
