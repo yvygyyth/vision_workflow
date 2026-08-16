@@ -5,12 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
+from vision_workflow.display import cached_template_scale
 from vision_workflow.events.support.anchor import PointAnchor, resolve_anchor
 from vision_workflow.events.support.find import wait_image
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
 _Mode = Literal["abs", "rel", "image", "anchor"]
+
+
+def _fit_xy(x: int, y: int, *, fit: bool) -> tuple[int, int]:
+    """相对模板基准缩放坐标；fit=False 时原样返回。"""
+    if not fit:
+        return int(x), int(y)
+    scale = cached_template_scale()
+    return int(round(x * scale)), int(round(y * scale))
 
 
 @dataclass(frozen=True)
@@ -27,13 +36,15 @@ class _Move:
     grayscale: bool | None = None
     duration: float = 0.15
     sleep: float = 0.0
+    fit_display: bool = True
+    """绝对/相对/(x,y)锚点是否按显示基准缩放；识图命中与 center 不受影响。"""
 
     def to(self, x: int, y: int) -> _Move:
-        """绝对坐标。"""
+        """绝对坐标（默认按分辨率相对基准缩放）。"""
         return replace(self, mode="abs", x=x, y=y, images=(), anchor=None)
 
     def by(self, dx: int, dy: int) -> _Move:
-        """相对当前位置偏移。"""
+        """相对当前位置偏移（默认按分辨率相对基准缩放）。"""
         return replace(self, mode="rel", x=dx, y=dy, images=(), anchor=None)
 
     def image(self, *images: str) -> _Move:
@@ -43,7 +54,7 @@ class _Move:
         return replace(self, mode="image", images=self.images + images, anchor=None)
 
     def at(self, target: PointAnchor) -> _Move:
-        """锚点：``\"center\"`` 或 ``(x, y)``。"""
+        """锚点：``\"center\"`` 或 ``(x, y)``（元组默认缩放，center 不缩放）。"""
         return replace(self, mode="anchor", anchor=target, images=())
 
     def match(
@@ -73,6 +84,14 @@ class _Move:
         """移动后等待。"""
         return replace(self, sleep=seconds)
 
+    def raw(self) -> _Move:
+        """关闭显示缩放，按字面像素移动（to / by / (x,y) 锚点）。"""
+        return replace(self, fit_display=False)
+
+    def fit(self) -> _Move:
+        """开启显示缩放（默认已开启；用于取消 .raw()）。"""
+        return replace(self, fit_display=True)
+
     def execute(self) -> EventFn:
         if self.mode is None:
             raise ValueError("move 需要 .to() / .by() / .image() / .at()")
@@ -88,16 +107,22 @@ class _Move:
         grayscale = self.grayscale
         duration = self.duration
         sleep = self.sleep
+        fit = self.fit_display
 
         def _event(m: ModuleContext) -> OutcomeKey:
             mouse = m.mouse()
             if mode == "abs":
-                mouse.move(x, y, duration=duration)
+                sx, sy = _fit_xy(x, y, fit=fit)
+                mouse.move(sx, sy, duration=duration)
             elif mode == "rel":
-                mouse.move(x, y, relative=True, duration=duration)
+                sx, sy = _fit_xy(x, y, fit=fit)
+                mouse.move(sx, sy, relative=True, duration=duration)
             elif mode == "anchor":
                 assert anchor is not None
-                ax, ay = resolve_anchor(anchor)
+                if isinstance(anchor, tuple):
+                    ax, ay = _fit_xy(int(anchor[0]), int(anchor[1]), fit=fit)
+                else:
+                    ax, ay = resolve_anchor(anchor)
                 mouse.move(ax, ay, duration=duration)
             else:
                 hit = wait_image(
