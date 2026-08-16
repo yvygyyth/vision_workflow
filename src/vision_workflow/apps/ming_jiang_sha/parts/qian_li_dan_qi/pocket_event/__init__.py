@@ -17,7 +17,7 @@ FLOW = Flow(
         Module(
             id="pick_event_pattern",
             name="随机点花纹",
-            description="在找到的 event_pattern 中随机点一个；没有则结束",
+            description="多轮识别 event_pattern，随机点一个；仍没有则结束",
             event=pick_event_pattern,
             on={
                 "clicked": to("check_cancel"),

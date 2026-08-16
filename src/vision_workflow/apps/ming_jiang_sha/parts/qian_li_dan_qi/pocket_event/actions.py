@@ -23,17 +23,35 @@ _EVENT_PATTERN = f"{_DIR}/event_patterm.png"
 
 # 点完后稍等 UI 刷新
 _AFTER_CLICK_SEC = 0.6
+# 未匹配时多扫几轮，避免偶发漏识别就退出
+_FIND_ROUNDS = 5
+_FIND_INTERVAL_SEC = 0.4
 
 # Flow 出口：出现取消 → 进 in_battle
 ENTER_BATTLE = "in_battle"
 
 
 def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
-    """找到的花纹里随机点一个；一个都没有则本 Flow 结束。"""
-    hits = find_all_images(m.resolve(_EVENT_PATTERN), threshold=0.8, max_count=16)
+    """找到的花纹里随机点一个；多轮仍没有则本 Flow 结束。"""
+    hits = None
+    for round_i in range(1, _FIND_ROUNDS + 1):
+        hits = find_all_images(m.resolve(_EVENT_PATTERN), threshold=0.8, max_count=16)
+        if hits:
+            if round_i > 1:
+                logger.info(
+                    "pick_event_pattern 第 %s/%s 轮识别到 %s 个",
+                    round_i,
+                    _FIND_ROUNDS,
+                    len(hits),
+                )
+            break
+        logger.info("pick_event_pattern 第 %s/%s 轮未匹配", round_i, _FIND_ROUNDS)
+        if round_i < _FIND_ROUNDS:
+            time.sleep(_FIND_INTERVAL_SEC)
+
     if not hits:
-        m.reason = "未找到 event_pattern，锦囊事件结束"
-        logger.info("pick_event_pattern → fulfilled（无匹配）")
+        m.reason = "多轮未找到 event_pattern，锦囊事件结束"
+        logger.info("pick_event_pattern → fulfilled（%s 轮无匹配）", _FIND_ROUNDS)
         return FULFILLED
 
     hit = random.choice(hits)
