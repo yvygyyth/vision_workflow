@@ -8,7 +8,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards impo
 )
 
 PRIORITY: list[GeneralPriority] = [
-    GeneralPriority("马超", (RewardKind.TOKEN, RewardKind.REINFORCE)),
-    GeneralPriority("吕布", (RewardKind.REINFORCE, RewardKind.TOKEN)),
-    GeneralPriority("陆逊", (RewardKind.GENERAL_CARD,)),
+    GeneralPriority("马超", (RewardKind.TOKEN, RewardKind.HELP)),
+    GeneralPriority("吕布", (RewardKind.HELP, RewardKind.TOKEN)),
+    GeneralPriority("陆逊", (RewardKind.CARD,)),
 ]

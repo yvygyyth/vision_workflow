@@ -2,24 +2,24 @@
 
 from vision_workflow.apps.ming_jiang_sha.common.actions import confirm
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions import (
+    choose_reward_kind,
+    choose_reward_title,
     click_auto,
     click_cancel,
     click_challenge_end,
     click_next_step,
     click_setting,
-    log_reward_titles,
     move_aside,
 )
 from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
-_OK = {FULFILLED: onward}
 
 FLOW = Flow(
     id="fight",
     name="开打",
-    description="确认进战 → 托管 → 等结束 → 下一步 / 确认",
+    description="确认进战 → 托管 → 等结束 → 下一步 / 确认 / 选赠礼",
     entry="confirm",
     modules=[
         Module(
@@ -84,11 +84,20 @@ FLOW = Flow(
             config=ModuleConfig(delay_ms=1500),
         ),
         Module(
-            id="log_reward_titles",
-            name="识别赠礼标题",
-            description="确认后 OCR 左/中/右三个赠礼标题区",
-            event=log_reward_titles,
-            on=_OK,
+            id="choose_reward_title",
+            name="选择赠礼武将",
+            description="OCR 三槽标题，按优先表与背包点击武将，并写入 ctx.vars",
+            event=choose_reward_title,
+            on=_CLICK,
+            config=ModuleConfig(delay_ms=800),
+        ),
+        Module(
+            id="choose_reward_kind",
+            name="选择赠礼类别",
+            description="识图信物/并肩作战/武将牌/驰援，按武将关键奖励与背包点击",
+            event=choose_reward_kind,
+            on=_CLICK,
+            config=ModuleConfig(delay_ms=800),
         ),
     ],
 )

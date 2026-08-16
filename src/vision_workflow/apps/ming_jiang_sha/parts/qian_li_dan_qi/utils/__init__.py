@@ -8,7 +8,9 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards impo
     GeneralPriority,
     RewardKind,
     parse_general_name,
+    pick_reward_kind,
     pick_reward_slot,
+    resolve_general_priority,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.state import (
     VARS_KEY,
@@ -31,5 +33,7 @@ __all__ = [
     "ensure_battle_state",
     "get_battle_state",
     "parse_general_name",
+    "pick_reward_kind",
     "pick_reward_slot",
+    "resolve_general_priority",
 ]

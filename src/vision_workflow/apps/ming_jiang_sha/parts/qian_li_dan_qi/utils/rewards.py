@@ -15,15 +15,15 @@ class RewardKind(StrEnum):
 
     TOKEN = "信物"
     JOINT = "共同作战"
-    REINFORCE = "驰援"
-    GENERAL_CARD = "武将牌"
+    HELP = "驰援"
+    CARD = "武将牌"
 
 
 # 主路径都不满足时：按类别回退（越靠前越优先）
 FALLBACK_KIND_ORDER: tuple[RewardKind, ...] = (
-    RewardKind.REINFORCE,
+    RewardKind.HELP,
     RewardKind.TOKEN,
-    RewardKind.GENERAL_CARD,
+    RewardKind.CARD,
     RewardKind.JOINT,
 )
 
@@ -67,6 +67,14 @@ def _entry_by_name(name: str) -> GeneralPriority | None:
         if entry.name == name:
             return entry
     return None
+
+
+def resolve_general_priority(name: str) -> GeneralPriority:
+    """查优先表；不在表内则返回空关键奖励的占位项。"""
+    entry = _entry_by_name(name)
+    if entry is not None:
+        return entry
+    return GeneralPriority(name=name or "未知", key_rewards=())
 
 
 def _needed_key_rewards(entry: GeneralPriority, state: _RewardBag) -> list[RewardKind]:
@@ -114,3 +122,32 @@ def pick_reward_slot(
             best_key = key
             best_slot = slot
     return best_slot
+
+
+def pick_reward_kind(
+    available: set[RewardKind] | list[RewardKind] | tuple[RewardKind, ...],
+    entry: GeneralPriority | None,
+    state: _RewardBag,
+) -> RewardKind | None:
+    """在本屏可选项里选出要拿的奖励类别。
+
+    顺序：当前武将 ``key_rewards``（优先未拿到的）→ 全局回退序。
+    """
+    avail = set(available)
+    if not avail:
+        return None
+
+    order: list[RewardKind] = []
+    if entry is not None:
+        order.extend(entry.key_rewards)
+    for kind in FALLBACK_KIND_ORDER:
+        if kind not in order:
+            order.append(kind)
+
+    for kind in order:
+        if kind in avail and not state.has_reward(kind):
+            return kind
+    for kind in order:
+        if kind in avail:
+            return kind
+    return None

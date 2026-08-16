@@ -31,7 +31,7 @@ class BattleState:
             return True
         if kind is RewardKind.TOKEN and self.critical_tokens:
             return True
-        if kind is RewardKind.REINFORCE and self.buffs:
+        if kind is RewardKind.HELP and self.buffs:
             return True
         return False
 
@@ -42,7 +42,7 @@ class BattleState:
         return name in self.critical_tokens or self.has_reward(RewardKind.TOKEN)
 
     def has_buff(self, name: str = "驰援") -> bool:
-        return name in self.buffs or self.has_reward(RewardKind.REINFORCE)
+        return name in self.buffs or self.has_reward(RewardKind.HELP)
 
 
 def bind_battle_state(ctx: FlowContext) -> BattleState:
