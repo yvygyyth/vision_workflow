@@ -103,6 +103,9 @@ class WorkflowRunner:
                 break
 
             logger.info("流程开始 (%s)", flow.log_label)
+            self.ctx.params = self.workflow.merged_params_for(flow_key)
+            if self.ctx.params:
+                logger.info("流程入参 %s", self.ctx.params)
             start_for_attempt = module_start if flow_key == flow_id else None
             module_start = None
             first_shot = {"pending": start_for_attempt, "used": False}
@@ -180,6 +183,7 @@ class WorkflowRunner:
                         break
                 if mod is None or flow is None:
                     raise KeyError(f"未知模块: {target}") from None
+        self.ctx.params = self.workflow.merged_params_for(flow.id)
         scope = ModuleScope(
             ctx=self.ctx,
             module=mod,

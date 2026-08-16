@@ -25,6 +25,7 @@ class FlowContext:
         self.base_dir = base_dir
         self.defaults = defaults or MatchOptions()
         self.vars: dict = {}
+        self.params: dict = {}
 
     def resolve(self, image: str | Path) -> Path:
         path = Path(image)

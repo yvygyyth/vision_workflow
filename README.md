@@ -15,6 +15,9 @@ from vision_workflow.module import Flow, FlowNode, Workflow
 from vision_workflow.status import FULFILLED, REJECTED, EventStatus, FlowStatus
 
 Flow(id="mail", name="收邮件", entry="click_email", modules=[...])
+# Flow.params 默认入参；FlowNode.params 编排时传入（覆盖默认）
+# 开跑合并后任意 Module 可读 m.params
+FlowNode(mail, params={"retries": 2})
 Workflow(
     id="daily_free_resources",
     name="名将杀免费资源每日领取",
