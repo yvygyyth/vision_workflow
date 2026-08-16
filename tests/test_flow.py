@@ -237,7 +237,7 @@ def test_self_loop_again() -> None:
 
 
 def test_config_workflow_load() -> None:
-    from vision_workflow.flows import WORKFLOW, WORKFLOWS, workflow_choices
+    from vision_workflow.apps import WORKFLOW, WORKFLOWS, workflow_choices
 
     wf = WORKFLOW
     assert wf.entry == "mail"

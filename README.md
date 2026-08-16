@@ -80,7 +80,7 @@ Module(
 # 识图后点击：do(move().image("x.png"), click())
 # 识图后相对偏移再点：do(move().image("x.png"), move().by(0, 100), click())
 # 滚轮：do(move().at("center"), scroll(-8))
-# 关弹窗 / 返回：from vision_workflow.actions.ming_jiang_sha import space_close, go_back
+# 关弹窗 / 返回：from vision_workflow.apps.ming_jiang_sha.common.actions import space_close, go_back
 ```
 
 `ModuleContext` 透传识图 / 鼠标 / 日志，并提供 `next` / `goto` / `again` / `end` / `fail`，方便以后扩展。
@@ -90,13 +90,14 @@ Module(
 ```text
 data/ming_jiang_sha/<流程id>/              # 模板图（打包后在 exe 旁，可热更）
 src/vision_workflow/
-  flows/
-    __init__.py                     # WORKFLOWS 目录注册
-    parts/                          # Flow 积木（内部编排）
-    workflows/                      # 一目录一个复杂流程
-      main/                         # 名将杀免费资源每日领取
-  module.py / events.py / flow/
-  ui/
+  # 框架公共
+  module.py / events/ / flow/ / ui/ ...
+  apps/                             # 各自动化应用的业务编排
+    __init__.py                     # WORKFLOWS 汇总（CLI / UI 入口）
+    ming_jiang_sha/
+      common/                       # 名将杀专属公共（paths + actions）
+      parts/                        # 局部 Flow
+      workflows/                    # main / solo
 scripts/build_exe.py
 ```
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from vision_workflow.config import reload_settings
 from vision_workflow.flow import WorkflowRunner
-from vision_workflow.flows import get_workflow
+from vision_workflow.apps import get_workflow
 from vision_workflow.logging_utils import setup_logging
 from vision_workflow.models.flow import FlowRunResult
 from vision_workflow.paths import project_root

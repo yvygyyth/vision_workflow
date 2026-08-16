@@ -11,7 +11,7 @@ from rich.table import Table
 from vision_workflow import __version__
 from vision_workflow.config import reload_settings
 from vision_workflow.flow import WorkflowRunner
-from vision_workflow.flows import WORKFLOW, get_workflow
+from vision_workflow.apps import WORKFLOW, get_workflow
 from vision_workflow.logging_utils import setup_logging
 
 app = typer.Typer(

@@ -7,7 +7,7 @@ import queue
 
 import customtkinter as ctk
 
-from vision_workflow.flows import WORKFLOW, workflow_choices
+from vision_workflow.apps import WORKFLOW, workflow_choices
 from vision_workflow.models.flow import FlowRunResult
 from vision_workflow.settings import MatchSettings
 from vision_workflow.ui import theme

@@ -34,7 +34,7 @@ def main() -> int:
         str(ROOT / "src"),
         # 内置流程随程序打包；新增子流程不必再改这里
         "--collect-submodules",
-        "vision_workflow.flows",
+        "vision_workflow.apps",
         "--collect-all",
         "customtkinter",
         str(ENTRY),
