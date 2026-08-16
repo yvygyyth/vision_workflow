@@ -35,6 +35,8 @@ from vision_workflow.status import (
 
 EventFn = Callable[["ModuleContext"], OutcomeKey]
 OutcomeFn = Callable[["ModuleContext"], NextRef]
+FlowHook = Callable[[FlowContext], None]
+"""Flow 生命周期钩子签名。"""
 
 _ConfigT = TypeVar("_ConfigT")
 
@@ -72,6 +74,16 @@ class FlowConfig:
 
     delay_ms: int = 0
     """本流程成功且还将进入下一流程时的等待（毫秒）；0 则回退 WorkflowConfig.delay_ms。"""
+
+
+@dataclass
+class FlowLifecycle:
+    """流程级生命周期钩子。"""
+
+    on_enter: FlowHook | None = None
+    """本 Flow 模块开始跑之前调用（如绑定局内状态）。"""
+    on_exit: FlowHook | None = None
+    """本 Flow 结束后必定调用（成功 / 失败 / 取消；如清理局内状态）。"""
 
 
 @dataclass
@@ -244,12 +256,15 @@ class Flow:
     params: dict[str, Any] = field(default_factory=dict)
     """硬编码默认入参；运行时与 FlowNode.params 合并（传入优先）。"""
     config: FlowConfig = field(default_factory=FlowConfig)
+    lifecycle: FlowLifecycle = field(default_factory=FlowLifecycle)
+    """进入 / 退出钩子（成功、失败、取消都会走 on_exit）。"""
 
     _by_id: dict[str, Module] = field(init=False, repr=False)
     _next_default: dict[str, NextRef] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.config = _coerce_config(FlowConfig, self.config)
+        self.lifecycle = _coerce_config(FlowLifecycle, self.lifecycle)
         self.params = dict(self.params or {})
         ids = [m.id for m in self.modules]
         if len(ids) != len(set(ids)):

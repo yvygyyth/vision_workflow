@@ -124,7 +124,18 @@ class WorkflowRunner:
                     first_shot["used"] = True
                 return self._run_flow_modules(flow, result, start_module=start)
 
-            settled = run_flow_onion(scope, build_flow_middlewares(scope), _core)
+            if flow.lifecycle.on_enter is not None:
+                flow.lifecycle.on_enter(self.ctx)
+            try:
+                settled = run_flow_onion(scope, build_flow_middlewares(scope), _core)
+            finally:
+                if flow.lifecycle.on_exit is not None:
+                    try:
+                        flow.lifecycle.on_exit(self.ctx)
+                    except Exception:
+                        logger.exception(
+                            "流程 lifecycle.on_exit 失败 (%s)", flow.log_label
+                        )
 
             if self._cancelled():
                 result.success = False
