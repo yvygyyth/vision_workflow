@@ -74,9 +74,9 @@ class WorkflowRunner:
             return False
         return True
 
-    def run(self, start: str | None = None) -> FlowRunResult:
-        start_token = start or self.entry
-        flow_id, module_start = self._parse_start(start_token)
+    def run(self, entry: str | None = None) -> FlowRunResult:
+        entry_token = entry or self.entry
+        flow_id, module_entry = self._parse_entry(entry_token)
 
         result = FlowRunResult(
             flow_name=self.workflow.log_label,
@@ -88,7 +88,7 @@ class WorkflowRunner:
         try:
             if self.workflow.lifecycle.on_enter is not None:
                 self.workflow.lifecycle.on_enter(self.ctx)
-            return self._run_flows(result, flow_id=flow_id, module_start=module_start)
+            return self._run_flows(result, flow_id=flow_id, module_entry=module_entry)
         finally:
             if self.workflow.lifecycle.on_exit is not None:
                 try:
@@ -104,7 +104,7 @@ class WorkflowRunner:
         result: FlowRunResult,
         *,
         flow_id: str,
-        module_start: str | None,
+        module_entry: str | None,
     ) -> FlowRunResult:
         current_flow: NextRef = flow_id
 
@@ -129,9 +129,9 @@ class WorkflowRunner:
             self.ctx.params = self.workflow.merged_params_for(flow_key)
             if self.ctx.params:
                 logger.info("流程入参 %s", self.ctx.params)
-            start_for_attempt = module_start if flow_key == flow_id else None
-            module_start = None
-            first_shot = {"pending": start_for_attempt, "used": False}
+            entry_for_attempt = module_entry if flow_key == flow_id else None
+            module_entry = None
+            first_shot = {"pending": entry_for_attempt, "used": False}
 
             scope = FlowScope(
                 ctx=self.ctx,
@@ -141,11 +141,11 @@ class WorkflowRunner:
             )
 
             def _core(flow: Flow = flow) -> Settled:
-                start = None
+                module_id = None
                 if not first_shot["used"]:
-                    start = first_shot["pending"]
+                    module_id = first_shot["pending"]
                     first_shot["used"] = True
-                return self._run_flow_modules(flow, result, start_module=start)
+                return self._run_flow_modules(flow, result, entry_module=module_id)
 
             if flow.lifecycle.on_enter is not None:
                 flow.lifecycle.on_enter(self.ctx)
@@ -228,7 +228,7 @@ class WorkflowRunner:
         settled, _ = execute_module(scope)
         return settled
 
-    def _parse_start(self, token: str) -> tuple[str, str | None]:
+    def _parse_entry(self, token: str) -> tuple[str, str | None]:
         if "." in token:
             flow_id, module_id = token.split(".", 1)
             return flow_id, module_id
@@ -241,10 +241,10 @@ class WorkflowRunner:
         flow: Flow,
         result: FlowRunResult,
         *,
-        start_module: str | None,
+        entry_module: str | None,
     ) -> Settled:
         """跑完一轮流程内模块。"""
-        current: NextRef = start_module or flow.entry
+        current: NextRef = entry_module or flow.entry
         last = Settled.reject("空流程")
 
         while not is_stop(current):

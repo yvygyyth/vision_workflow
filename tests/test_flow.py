@@ -405,3 +405,44 @@ def test_flow_loop_via_router() -> None:
     assert hits["n"] == 3
     assert result.path == ["loop_flow.a", "loop_flow.a", "loop_flow.a"]
     assert not result.success
+
+
+def test_custom_flow_outcome_routes_next_flow() -> None:
+    """流程结束时可用自定义 str/Enum 作为 FlowRouter key。"""
+    from enum import Enum
+
+    class Exit(str, Enum):
+        SIDE = "side"
+
+    workflow = _wf(
+        Flow(
+            id="main",
+            entry="a",
+            modules=[
+                Module(
+                    id="a",
+                    event=lambda m: Exit.SIDE,
+                    on={Exit.SIDE: lambda m: m.end()},
+                )
+            ],
+        ),
+        Flow(
+            id="side",
+            entry="b",
+            modules=[
+                Module(id="b", event=lambda m: FULFILLED, on={FULFILLED: onward}),
+            ],
+        ),
+        routers={
+            "main": FlowRouter(
+                on={
+                    Exit.SIDE: "side",
+                    FlowStatus.FULFILLED: None,
+                    FlowStatus.REJECTED: None,
+                }
+            )
+        },
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    assert result.path == ["main.a", "side.b"]

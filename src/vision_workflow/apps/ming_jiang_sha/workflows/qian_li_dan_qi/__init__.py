@@ -3,14 +3,20 @@
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select import (
     FLOW as battle_select,
 )
-from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
-    bind_battle_state,
-    clear_battle_state,
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.actions import (
+    ShopChoice,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle import (
     FLOW as enter_battle,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight import FLOW as fight
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.pocket_event import (
+    FLOW as pocket_event,
+)
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
+    bind_battle_state,
+    clear_battle_state,
+)
 from vision_workflow.module import FlowNode, FlowRouter, Workflow, WorkflowLifecycle
 from vision_workflow.status import FlowStatus
 
@@ -30,6 +36,16 @@ WORKFLOW = Workflow(
             router=FlowRouter(
                 on={
                     FlowStatus.FULFILLED: "fight",
+                    ShopChoice.POCKET_EVENT: "pocket_event",
+                    FlowStatus.REJECTED: None,
+                }
+            ),
+        ),
+        FlowNode(
+            pocket_event,
+            router=FlowRouter(
+                on={
+                    FlowStatus.FULFILLED: "battle_select",
                     FlowStatus.REJECTED: None,
                 }
             ),

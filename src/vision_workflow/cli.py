@@ -31,10 +31,10 @@ def flow_cmd(
         "-w",
         help="复杂流程 id；默认入口复杂流程",
     ),
-    start: str | None = typer.Option(
+    entry: str | None = typer.Option(
         None,
-        "--start",
-        "-s",
+        "--entry",
+        "-e",
         help="调试：从子流程 id 或 flow.module 开始",
     ),
     only: str | None = typer.Option(
@@ -66,7 +66,7 @@ def flow_cmd(
             )
         raise typer.Exit(code=0 if settled.ok else 1)
 
-    result = runner.run(start=start)
+    result = runner.run(entry=entry)
     if json_out:
         console.print_json(result.model_dump_json())
     else:

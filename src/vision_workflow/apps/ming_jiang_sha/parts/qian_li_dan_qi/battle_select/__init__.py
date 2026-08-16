@@ -1,6 +1,7 @@
 """子流程：千里单骑三选一（选完战斗后结束本 Flow，交给 fight）。"""
 
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.actions import (
+    ShopChoice,
     choose_battle,
     choose_event,
     choose_shop,
@@ -14,7 +15,7 @@ _BACK_TO_DETECT = {FULFILLED: to("detect_choice"), REJECTED: abort}
 FLOW = Flow(
     id="battle_select",
     name="三选一",
-    description="判定并点选本轮选项；战斗选完后进入 fight",
+    description="判定并点选本轮选项；战斗选完后进入 fight；袋子进入 pocket_event",
     entry="detect_choice",
     modules=[
         Module(
@@ -47,9 +48,14 @@ FLOW = Flow(
         Module(
             id="choose_shop",
             name="商店选择",
-            description="按铜钱选择（逻辑待补）；完成后回到判定",
+            description="铜币≥30点霸青商店，否则锦囊事件，再否则休息；袋子结束本 Flow",
             event=choose_shop,
-            on=_BACK_TO_DETECT,
+            on={
+                ShopChoice.BA_QING_STORE: to("detect_choice"),
+                ShopChoice.POCKET_EVENT: lambda m: m.end(),
+                ShopChoice.REST: to("detect_choice"),
+                REJECTED: abort,
+            },
         ),
         Module(
             id="choose_event",

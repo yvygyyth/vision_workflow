@@ -208,6 +208,155 @@ def _match_once(
     )
 
 
+def find_all_images(
+    template: str | Path,
+    *,
+    threshold: float = 0.8,
+    region: tuple[int, int, int, int] | None = None,
+    region_fit: bool = True,
+    grayscale: bool = True,
+    screenshot: "Image.Image | None" = None,
+    max_count: int = 32,
+) -> list[MatchResult]:
+    """查找所有高于阈值的匹配（多尺度 + 简易 NMS），按置信度降序。"""
+    path = Path(template).expanduser()
+    if not path.exists():
+        return []
+
+    options = MatchOptions(
+        threshold=threshold,
+        timeout=0.0,
+        interval=0.5,
+        region=region,
+        region_fit=region_fit,
+        grayscale=grayscale,
+    )
+    return _match_all(path, options, screenshot=screenshot, max_count=max_count)
+
+
+def _match_all(
+    path: Path,
+    options: MatchOptions,
+    *,
+    screenshot: "Image.Image | None" = None,
+    max_count: int = 32,
+) -> list[MatchResult]:
+    try:
+        import cv2
+        import numpy as np
+        from PIL import ImageGrab
+    except ImportError as exc:
+        raise RuntimeError(
+            "识图依赖未安装，请执行: pip install opencv-python-headless numpy"
+        ) from exc
+
+    template_bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    if template_bgr is None:
+        return []
+
+    region = _resolve_region(options, screenshot=screenshot)
+
+    if screenshot is not None:
+        hay_rgb = screenshot.convert("RGB")
+        hay_bgr = cv2.cvtColor(np.array(hay_rgb), cv2.COLOR_RGB2BGR)
+        offset_x, offset_y = 0, 0
+        if region:
+            left, top, width, height = region
+            hay_bgr = hay_bgr[top : top + height, left : left + width]
+            offset_x, offset_y = left, top
+    else:
+        bbox = None
+        offset_x, offset_y = 0, 0
+        if region:
+            left, top, width, height = region
+            bbox = (left, top, left + width, top + height)
+            offset_x, offset_y = left, top
+        grab = ImageGrab.grab(bbox=bbox)
+        hay_bgr = cv2.cvtColor(np.array(grab.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+    from vision_workflow.display import match_scales
+
+    hay = (
+        cv2.cvtColor(hay_bgr, cv2.COLOR_BGR2GRAY)
+        if options.grayscale
+        else hay_bgr
+    )
+    hh, hw = hay.shape[:2]
+    candidates: list[dict[str, Any]] = []
+
+    for scale in match_scales():
+        tpl_bgr = _resize_template(cv2, template_bgr, scale)
+        tpl = (
+            cv2.cvtColor(tpl_bgr, cv2.COLOR_BGR2GRAY)
+            if options.grayscale
+            else tpl_bgr
+        )
+        th, tw = tpl.shape[:2]
+        if th > hh or tw > hw or th < 1 or tw < 1:
+            continue
+
+        result = cv2.matchTemplate(hay, tpl, cv2.TM_CCOEFF_NORMED)
+        ys, xs = np.where(result >= options.threshold)
+        for y, x in zip(ys.tolist(), xs.tolist(), strict=False):
+            conf = float(result[y, x])
+            bx = int(x + offset_x)
+            by = int(y + offset_y)
+            candidates.append(
+                {
+                    "confidence": conf,
+                    "scale": scale,
+                    "box": (bx, by, tw, th),
+                    "center": (bx + tw // 2, by + th // 2),
+                }
+            )
+
+    kept = _nms_boxes(candidates, iou_threshold=0.35)
+    kept.sort(key=lambda c: c["confidence"], reverse=True)
+    if max_count > 0:
+        kept = kept[:max_count]
+
+    return [
+        MatchResult(
+            found=True,
+            image=str(path),
+            confidence=c["confidence"],
+            box=c["box"],
+            center=c["center"],
+            message="matched",
+        )
+        for c in kept
+    ]
+
+
+def _box_iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    ax2, ay2 = ax + aw, ay + ah
+    bx2, by2 = bx + bw, by + bh
+    ix1, iy1 = max(ax, bx), max(ay, by)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0:
+        return 0.0
+    union = aw * ah + bw * bh - inter
+    return inter / union if union > 0 else 0.0
+
+
+def _nms_boxes(
+    candidates: list[dict[str, Any]],
+    *,
+    iou_threshold: float,
+) -> list[dict[str, Any]]:
+    ordered = sorted(candidates, key=lambda c: c["confidence"], reverse=True)
+    kept: list[dict[str, Any]] = []
+    for cand in ordered:
+        if any(_box_iou(cand["box"], k["box"]) >= iou_threshold for k in kept):
+            continue
+        kept.append(cand)
+    return kept
+
+
 def _resize_template(cv2: Any, template_bgr: Any, scale: float) -> Any:
     if abs(scale - 1.0) < 1e-3:
         return template_bgr
@@ -224,6 +373,7 @@ from vision_workflow.vision.ocr import image_to_text
 __all__ = [
     "find_image",
     "find_image_with_options",
+    "find_all_images",
     "grab_region",
     "image_to_text",
 ]

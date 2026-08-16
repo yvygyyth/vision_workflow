@@ -2,8 +2,9 @@
 
 两层状态分开（即便字面值相同也不混用）::
     EventStatus  — 模块 event 返回值，供 Module.on 路由到下一子模块
-    FlowStatus   — 流程跑完后的对外状态，供 FlowRouter 路由到下一流程
+    FlowStatus   — 流程跑完后的内置对外状态（成功/失败）
 
+Module.on / FlowRouter.on 均可额外使用自定义 str（或 str Enum）作分支 key。
 接口形态均为：状态 → 下一跳 id；返回 None 表示本层结束（无下一跳）。
 默认 FlowRouter：fulfilled → 顺序下一个 Flow，rejected → 结束（None）。
 """
@@ -26,7 +27,7 @@ class EventStatus(str, Enum):
 
 
 class FlowStatus(str, Enum):
-    """流程跑完后的对外状态（FlowRouter 唯一依据）。"""
+    """流程跑完后的内置对外状态。"""
 
     FULFILLED = "fulfilled"
     REJECTED = "rejected"
@@ -41,6 +42,8 @@ FULFILLED = EventStatus.FULFILLED
 REJECTED = EventStatus.REJECTED
 
 OutcomeKey = EventStatus | str
+# 流程路由 key：内置 FlowStatus 或自定义 str（与 Module 对称）
+FlowOutcomeKey = FlowStatus | str
 # 下一跳：业务 id；None = 本层结束
 NextRef = str | None
 
@@ -72,7 +75,7 @@ def as_outcome(value: Any) -> OutcomeKey:
 
 
 def as_flow_status(value: FlowStatus | str | Enum) -> FlowStatus:
-    """规范流程状态（必须是 FlowStatus；不接受 EventStatus 隐式混用）。"""
+    """规范为内置 FlowStatus；不接受 EventStatus 隐式混用，不接受自定义 str。"""
     if isinstance(value, FlowStatus):
         return value
     if isinstance(value, EventStatus):
@@ -82,6 +85,21 @@ def as_flow_status(value: FlowStatus | str | Enum) -> FlowStatus:
     if isinstance(value, Enum):
         return FlowStatus(str(value.value))
     return FlowStatus(str(value))
+
+
+def as_flow_outcome(value: Any) -> FlowOutcomeKey:
+    """规范流程路由 key：内置 FlowStatus，或保留自定义 str。"""
+    if isinstance(value, FlowStatus):
+        return value
+    if isinstance(value, EventStatus):
+        return FlowStatus.from_ok(value is EventStatus.FULFILLED)
+    if isinstance(value, Enum):
+        value = value.value
+    text = str(value)
+    try:
+        return FlowStatus(text)
+    except ValueError:
+        return text
 
 
 def as_next(value: NextRef | Any) -> NextRef:

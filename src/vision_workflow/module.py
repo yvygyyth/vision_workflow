@@ -6,11 +6,12 @@ Module（最小节点）::
     on[key] 返回下一模块 id；None 表示本流程结束
 
 Flow::
-    若干 Module 组成一个流程；跑完映射为 FlowStatus（经由 settled.ok）
+    若干 Module 组成一个流程；结束时用 settled.key 作 FlowRouter 路由
+    （内置 fulfilled/rejected，也可自定义 str）
 
 Workflow::
     若干 FlowNode（flow + 可选 router）组成复杂流程
-    router 按 FlowStatus 决定下一流程 id；None 表示工作流结束
+    router 按 FlowOutcomeKey 决定下一流程 id；None 表示工作流结束
     缺省接口：fulfilled → 顺序下一个，rejected → 结束
 """
 
@@ -24,10 +25,11 @@ from typing import Any, TypeVar
 from vision_workflow.flow.context import FlowContext
 from vision_workflow.models.flow import MatchOptions, MatchResult
 from vision_workflow.status import (
+    FlowOutcomeKey,
     FlowStatus,
     NextRef,
     OutcomeKey,
-    as_flow_status,
+    as_flow_outcome,
     as_next,
     as_outcome,
     is_stop,
@@ -303,18 +305,21 @@ class Flow:
 
 @dataclass
 class FlowRouter:
-    """按 FlowStatus 决定下一流程 id；None 表示结束。与 Flow 定义独立。"""
+    """按 FlowOutcomeKey 决定下一流程 id；None 表示结束。与 Flow 定义独立。
 
-    on: dict[FlowStatus, NextRef] = field(default_factory=dict)
+    内置 FlowStatus.FULFILLED / REJECTED，也可使用自定义 str（与 Module.on 对称）。
+    """
+
+    on: dict[FlowOutcomeKey, NextRef] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        normalized: dict[FlowStatus, NextRef] = {}
+        normalized: dict[FlowOutcomeKey, NextRef] = {}
         for key, target in self.on.items():
-            normalized[as_flow_status(key)] = as_next(target)
+            normalized[as_flow_outcome(key)] = as_next(target)
         self.on = normalized
 
-    def next(self, status: FlowStatus) -> NextRef:
-        status = as_flow_status(status)
+    def next(self, status: FlowOutcomeKey) -> NextRef:
+        status = as_flow_outcome(status)
         if status not in self.on:
             return None
         return as_next(self.on[status])
@@ -373,7 +378,7 @@ class Workflow:
             default_next: NextRef = (
                 self.nodes[i + 1].flow.id if i + 1 < len(self.nodes) else None
             )
-            on: dict[FlowStatus, NextRef] = {}
+            on: dict[FlowOutcomeKey, NextRef] = {}
             if node.router is not None:
                 on.update(node.router.on)
             # 默认接口：成功 → 下一个；失败 → 结束
@@ -424,5 +429,5 @@ class Workflow:
             raise KeyError(f"未知流程路由: {flow_id}，可选: {list(self._routers)}")
         return self._routers[flow_id]
 
-    def resolve_next(self, flow_id: str, status: FlowStatus) -> NextRef:
+    def resolve_next(self, flow_id: str, status: FlowOutcomeKey) -> NextRef:
         return self.router_for(flow_id).next(status)

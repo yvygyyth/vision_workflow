@@ -22,6 +22,7 @@ from vision_workflow.status import (
     EventStatus,
     FlowStatus,
     NextRef,
+    as_flow_outcome,
     as_next,
     as_outcome,
     is_stop,
@@ -152,6 +153,7 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
                 str(exc),
                 value=mctx.value,
                 feedback=f"（{mod.display_name}）on[{outcome_label(key)}] 异常",
+                key=key,
             )
 
         scope.next_id = nxt
@@ -164,11 +166,13 @@ def resolve_and_delay_middleware() -> ModuleMiddleware:
                 detail or f"outcome [{outcome_label(key)}] → stop",
                 value=mctx.value,
                 feedback=feedback,
+                key=key,
             )
         else:
             settled = Settled.resolve(
                 mctx.value if mctx.value is not None else key,
                 feedback=feedback,
+                key=key,
             )
 
         if settled.ok and not is_stop(nxt):
@@ -211,7 +215,11 @@ def run_module_event(scope: ModuleScope) -> Settled:
         raw = mod.event(mctx)
     except Exception as exc:
         logger.exception("模块 event 异常 (%s)", mod.log_label)
-        settled = Settled.reject(str(exc), feedback=f"（{mod.display_name}）event 异常")
+        settled = Settled.reject(
+            str(exc),
+            feedback=f"（{mod.display_name}）event 异常",
+            key=EventStatus.REJECTED,
+        )
         logger.info("模块结束 (%s) status=%s", label, EventStatus.REJECTED.value)
         return settled
 
@@ -220,13 +228,19 @@ def run_module_event(scope: ModuleScope) -> Settled:
     if not mod.has_outcome(mctx.key):
         msg = f"未知结果 [{outcome_label(mctx.key)}]，可选: {list(mod.on)}"
         logger.error("模块 [%s] %s", label, msg)
-        settled = Settled.reject(msg, value=mctx.value, feedback=f"（{mod.display_name}）{msg}")
+        settled = Settled.reject(
+            msg,
+            value=mctx.value,
+            feedback=f"（{mod.display_name}）{msg}",
+            key=mctx.key,
+        )
         logger.info("模块结束 (%s) status=%s", label, EventStatus.REJECTED.value)
         return settled
 
     settled = Settled.resolve(
         mctx.value if mctx.value is not None else mctx.key,
         feedback=f"（{mod.display_name}）outcome={outcome_label(mctx.key)}",
+        key=mctx.key,
     )
     logger.info("模块结束 (%s) key=%s", label, outcome_label(mctx.key))
     return settled
@@ -250,7 +264,7 @@ class FlowScope:
     cancelled: Callable[[], bool] = field(default_factory=lambda: (lambda: False))
     next_flow_id: NextRef = None
     last_settled: Settled | None = None
-    status: FlowStatus = FlowStatus.FULFILLED
+    status: FlowStatus | str = FlowStatus.FULFILLED
 
 
 CallNextFlow = Callable[[], Settled]
@@ -278,21 +292,31 @@ def run_flow_onion(
     return bind(0)()
 
 
+def _flow_route_status(settled: Settled) -> FlowStatus | str:
+    """流程对外路由 key：失败 → rejected；成功则优先用末模块自定义 outcome。"""
+    if not settled.ok:
+        return FlowStatus.REJECTED
+    if settled.key is None:
+        return FlowStatus.FULFILLED
+    return as_flow_outcome(settled.key)
+
+
 def flow_resolve_and_delay_middleware() -> FlowMiddleware:
     def mw(scope: FlowScope, call_next: CallNextFlow) -> Settled:
         settled = call_next()
         scope.last_settled = settled
-        status = FlowStatus.from_ok(settled.ok)
+        status = _flow_route_status(settled)
         scope.status = status
         nxt = as_next(scope.workflow.resolve_next(scope.flow.id, status))
         scope.next_flow_id = nxt
+        status_label = status.value if isinstance(status, FlowStatus) else status
         logger.info(
             "流程结束 (%s) status=%s → %s",
             scope.flow.log_label,
-            status.value,
+            status_label,
             nxt,
         )
-        if status is FlowStatus.FULFILLED and not is_stop(nxt):
+        if settled.ok and not is_stop(nxt):
             delay = max(0, int(scope.flow.config.delay_ms or scope.workflow.config.delay_ms))
             if delay > 0 and not scope.cancelled():
                 logger.info("延迟 %sms（流程后 %s）", delay, scope.flow.log_label)

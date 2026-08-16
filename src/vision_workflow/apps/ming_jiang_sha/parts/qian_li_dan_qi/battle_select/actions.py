@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import logging
+from enum import Enum
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
+    get_battle_state,
+    refresh_copper_coins,
+)
 from vision_workflow.input import Mouse
-from vision_workflow.module import EventFn, ModuleContext
+from vision_workflow.module import ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 
 logger = logging.getLogger(__name__)
@@ -18,17 +23,30 @@ CHOICE_REGION: tuple[int, int, int, int] = (1130, 350, 1300, 780)
 
 _CHALLENGE = f"{_DIR}/challenge.png"
 _CHALLENGE_HELP = f"{_DIR}/challenge_help.png"
+_BA_QING_STORE = f"{_DIR}/ba_qing_store.png"
+_POCKET_EVENT = f"{_DIR}/pocket_event.png"
+_REST = f"{_DIR}/rest.png"
 _SHOP = (
-    f"{_DIR}/ba_qing_store.png",
-    f"{_DIR}/rest.png",
+    _BA_QING_STORE,
+    _REST,
     f"{_DIR}/lv_bu_wei_store.png",
-    f"{_DIR}/pocket_event.png",
+    _POCKET_EVENT,
 )
 _EVENT = (
     f"{_DIR}/zhu_ge_liangf.png",
     f"{_DIR}/fei_fei.png",
     f"{_DIR}/zuo_ci.png",
 )
+# 铜币 ≥ 此值才尝试点霸青商店
+_BA_QING_COPPER_MIN = 30
+
+
+class ShopChoice(str, Enum):
+    """商店分支选中的选项（兼作 Module / Flow 路由 key）。"""
+
+    BA_QING_STORE = "ba_qing_store"
+    POCKET_EVENT = "pocket_event"
+    REST = "rest"
 
 
 def _find_in_choice(m: ModuleContext, image: str, *, timeout: float = 0.0):
@@ -83,13 +101,44 @@ def choose_battle(m: ModuleContext) -> OutcomeKey:
     return REJECTED
 
 
-def _stub(name: str) -> EventFn:
-    def event(_m: ModuleContext) -> OutcomeKey:
-        logger.info("%s placeholder", name)
-        return FULFILLED
+def update_copper_coins(m: ModuleContext) -> int:
+    """OCR 铜币区域，写入 BattleState.copper_coins；失败记 0。"""
+    state = get_battle_state(m.ctx)
+    amount = refresh_copper_coins(state)
+    if amount is None:
+        state.copper_coins = 0
+        amount = 0
+        logger.warning("update_copper_coins 识别失败，铜币记 0")
+    else:
+        logger.info("update_copper_coins → %s", amount)
+    return amount
 
-    return event
+
+def choose_shop(m: ModuleContext) -> OutcomeKey:
+    """按铜币优先选：霸青商店(≥30) → 锦囊事件 → 休息；全未识别则 REJECTED。"""
+    coins = update_copper_coins(m)
+    candidates: list[tuple[str, ShopChoice]] = []
+    if coins >= _BA_QING_COPPER_MIN:
+        candidates.append((_BA_QING_STORE, ShopChoice.BA_QING_STORE))
+    candidates.extend(
+        (
+            (_POCKET_EVENT, ShopChoice.POCKET_EVENT),
+            (_REST, ShopChoice.REST),
+        )
+    )
+
+    for path, choice in candidates:
+        hit = _find_in_choice(m, path, timeout=0.8)
+        if hit.found and _click_center(hit, label=choice.value):
+            m.reason = f"铜币={coins} 选中={choice.value}"
+            logger.info("choose_shop → %s (铜币=%s)", choice.value, coins)
+            return choice
+
+    m.reason = f"铜币={coins} 未识别到 ba_qing_store/pocket_event/rest"
+    logger.error("choose_shop 失败：%s", m.reason)
+    return REJECTED
 
 
-choose_shop: EventFn = _stub("choose_shop")
-choose_event: EventFn = _stub("choose_event")
+def choose_event(_m: ModuleContext) -> OutcomeKey:
+    logger.info("choose_event placeholder")
+    return FULFILLED
