@@ -64,12 +64,13 @@ def _probe_in_choice(m: ModuleContext, image: str) -> bool:
     return bool(_find_in_choice(m, image).found)
 
 
-def _click_center(hit, *, label: str) -> bool:
+def _click_center(hit, *, label: str, times: int = 1) -> bool:
     if not hit.center:
         return False
     cx, cy = hit.center
-    logger.info("点击 %s @ (%s,%s)", label, cx, cy)
-    Mouse().move(cx, cy).click().sleep(0.2).perform()
+    n = max(times, 1)
+    logger.info("点击 %s @ (%s,%s) ×%s", label, cx, cy, n)
+    Mouse().move(cx, cy).click(clicks=n).sleep(0.2).perform()
     return True
 
 
@@ -157,9 +158,9 @@ def choose_shop(m: ModuleContext) -> OutcomeKey:
 
     for path, choice in candidates:
         hit = _find_in_choice(m, path, timeout=0.8)
-        if hit.found and _click_center(hit, label=choice.value):
-            m.reason = f"铜币={coins} 选中={choice.value}"
-            logger.info("choose_shop → %s (铜币=%s)", choice.value, coins)
+        if hit.found and _click_center(hit, label=choice.value, times=2):
+            m.reason = f"铜币={coins} 选中={choice.value}（点两次）"
+            logger.info("choose_shop → %s (铜币=%s, 点两次)", choice.value, coins)
             return choice
 
     m.reason = f"铜币={coins} 未识别到 ba_qing_store/pocket_event/rest"
