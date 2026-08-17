@@ -11,6 +11,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     get_battle_state,
     refresh_copper_coins,
 )
+from vision_workflow.events import click, do, move
 from vision_workflow.input import Mouse
 from vision_workflow.module import ModuleContext
 from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
@@ -22,33 +23,13 @@ _DIR = f"{DATA_ROOT}/qian_li_dan_qi/battle_select"
 # 三选一图标区（相对模板基准分辨率；识图时自动 fit）
 CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
 
+# 多处复用的模板
 _CHALLENGE = f"{_DIR}/challenge.png"
-_CHALLENGE_HELP = f"{_DIR}/challenge_help.png"
 _BA_QING_STORE = f"{_DIR}/ba_qing_store.png"
 _POCKET_EVENT = f"{_DIR}/pocket_event.png"
 _REST = f"{_DIR}/rest.png"
-_ZHU_GE_LIANG = f"{_DIR}/zhu_ge_liangf.png"
-_FEI_FEI = f"{_DIR}/fei_fei.png"
-_SHI_CHANG_SHI = f"{_DIR}/shi_chang_shi.png"
-_CONFIRM = f"{COMMON_DIR}/confirm.png"
-_SHOP = (
-    _BA_QING_STORE,
-    _REST,
-    f"{_DIR}/lv_bu_wei_store.png",
-    _POCKET_EVENT,
-)
-_EVENT = (
-    _FEI_FEI,
-    _SHI_CHANG_SHI,
-    _ZHU_GE_LIANG,
-)
-# 铜币 ≥ 此值才尝试点巴清商店
-_BA_QING_COPPER_MIN = 30
-# 点选后等 UI 切换再核验图标是否消失
-_ENTER_WAIT_SEC = 0.6
-PENDING_EVENT_KEY = "pending_event_choice"
 
-# Flow 对外：本轮游戏结束（确认+关弹窗后，工作流停止）
+PENDING_EVENT_KEY = "pending_event_choice"
 RUN_ENDED = "run_ended"
 
 
@@ -68,18 +49,12 @@ class EventChoice(str, Enum):
     SHI_CHANG_SHI = "shi_chang_shi"
 
 
-# 枚举 → 图标（核验进场用）
+# 枚举 → 图标（点选 + 进场核验）
 _EVENT_IMAGE: dict[EventChoice, str] = {
-    EventChoice.FEI_FEI: _FEI_FEI,
-    EventChoice.SHI_CHANG_SHI: _SHI_CHANG_SHI,
-    EventChoice.ZHU_GE_LIANG: _ZHU_GE_LIANG,
+    EventChoice.FEI_FEI: f"{_DIR}/fei_fei.png",
+    EventChoice.SHI_CHANG_SHI: f"{_DIR}/shi_chang_shi.png",
+    EventChoice.ZHU_GE_LIANG: f"{_DIR}/zhu_ge_liangf.png",
 }
-# 点选优先级：妃妃 → 十常侍 → 诸葛亮
-_EVENT_CANDIDATES: tuple[tuple[str, EventChoice], ...] = (
-    (_EVENT_IMAGE[EventChoice.FEI_FEI], EventChoice.FEI_FEI),
-    (_EVENT_IMAGE[EventChoice.SHI_CHANG_SHI], EventChoice.SHI_CHANG_SHI),
-    (_EVENT_IMAGE[EventChoice.ZHU_GE_LIANG], EventChoice.ZHU_GE_LIANG),
-)
 
 
 def _find_in_choice(m: ModuleContext, image: str, *, timeout: float = 0.0):
@@ -99,24 +74,43 @@ def _click_center(hit, *, label: str) -> bool:
     return True
 
 
+def dismiss_up_panel(m: ModuleContext) -> OutcomeKey:
+    """若出现「武将技能」(up.png)，绝对坐标点击收起，再继续三选一判定。"""
+    hit = m.find(f"{_DIR}/up.png", timeout=0.5, threshold=0.8)
+    if not hit.found:
+        m.reason = "无武将技能面板"
+        logger.info("dismiss_up_panel → skip")
+        return FULFILLED
+
+    logger.info("dismiss_up_panel 识别到 up，绝对点击 (1300,1150)")
+    do(move().to(1300, 1150).raw(), click())(m)
+    time.sleep(0.4)
+    m.reason = "点掉武将技能 @ (1300,1150)"
+    return FULFILLED
+
+
 def detect_choice(m: ModuleContext) -> OutcomeKey:
     """判定：战斗 > 商店 > 事件 > 本轮结束确认框；未识别则 REJECTED（模块重试）。"""
     if _probe_in_choice(m, _CHALLENGE):
         logger.info("detect_choice → battle")
         return "battle"
 
-    for path in _SHOP:
+    for path in (
+        _BA_QING_STORE,
+        _REST,
+        f"{_DIR}/lv_bu_wei_store.png",
+        _POCKET_EVENT,
+    ):
         if _probe_in_choice(m, path):
             logger.info("detect_choice → shop (%s)", path.rsplit("/", 1)[-1])
             return "shop"
 
-    for path in _EVENT:
+    for path in _EVENT_IMAGE.values():
         if _probe_in_choice(m, path):
             logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
-    # 结算后无三选一、出现公共确认 → 本轮结束
-    if m.find(_CONFIRM, timeout=0.0, threshold=0.8).found:
+    if m.find(f"{COMMON_DIR}/confirm.png", timeout=0.0, threshold=0.8).found:
         m.reason = "识别到结算确认，本轮结束"
         logger.info("detect_choice → run_ended")
         return RUN_ENDED
@@ -128,7 +122,7 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
 
 def choose_battle(m: ModuleContext) -> OutcomeKey:
     """优先点「驰援/助战」类 challenge_help；否则点选择区内第一个 challenge。"""
-    help_hit = _find_in_choice(m, _CHALLENGE_HELP, timeout=0.8)
+    help_hit = _find_in_choice(m, f"{_DIR}/challenge_help.png", timeout=0.8)
     if help_hit.found and _click_center(help_hit, label="challenge_help"):
         return FULFILLED
 
@@ -157,7 +151,7 @@ def choose_shop(m: ModuleContext) -> OutcomeKey:
     """按铜币优先选：巴清商店(≥30) → 锦囊事件 → 休息；全未识别则 REJECTED。"""
     coins = update_copper_coins(m)
     candidates: list[tuple[str, ShopChoice]] = []
-    if coins >= _BA_QING_COPPER_MIN:
+    if coins >= 30:
         candidates.append((_BA_QING_STORE, ShopChoice.BA_QING_STORE))
     candidates.extend(
         (
@@ -180,7 +174,7 @@ def choose_shop(m: ModuleContext) -> OutcomeKey:
 
 def confirm_ba_qing_entered(m: ModuleContext) -> OutcomeKey:
     """点巴清后核验：图标消失 → 已进店；仍在 → 未进店。"""
-    time.sleep(_ENTER_WAIT_SEC)
+    time.sleep(0.6)
     if _probe_in_choice(m, _BA_QING_STORE):
         m.reason = "巴清图标仍在，未进入商店"
         logger.info("confirm_ba_qing_entered → still_here")
@@ -191,7 +185,7 @@ def confirm_ba_qing_entered(m: ModuleContext) -> OutcomeKey:
 
 def choose_event(m: ModuleContext) -> OutcomeKey:
     """在妃妃 / 十常侍 / 诸葛亮中点第一个找到的；写入 pending 供进场核验。"""
-    for path, choice in _EVENT_CANDIDATES:
+    for choice, path in _EVENT_IMAGE.items():
         hit = _find_in_choice(m, path, timeout=0.8)
         if hit.found and _click_center(hit, label=choice.value):
             m.vars[PENDING_EVENT_KEY] = choice
@@ -212,9 +206,8 @@ def confirm_event_entered(m: ModuleContext) -> OutcomeKey:
         logger.error("confirm_event_entered 缺少 pending_event_choice")
         return REJECTED
 
-    time.sleep(_ENTER_WAIT_SEC)
-    image = _EVENT_IMAGE[choice]
-    if _probe_in_choice(m, image):
+    time.sleep(0.6)
+    if _probe_in_choice(m, _EVENT_IMAGE[choice]):
         m.reason = f"{choice.value} 图标仍在，未进入事件"
         logger.info("confirm_event_entered → still_here (%s)", choice.value)
         return "still_here"

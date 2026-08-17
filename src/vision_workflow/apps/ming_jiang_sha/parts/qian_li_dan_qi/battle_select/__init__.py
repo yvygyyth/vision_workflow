@@ -11,8 +11,9 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.acti
     confirm_ba_qing_entered,
     confirm_event_entered,
     detect_choice,
+    dismiss_up_panel,
 )
-from vision_workflow.module import Flow, Module, ModuleConfig, abort, to
+from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
@@ -21,8 +22,15 @@ FLOW = Flow(
     id="battle_select",
     name="三选一",
     description="判定并点选；战斗→fight；无选项但有确认→本轮结束",
-    entry="detect_choice",
+    entry="dismiss_up",
     modules=[
+        Module(
+            id="dismiss_up",
+            name="收起武将技能",
+            description="识别到 up.png 则绝对点击 (1300,1150)，再判定三选一",
+            event=dismiss_up_panel,
+            on={FULFILLED: onward, REJECTED: abort},
+        ),
         Module(
             id="detect_choice",
             name="判定选择类型",
@@ -56,7 +64,7 @@ FLOW = Flow(
             on={
                 ShopChoice.BA_QING_STORE: to("confirm_ba_qing_entered"),
                 ShopChoice.POCKET_EVENT: lambda m: m.end(),
-                ShopChoice.REST: to("detect_choice"),
+                ShopChoice.REST: to("dismiss_up"),
                 REJECTED: abort,
             },
         ),
@@ -67,7 +75,7 @@ FLOW = Flow(
             event=confirm_ba_qing_entered,
             on={
                 ShopChoice.BA_QING_STORE: lambda m: m.end(),
-                "still_here": to("detect_choice"),
+                "still_here": to("dismiss_up"),
                 REJECTED: abort,
             },
             config=ModuleConfig(
@@ -97,7 +105,7 @@ FLOW = Flow(
                 EventChoice.ZHU_GE_LIANG: lambda m: m.end(),
                 EventChoice.FEI_FEI: lambda m: m.end(),
                 EventChoice.SHI_CHANG_SHI: lambda m: m.end(),
-                "still_here": to("detect_choice"),
+                "still_here": to("dismiss_up"),
                 REJECTED: abort,
             },
             config=ModuleConfig(
