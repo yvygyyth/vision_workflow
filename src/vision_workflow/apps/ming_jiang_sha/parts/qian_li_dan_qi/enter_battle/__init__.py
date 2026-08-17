@@ -10,7 +10,10 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle.actio
     try_click_start,
     type_wu_jiang,
 )
-from vision_workflow.module import Flow, Module, abort, onward, to
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
+    bind_battle_state,
+)
+from vision_workflow.module import Flow, FlowLifecycle, Module, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
@@ -22,6 +25,7 @@ FLOW = Flow(
     description="确保进入千里单骑战斗界面",
     entry="check_battle",
     params={"wu_jiang": "吕布"},
+    lifecycle=FlowLifecycle(on_enter=bind_battle_state),
     modules=[
         Module(
             id="check_battle",

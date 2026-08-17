@@ -6,7 +6,7 @@ import logging
 import time
 from enum import Enum
 
-from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.common.paths import COMMON_DIR, DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     get_battle_state,
     refresh_copper_coins,
@@ -30,6 +30,7 @@ _REST = f"{_DIR}/rest.png"
 _ZHU_GE_LIANG = f"{_DIR}/zhu_ge_liangf.png"
 _FEI_FEI = f"{_DIR}/fei_fei.png"
 _SHI_CHANG_SHI = f"{_DIR}/shi_chang_shi.png"
+_CONFIRM = f"{COMMON_DIR}/confirm.png"
 _SHOP = (
     _BA_QING_STORE,
     _REST,
@@ -46,6 +47,9 @@ _BA_QING_COPPER_MIN = 30
 # 点选后等 UI 切换再核验图标是否消失
 _ENTER_WAIT_SEC = 0.6
 PENDING_EVENT_KEY = "pending_event_choice"
+
+# Flow 对外：本轮游戏结束（确认+关弹窗后，工作流停止）
+RUN_ENDED = "run_ended"
 
 
 class ShopChoice(str, Enum):
@@ -90,7 +94,7 @@ def _click_center(hit, *, label: str) -> bool:
 
 
 def detect_choice(m: ModuleContext) -> OutcomeKey:
-    """判定本轮三选一类型：战斗 > 商店 > 事件；未识别则 REJECTED（交给模块重试）。"""
+    """判定：战斗 > 商店 > 事件 > 本轮结束确认框；未识别则 REJECTED（模块重试）。"""
     if _probe_in_choice(m, _CHALLENGE):
         logger.info("detect_choice → battle")
         return "battle"
@@ -105,7 +109,13 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
             logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
-    m.reason = "选择区内未识别到战斗/商店/事件"
+    # 结算后无三选一、出现公共确认 → 本轮结束
+    if m.find(_CONFIRM, timeout=0.0, threshold=0.8).found:
+        m.reason = "识别到结算确认，本轮结束"
+        logger.info("detect_choice → run_ended")
+        return RUN_ENDED
+
+    m.reason = "选择区内未识别到战斗/商店/事件，也无结算确认"
     logger.info("detect_choice → rejected")
     return REJECTED
 

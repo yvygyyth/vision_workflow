@@ -406,7 +406,8 @@ class Workflow:
                 if is_stop(target):
                     continue
                 assert target is not None
-                if target not in self._by_id:
+                flow_id = target.split(".", 1)[0] if "." in target else target
+                if flow_id not in self._by_id:
                     raise KeyError(
                         f"流程 [{node.flow.id}] 路由目标不存在: {target}，"
                         f"可选: {list(self._by_id)}"

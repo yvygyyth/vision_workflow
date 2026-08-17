@@ -106,7 +106,10 @@ class WorkflowRunner:
         flow_id: str,
         module_entry: str | None,
     ) -> FlowRunResult:
-        current_flow: NextRef = flow_id
+        # 支持路由目标 "flow" 或 "flow.module"
+        current_flow: NextRef = (
+            f"{flow_id}.{module_entry}" if module_entry else flow_id
+        )
 
         while not is_stop(current_flow):
             if self._cancelled():
@@ -116,7 +119,7 @@ class WorkflowRunner:
                 break
 
             assert current_flow is not None
-            flow_key = current_flow
+            flow_key, entry_module = self._parse_route_target(current_flow)
             try:
                 flow = self.workflow.get(flow_key)
             except KeyError as exc:
@@ -125,13 +128,14 @@ class WorkflowRunner:
                 result.feedback = str(exc)
                 break
 
-            logger.info("流程开始 (%s)", flow.log_label)
+            logger.info(
+                "流程开始 (%s)%s",
+                flow.log_label,
+                f" entry={entry_module}" if entry_module else "",
+            )
             self.ctx.params = self.workflow.merged_params_for(flow_key)
             if self.ctx.params:
                 logger.info("流程入参 %s", self.ctx.params)
-            entry_for_attempt = module_entry if flow_key == flow_id else None
-            module_entry = None
-            first_shot = {"pending": entry_for_attempt, "used": False}
 
             scope = FlowScope(
                 ctx=self.ctx,
@@ -140,12 +144,10 @@ class WorkflowRunner:
                 cancelled=self._cancelled,
             )
 
-            def _core(flow: Flow = flow) -> Settled:
-                module_id = None
-                if not first_shot["used"]:
-                    module_id = first_shot["pending"]
-                    first_shot["used"] = True
-                return self._run_flow_modules(flow, result, entry_module=module_id)
+            def _core(
+                flow: Flow = flow, entry_module: str | None = entry_module
+            ) -> Settled:
+                return self._run_flow_modules(flow, result, entry_module=entry_module)
 
             if flow.lifecycle.on_enter is not None:
                 flow.lifecycle.on_enter(self.ctx)
@@ -235,6 +237,13 @@ class WorkflowRunner:
         if token in self.workflow._by_id:
             return token, None
         return self.entry, token
+
+    def _parse_route_target(self, token: str) -> tuple[str, str | None]:
+        """流程间跳转目标：``flow_id`` 或 ``flow_id.module_id``。"""
+        if "." in token:
+            flow_id, module_id = token.split(".", 1)
+            return flow_id, module_id
+        return token, None
 
     def _run_flow_modules(
         self,

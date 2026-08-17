@@ -262,6 +262,39 @@ def test_dynamic_outcome_jump() -> None:
     assert result.path == ["f.a", "f.b"]
 
 
+def test_flow_router_can_enter_mid_module() -> None:
+    """流程间路由支持 flow.module，从指定模块切入。"""
+    workflow = _wf(
+        Flow(
+            id="a",
+            entry="start",
+            modules=[
+                Module(
+                    id="start",
+                    event=lambda m: FULFILLED,
+                    on={FULFILLED: lambda m: m.end()},
+                )
+            ],
+        ),
+        Flow(
+            id="b",
+            entry="x",
+            modules=[
+                Module(id="x", event=lambda m: FULFILLED, on={FULFILLED: onward}),
+                Module(id="y", event=lambda m: FULFILLED, on={FULFILLED: onward}),
+            ],
+        ),
+        routers={
+            "a": FlowRouter(
+                on={FlowStatus.FULFILLED: "b.y", FlowStatus.REJECTED: None}
+            )
+        },
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    assert result.path == ["a.start", "b.y"]
+
+
 def test_self_loop_again() -> None:
     hits = {"n": 0}
 

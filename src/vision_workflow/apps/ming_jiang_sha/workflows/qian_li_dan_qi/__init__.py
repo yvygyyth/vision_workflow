@@ -8,6 +8,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select impo
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.actions import (
     EventChoice,
+    RUN_ENDED,
     ShopChoice,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle import (
@@ -64,6 +65,7 @@ WORKFLOW = Workflow(
                     EventChoice.ZHU_GE_LIANG: "zhu_ge_liang",
                     EventChoice.FEI_FEI: "fei_fei",
                     EventChoice.SHI_CHANG_SHI: "shi_chang_shi",
+                    RUN_ENDED: "enter_battle",
                     FlowStatus.REJECTED: None,
                 }
             ),

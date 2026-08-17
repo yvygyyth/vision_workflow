@@ -1,11 +1,16 @@
 """子流程：千里单骑战斗（选关后的开打 / 结算）。
 
-- FLOW：完整开打（含赠礼）
-- FLOW_IN_BATTLE：正在战斗（取消→结算，无赠礼），供事件等复用
+一份模块链；用入参 ``FightGift`` 区分有无赠礼。
+编排侧可用工厂生成 ``fight`` / ``in_battle`` 两个 Flow 实例（入口与入参不同）。
+
+识不到赠礼时直接结束本 Flow，回三选一由那边判断是否本轮结束。
 """
+
+from __future__ import annotations
 
 from vision_workflow.apps.ming_jiang_sha.common.actions import confirm
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions import (
+    after_settle_branch,
     choose_reward_kind,
     choose_reward_title,
     click_auto,
@@ -15,19 +20,35 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions impo
     click_setting,
     move_aside,
 )
-from vision_workflow.module import Flow, Module, ModuleConfig, OutcomeFn, abort, onward, to
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.params import (
+    PARAM_GIFT,
+    FightGift,
+)
+from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
 _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
 
 
-def _in_battle_modules(
-    *,
-    after_settle: dict[object, OutcomeFn],
-) -> list[Module]:
-    """取消 → 设置/托管 → 挑战结束 → 下一步 → 结算确认。"""
+def _fight_modules() -> list[Module]:
+    """完整模块链：确认进战 → 托管结算 → 按入参分支。"""
     return [
+        Module(
+            id="confirm",
+            name="确认",
+            description="公共确认框",
+            event=confirm,
+            on=_CLICK,
+        ),
+        Module(
+            id="move_aside",
+            name="移开鼠标",
+            description="移到 (80,80)，避免挡住识图（勿用 0,0，会触发 FailSafe）",
+            event=move_aside,
+            on=_CLICK,
+            config=ModuleConfig(delay_ms=500),
+        ),
         Module(
             id="click_cancel",
             name="取消",
@@ -68,43 +89,33 @@ def _in_battle_modules(
         ),
         Module(
             id="settle_confirm",
-            name="确认",
-            description="结算确认",
+            name="结算确认",
+            description="再点一次空白/下一步，随后按赠礼入参分支",
             event=click_next_step,
-            on=after_settle,
+            on={FULFILLED: to("after_settle"), REJECTED: abort},
             config=ModuleConfig(delay_ms=1500),
         ),
-    ]
-
-
-FLOW = Flow(
-    id="fight",
-    name="开打",
-    description="确认进战 → 托管 → 等结束 → 下一步 / 确认 / 选赠礼",
-    entry="confirm",
-    modules=[
         Module(
-            id="confirm",
-            name="确认",
-            description="公共确认框",
-            event=confirm,
-            on=_CLICK,
+            id="after_settle",
+            name="结算分支",
+            description="无赠礼/识不到→结束回三选一；有赠礼→选赠礼",
+            event=after_settle_branch,
+            on={
+                FULFILLED: lambda m: m.end(),
+                "has_gift": to("choose_reward_title"),
+                REJECTED: abort,
+            },
         ),
-        Module(
-            id="move_aside",
-            name="移开鼠标",
-            description="移到 (80,80)，避免挡住识图（勿用 0,0，会触发 FailSafe）",
-            event=move_aside,
-            on=_CLICK,
-            config=ModuleConfig(delay_ms=500),
-        ),
-        *_in_battle_modules(after_settle=_CLICK),
         Module(
             id="choose_reward_title",
             name="选择赠礼武将",
-            description="OCR 三槽标题，按优先表与背包点击武将，并写入 ctx.vars",
+            description="OCR 三槽标题选武将；识不到则结束回三选一",
             event=choose_reward_title,
-            on=_CLICK,
+            on={
+                FULFILLED: to("choose_reward_kind"),
+                "no_gift": to("settle_done"),
+                REJECTED: abort,
+            },
             config=ModuleConfig(delay_ms=200),
         ),
         Module(
@@ -112,15 +123,57 @@ FLOW = Flow(
             name="选择赠礼类别",
             description="识图信物/并肩作战/武将牌/资助/驰援，按武将关键奖励与背包点击",
             event=choose_reward_kind,
-            on=_CLICK,
+            on=_END,
         ),
-    ],
+        Module(
+            id="settle_done",
+            name="结算结束",
+            description="对外 fulfilled，回三选一继续判断",
+            event=lambda m: FULFILLED,
+            on=_END,
+        ),
+    ]
+
+
+def build_fight_flow(
+    *,
+    id: str,
+    gift: FightGift,
+    entry: str,
+    name: str,
+    description: str,
+) -> Flow:
+    """同一套模块，按入口与赠礼入参生成 Flow 实例。"""
+    return Flow(
+        id=id,
+        name=name,
+        description=description,
+        entry=entry,
+        params={PARAM_GIFT: gift},
+        modules=_fight_modules(),
+    )
+
+
+FLOW = build_fight_flow(
+    id="fight",
+    gift=FightGift.WITH,
+    entry="confirm",
+    name="开打",
+    description="确认进战 → 托管 → 结算 → 选赠礼（有赠礼）",
 )
 
-FLOW_IN_BATTLE = Flow(
+FLOW_IN_BATTLE = build_fight_flow(
     id="in_battle",
-    name="正在战斗",
-    description="取消 → 托管 → 结算确认（不含赠礼）",
+    gift=FightGift.WITHOUT,
     entry="click_cancel",
-    modules=_in_battle_modules(after_settle=_END),
+    name="正在战斗",
+    description="取消 → 托管 → 结算（无赠礼，回三选一）",
 )
+
+__all__ = [
+    "PARAM_GIFT",
+    "FightGift",
+    "FLOW",
+    "FLOW_IN_BATTLE",
+    "build_fight_flow",
+]

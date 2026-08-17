@@ -5,6 +5,10 @@ from __future__ import annotations
 import logging
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.params import (
+    PARAM_GIFT,
+    FightGift,
+)
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     GeneralPriority,
     RewardKind,
@@ -27,6 +31,7 @@ CANCEL_IMAGE = f"{_DIR}/cancel.png"
 
 # FlowContext.vars：选择武将后暂存，供下一步选类别
 PENDING_GENERAL_KEY = "pending_reward_general"
+PENDING_TITLES_KEY = "pending_reward_titles"
 
 # 结算三选一标题区（相对模板基准；grab_region / move.to 会 fit）
 REWARD_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
@@ -61,17 +66,66 @@ def cancel_visible(m: ModuleContext, *, timeout: float = 0.8) -> bool:
     return bool(m.find(CANCEL_IMAGE, timeout=timeout, threshold=0.8).found)
 
 
-def choose_reward_title(m: ModuleContext) -> OutcomeKey:
-    """OCR 三槽标题，按优先表 + 背包选槽并点击；GeneralPriority 写入 ctx.vars。"""
+def _gift_param(m: ModuleContext) -> FightGift:
+    raw = m.params.get(PARAM_GIFT, FightGift.WITH)
+    if isinstance(raw, FightGift):
+        return raw
+    try:
+        return FightGift(str(raw))
+    except ValueError:
+        logger.warning("未知 gift 入参 %r，按 WITH 处理", raw)
+        return FightGift.WITH
+
+
+def _ocr_reward_titles() -> list[str]:
     titles: list[str] = []
-    lines: list[str] = []
     for i, region in enumerate(REWARD_TITLE_REGIONS, start=1):
         text = image_to_text(grab_region(region))
         titles.append(text)
-        shown = text if text else "(空)"
-        lines.append(f"{i}:{shown}")
-        logger.info("【赠礼OCR】槽位%s → %s", i, shown)
+        logger.info("【赠礼OCR】槽位%s → %s", i, text if text else "(空)")
+    return titles
 
+
+def titles_look_like_gift(titles: list[str]) -> bool:
+    """三槽里是否像赠礼界面（有武将名或「赠礼」字样）。"""
+    for text in titles:
+        if parse_general_name(text):
+            return True
+        raw = (text or "").strip()
+        if "赠礼" in raw or "贈禮" in raw:
+            return True
+    return False
+
+
+def after_settle_branch(m: ModuleContext) -> OutcomeKey:
+    """结算后：无赠礼或识不到→fulfilled 回三选一；识到→选赠礼。"""
+    if _gift_param(m) is FightGift.WITHOUT:
+        m.reason = "无赠礼，回战斗选择"
+        logger.info("after_settle_branch → fulfilled（无赠礼）")
+        return FULFILLED
+
+    titles = _ocr_reward_titles()
+    if titles_look_like_gift(titles):
+        m.vars[PENDING_TITLES_KEY] = titles
+        m.reason = "识别到赠礼"
+        logger.info("after_settle_branch → has_gift")
+        return "has_gift"
+
+    m.reason = "有赠礼模式但未识别到赠礼，回三选一判断"
+    logger.info("after_settle_branch → fulfilled（无赠礼 UI）")
+    return FULFILLED
+
+
+def choose_reward_title(m: ModuleContext) -> OutcomeKey:
+    """OCR 三槽标题，按优先表 + 背包选槽并点击；识不到则 no_gift。"""
+    cached = m.vars.pop(PENDING_TITLES_KEY, None)
+    titles = cached if isinstance(cached, list) else _ocr_reward_titles()
+    if not titles_look_like_gift(titles):
+        m.reason = "未识别到赠礼标题"
+        logger.info("choose_reward_title → no_gift")
+        return "no_gift"
+
+    lines = [f"{i}:{(t if t else '(空)')}" for i, t in enumerate(titles, start=1)]
     state = get_battle_state(m.ctx)
     slot = pick_reward_slot(titles, state)
     picked = parse_general_name(titles[slot]) or f"槽{slot + 1}"

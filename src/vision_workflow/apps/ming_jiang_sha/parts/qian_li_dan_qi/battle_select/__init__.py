@@ -1,7 +1,9 @@
 ﻿"""子流程：千里单骑三选一（选完战斗后结束本 Flow，交给 fight）。"""
 
+from vision_workflow.apps.ming_jiang_sha.common.actions import confirm, space_close
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.actions import (
     EventChoice,
+    RUN_ENDED,
     ShopChoice,
     choose_battle,
     choose_event,
@@ -18,18 +20,19 @@ _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
 FLOW = Flow(
     id="battle_select",
     name="三选一",
-    description="判定并点选；战斗→fight，巴清/事件确认进入后再进对应 Flow",
+    description="判定并点选；战斗→fight；无选项但有确认→本轮结束",
     entry="detect_choice",
     modules=[
         Module(
             id="detect_choice",
             name="判定选择类型",
-            description="在选择区内识别战斗/商店/事件（优先战斗）",
+            description="选择区：战斗/商店/事件；否则看公共确认（本轮结束）",
             event=detect_choice,
             on={
                 "battle": to("choose_battle"),
                 "shop": to("choose_shop"),
                 "event": to("choose_event"),
+                RUN_ENDED: to("run_end_confirm"),
                 REJECTED: abort,
             },
             config=ModuleConfig(
@@ -102,6 +105,27 @@ FLOW = Flow(
                 retry_delay_ms=400,
                 retry_on=["still_here"],
             ),
+        ),
+        Module(
+            id="run_end_confirm",
+            name="本轮结束确认",
+            description="公共确认框",
+            event=confirm,
+            on={FULFILLED: to("run_end_close"), REJECTED: to("run_end_close")},
+        ),
+        Module(
+            id="run_end_close",
+            name="关闭空白弹窗",
+            description="公共 Esc 关弹窗",
+            event=space_close(),
+            on={FULFILLED: to("mark_run_ended"), REJECTED: to("mark_run_ended")},
+        ),
+        Module(
+            id="mark_run_ended",
+            name="标记本轮结束",
+            description="对外 outcome=run_ended，回到进战开下一局",
+            event=lambda m: RUN_ENDED,
+            on={RUN_ENDED: lambda m: m.end()},
         ),
     ],
 )
