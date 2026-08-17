@@ -68,12 +68,18 @@ class EventChoice(str, Enum):
     SHI_CHANG_SHI = "shi_chang_shi"
 
 
+# 枚举 → 图标（核验进场用）
+_EVENT_IMAGE: dict[EventChoice, str] = {
+    EventChoice.FEI_FEI: _FEI_FEI,
+    EventChoice.SHI_CHANG_SHI: _SHI_CHANG_SHI,
+    EventChoice.ZHU_GE_LIANG: _ZHU_GE_LIANG,
+}
+# 点选优先级：妃妃 → 十常侍 → 诸葛亮
 _EVENT_CANDIDATES: tuple[tuple[str, EventChoice], ...] = (
-    (_FEI_FEI, EventChoice.FEI_FEI),
-    (_SHI_CHANG_SHI, EventChoice.SHI_CHANG_SHI),
-    (_ZHU_GE_LIANG, EventChoice.ZHU_GE_LIANG),
+    (_EVENT_IMAGE[EventChoice.FEI_FEI], EventChoice.FEI_FEI),
+    (_EVENT_IMAGE[EventChoice.SHI_CHANG_SHI], EventChoice.SHI_CHANG_SHI),
+    (_EVENT_IMAGE[EventChoice.ZHU_GE_LIANG], EventChoice.ZHU_GE_LIANG),
 )
-_EVENT_IMAGE: dict[EventChoice, str] = dict(_EVENT_CANDIDATES)
 
 
 def _find_in_choice(m: ModuleContext, image: str, *, timeout: float = 0.0):

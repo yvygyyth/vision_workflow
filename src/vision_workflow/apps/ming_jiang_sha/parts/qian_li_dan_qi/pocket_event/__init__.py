@@ -37,12 +37,7 @@ FLOW = Flow(
                 "continue": to("pick_event_pattern"),
                 FULFILLED: lambda m: m.end(),
                 REJECTED: abort,
-            },
-            config=ModuleConfig(
-                retry=12,
-                retry_delay_ms=500,
-                retry_on=[REJECTED],
-            ),
+            }
         ),
         Module(
             id="click_ok",
@@ -52,12 +47,7 @@ FLOW = Flow(
             on={
                 FULFILLED: to("check_after"),
                 REJECTED: abort,
-            },
-            config=ModuleConfig(
-                retry=3,
-                retry_delay_ms=300,
-                retry_on=[REJECTED],
-            ),
+            }
         ),
     ],
 )
