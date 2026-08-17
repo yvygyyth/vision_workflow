@@ -14,6 +14,7 @@ from vision_workflow.module import (
     Workflow,
     WorkflowConfig,
     abort,
+    back,
     onward,
     to,
 )
@@ -114,6 +115,58 @@ def test_module_miss_abort_ends_flow() -> None:
     assert result.path == ["f.a"]
     assert "识图未找到 [confirm.png]" in (result.feedback or "")
     assert "购买" in (result.feedback or "")
+
+
+def test_module_back_returns_to_runtime_previous() -> None:
+    """REJECTED + back：回到运行时刚离开的模块，而不是列表相邻项。"""
+    b_hits = {"n": 0}
+
+    def c_event(m):
+        b_hits["n"] += 1
+        if b_hits["n"] == 1:
+            return REJECTED
+        return FULFILLED
+
+    workflow = _wf(
+        Flow(
+            id="f",
+            entry="a",
+            modules=[
+                Module(id="a", event=lambda m: FULFILLED, on={FULFILLED: to("c")}),
+                Module(id="b", event=lambda m: FULFILLED, on={FULFILLED: onward}),
+                Module(
+                    id="c",
+                    event=c_event,
+                    on={FULFILLED: lambda m: m.end(), REJECTED: back},
+                ),
+            ],
+        )
+    )
+    result = WorkflowRunner(workflow).run()
+    assert result.success
+    # a → c(失败) → a → c(成功)；未经过声明序上的 b
+    assert result.path == ["f.a", "f.c", "f.a", "f.c"]
+    assert b_hits["n"] == 2
+
+
+def test_module_back_on_entry_ends_flow() -> None:
+    workflow = _wf(
+        Flow(
+            id="f",
+            entry="a",
+            modules=[
+                Module(
+                    id="a",
+                    event=lambda m: REJECTED,
+                    on={FULFILLED: onward, REJECTED: back},
+                ),
+                Module(id="b", event=lambda m: FULFILLED, on={FULFILLED: onward}),
+            ],
+        )
+    )
+    result = WorkflowRunner(workflow).run()
+    assert not result.success
+    assert result.path == ["f.a"]
 
 
 def test_flow_compose_to_workflow_default_order() -> None:

@@ -21,6 +21,8 @@ class FlowContext:
         self.defaults = defaults or MatchOptions()
         self.vars: dict = {}
         self.params: dict = {}
+        # 本 Flow 内已成功离开的模块 id（运行时路径）；供 back() 回退
+        self.module_trail: list[str] = []
 
     def resolve(self, image: str | Path) -> Path:
         path = Path(image)

@@ -4,6 +4,8 @@ Module（最小节点）::
     id + event + on
     event 必须返回 on 中的某个 key（EventStatus 或自定义 str）
     on[key] 返回下一模块 id；None 表示本流程结束
+    常用助手：onward / abort / back / to(...)
+    back 按运行时路径回上一步（见 FlowContext.module_trail）
 
 Flow::
     若干 Module 组成一个流程；结束时用 settled.key 作 FlowRouter 路由
@@ -132,6 +134,8 @@ class ModuleContext:
     value: Any = None
     reason: str = ""
     """event 可写入的可读原因（如识图未找到），供反馈使用。"""
+    used_back: bool = False
+    """本步 on[*] 是否走了 back()；为 True 时不把当前模块写入 trail。"""
 
     @property
     def base_dir(self) -> Path:
@@ -183,6 +187,14 @@ class ModuleContext:
         """自循环：回到当前模块。"""
         return self.module.id
 
+    def back(self) -> NextRef:
+        """回到运行时上一步（本 Flow 内刚成功离开的模块）；无上一步则结束流程。"""
+        self.used_back = True
+        trail = self.ctx.module_trail
+        if not trail:
+            return None
+        return trail.pop()
+
     def end(self) -> None:
         """结束当前流程（成败由 event 状态决定）。"""
         return None
@@ -200,6 +212,11 @@ def onward(m: ModuleContext) -> NextRef:
 def abort(m: ModuleContext) -> NextRef:
     """常用 outcome：结束当前流程（配合 REJECTED → 流程失败）。"""
     return m.fail()
+
+
+def back(m: ModuleContext) -> NextRef:
+    """常用 outcome：回到运行时上一步；入口步失败则结束（配合 REJECTED）。"""
+    return m.back()
 
 
 def to(module_id: str) -> OutcomeFn:

@@ -244,6 +244,7 @@ class WorkflowRunner:
         entry_module: str | None,
     ) -> Settled:
         """跑完一轮流程内模块。"""
+        self.ctx.module_trail.clear()
         current: NextRef = entry_module or flow.entry
         last = Settled.reject("空流程")
 
@@ -292,6 +293,9 @@ class WorkflowRunner:
             if is_stop(nxt):
                 return settled
 
+            # 成功离开且非自循环、非 back 时记入运行时路径
+            if nxt != module_id and not (scope.module_ctx and scope.module_ctx.used_back):
+                self.ctx.module_trail.append(module_id)
             current = nxt
 
         return last
