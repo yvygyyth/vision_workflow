@@ -10,9 +10,10 @@ from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions import (
     cancel_visible,
 )
+from vision_workflow.events import click, do, move
 from vision_workflow.input import Mouse
 from vision_workflow.module import ModuleContext
-from vision_workflow.status import FULFILLED, OutcomeKey
+from vision_workflow.status import FULFILLED, REJECTED, OutcomeKey
 from vision_workflow.vision import find_all_images
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/pocket_event"
 # 资源文件名拼写保持与磁盘一致
 _EVENT_PATTERN = f"{_DIR}/event_patterm.png"
+_OK = f"{_DIR}/ok.png"
 
 # 点完后稍等 UI 刷新
 _AFTER_CLICK_SEC = 0.6
@@ -29,10 +31,16 @@ _FIND_INTERVAL_SEC = 0.4
 
 # Flow 出口：出现取消 → 进 in_battle
 ENTER_BATTLE = "in_battle"
+# 花纹已空：检查取消/确认后若都没有则结束（不再点花纹）
+_DONE_KEY = "pocket_event_done"
+
+
+def _ok_visible(m: ModuleContext, *, timeout: float = 0.5) -> bool:
+    return bool(m.find(_OK, timeout=timeout, threshold=0.8).found)
 
 
 def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
-    """找到的花纹里随机点一个；多轮仍没有则本 Flow 结束。"""
+    """找到的花纹里随机点一个；多轮仍没有则去看取消/确认。"""
     hits = None
     for round_i in range(1, _FIND_ROUNDS + 1):
         hits = find_all_images(m.resolve(_EVENT_PATTERN), threshold=0.8, max_count=16)
@@ -50,16 +58,19 @@ def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
             time.sleep(_FIND_INTERVAL_SEC)
 
     if not hits:
-        m.reason = "多轮未找到 event_pattern，锦囊事件结束"
-        logger.info("pick_event_pattern → fulfilled（%s 轮无匹配）", _FIND_ROUNDS)
-        return FULFILLED
+        m.vars[_DONE_KEY] = True
+        m.reason = "多轮未找到 event_pattern，去看取消/确认"
+        logger.info("pick_event_pattern → check（%s 轮无匹配）", _FIND_ROUNDS)
+        return "check"
 
     hit = random.choice(hits)
     if not hit.center:
-        m.reason = "匹配无中心点"
-        logger.warning("pick_event_pattern 匹配无 center，当作结束")
-        return FULFILLED
+        m.vars[_DONE_KEY] = True
+        m.reason = "匹配无中心点，去看取消/确认"
+        logger.warning("pick_event_pattern 匹配无 center → check")
+        return "check"
 
+    m.vars.pop(_DONE_KEY, None)
     cx, cy = hit.center
     logger.info(
         "pick_event_pattern 候选=%s 随机点击 @ (%s,%s) conf=%.3f",
@@ -74,13 +85,44 @@ def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
     return "clicked"
 
 
-def check_cancel_ready(m: ModuleContext) -> OutcomeKey:
-    """点花纹后：有取消 → in_battle；没有 → 继续点花纹。"""
+def check_after_pattern(m: ModuleContext) -> OutcomeKey:
+    """点花纹后（或花纹已空）：取消→战斗；确认→点 ok；都没有则继续或结束。
+
+    看到取消或确认后不会再有花纹。
+    """
     if cancel_visible(m):
+        m.vars.pop(_DONE_KEY, None)
         m.reason = "取消已出现，进入战斗"
-        logger.info("check_cancel_ready → in_battle")
+        logger.info("check_after_pattern → in_battle")
         return ENTER_BATTLE
 
-    m.reason = "取消未出现，继续点花纹"
-    logger.info("check_cancel_ready → continue")
+    if _ok_visible(m):
+        m.vars.pop(_DONE_KEY, None)
+        m.reason = "确认已出现，去点击"
+        logger.info("check_after_pattern → need_ok")
+        return "need_ok"
+
+    if m.vars.pop(_DONE_KEY, False):
+        m.reason = "无花纹且无取消/确认，结束"
+        logger.info("check_after_pattern → fulfilled（结束）")
+        return FULFILLED
+
+    m.reason = "取消/确认未出现，继续点花纹"
+    logger.info("check_after_pattern → continue")
     return "continue"
+
+
+def click_ok(m: ModuleContext) -> OutcomeKey:
+    """点击 ok 确认（进入本模块时确认已在画面上）；点完回三选一。"""
+    hit = m.find(_OK, timeout=0.8, threshold=0.8)
+    if not (hit.found and hit.center):
+        m.reason = "确认按钮未找到"
+        logger.warning("click_ok → rejected")
+        return REJECTED
+
+    cx, cy = hit.center
+    logger.info("click_ok @ (%s,%s) conf=%.3f", cx, cy, hit.confidence)
+    do(move().to(cx, cy).raw(), click())(m)
+    time.sleep(0.3)
+    m.reason = "点到确认，回三选一"
+    return FULFILLED
