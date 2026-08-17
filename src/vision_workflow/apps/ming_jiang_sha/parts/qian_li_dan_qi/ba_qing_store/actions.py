@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
@@ -16,6 +17,7 @@ from vision_workflow.vision import grab_region, image_to_text
 logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/ba_qing_store"
+_GO_BACK = f"{_DIR}/go_back.png"
 
 # 店内信物标题区（相对模板基准；grab_region / move.to 会 fit）
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
@@ -25,8 +27,19 @@ TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
 )
 
 click_token_slot: EventFn = do(move().image(f"{_DIR}/token_slot.png"), click())
-click_go_back: EventFn = do(move().image(f"{_DIR}/go_back.png"), click())
+click_go_back: EventFn = do(move().image(_GO_BACK), click())
 click_confirm: EventFn = do(move().image(f"{_DIR}/confirm.png"), click())
+
+
+def ensure_left(m: ModuleContext) -> OutcomeKey:
+    """点确认后核验：go_back 消失才算离店；仍在则 still_here。"""
+    time.sleep(0.6)
+    if m.find(_GO_BACK, timeout=0.8, threshold=0.8).found:
+        m.reason = "go_back 仍在，未离开巴清商店"
+        logger.info("ensure_left → still_here")
+        return "still_here"
+    logger.info("ensure_left → left")
+    return FULFILLED
 
 
 def pick_token_slot(titles: list[str], priority: list[str] | None = None) -> int | None:

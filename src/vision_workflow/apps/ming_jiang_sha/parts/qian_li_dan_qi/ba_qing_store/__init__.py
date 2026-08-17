@@ -6,6 +6,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.ba_qing_store.acti
     click_confirm,
     click_go_back,
     click_token_slot,
+    ensure_left,
 )
 from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
@@ -16,7 +17,7 @@ _EXIT = {FULFILLED: to("click_go_back"), REJECTED: to("click_go_back")}
 FLOW = Flow(
     id="ba_qing_store",
     name="巴清商店",
-    description="可选买格子 → 按优先表买信物 → 返回退出；铜币不够则 Esc 后退出",
+    description="可选买格子 → 按优先表买信物 → 返回+确认 → 核验离店后再回三选一",
     entry="click_token_slot",
     modules=[
         Module(
@@ -37,7 +38,7 @@ FLOW = Flow(
             on={
                 FULFILLED: to("choose_token"),
                 REJECTED: to("esc_go_back"),
-            }
+            },
         ),
         Module(
             id="choose_token",
@@ -48,7 +49,7 @@ FLOW = Flow(
                 FULFILLED: to("token_confirm"),
                 "skip": to("click_go_back"),
                 REJECTED: to("click_go_back"),
-            }
+            },
         ),
         Module(
             id="token_confirm",
@@ -58,29 +59,41 @@ FLOW = Flow(
             on={
                 FULFILLED: to("click_go_back"),
                 REJECTED: to("esc_go_back"),
-            }
+            },
         ),
         Module(
             id="esc_go_back",
-            name="Esc返回",
-            description="通用 go_back（Esc），关掉买不起的弹窗",
+            name="Esc关弹窗",
+            description="关掉买不起的确认弹窗，再走返回离店",
             event=go_back(),
             on=_EXIT,
         ),
         Module(
             id="click_go_back",
             name="返回",
-            description="识别并点击本页 go_back",
+            description="点本页 go_back，弹出退出确认",
             event=click_go_back,
             on=_CLICK,
+            config=ModuleConfig(delay_ms=600),
         ),
         Module(
             id="click_confirm",
             name="确认退出",
-            description="识别并点击商店内 confirm",
+            description="点商店内 confirm；点完不论成败都去核验是否离店",
             event=click_confirm,
             on={
+                FULFILLED: to("ensure_left"),
+                REJECTED: to("ensure_left"),
+            },
+        ),
+        Module(
+            id="ensure_left",
+            name="确认已离店",
+            description="go_back 消失才结束回三选一；仍在则再点返回",
+            event=ensure_left,
+            on={
                 FULFILLED: lambda m: m.end(),
+                "still_here": to("click_go_back"),
                 REJECTED: abort,
             },
         ),
