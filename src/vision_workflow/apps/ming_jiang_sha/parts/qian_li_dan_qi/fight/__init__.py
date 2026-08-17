@@ -46,24 +46,21 @@ def _fight_modules() -> list[Module]:
             name="移开鼠标",
             description="移到 (80,80)，避免挡住识图（勿用 0,0，会触发 FailSafe）",
             event=move_aside,
-            on=_CLICK,
-            config=ModuleConfig(delay_ms=500),
+            on=_CLICK
         ),
         Module(
             id="click_cancel",
             name="取消",
             description="点取消",
             event=click_cancel,
-            on=_CLICK,
-            config=ModuleConfig(delay_ms=500),
+            on=_CLICK
         ),
         Module(
             id="click_setting",
             name="点设置",
             description="识别并点击 setting；成功后等 500ms",
             event=click_setting,
-            on=_CLICK,
-            config=ModuleConfig(delay_ms=500),
+            on=_CLICK
         ),
         Module(
             id="click_auto",
@@ -77,8 +74,7 @@ def _fight_modules() -> list[Module]:
             name="挑战结束",
             description="最长约 10 分钟、每 5 秒轮询 challenge_end 并点击",
             event=click_challenge_end,
-            on=_CLICK,
-            config=ModuleConfig(delay_ms=500),
+            on=_CLICK
         ),
         Module(
             id="next_step",
@@ -92,8 +88,7 @@ def _fight_modules() -> list[Module]:
             name="结算确认",
             description="再点一次空白/下一步，随后按赠礼入参分支",
             event=click_next_step,
-            on={FULFILLED: to("after_settle"), REJECTED: abort},
-            config=ModuleConfig(delay_ms=1500),
+            on={FULFILLED: to("after_settle"), REJECTED: abort}
         ),
         Module(
             id="after_settle",
@@ -115,8 +110,7 @@ def _fight_modules() -> list[Module]:
                 FULFILLED: to("choose_reward_kind"),
                 "no_gift": to("settle_done"),
                 REJECTED: abort,
-            },
-            config=ModuleConfig(delay_ms=200),
+            }
         ),
         Module(
             id="choose_reward_kind",
