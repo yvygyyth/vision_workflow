@@ -53,9 +53,9 @@ def _fight_modules() -> list[Module]:
         Module(
             id="click_cancel",
             name="取消",
-            description="点取消",
+            description="点取消；失败则回到确认",
             event=click_cancel,
-            on=_CLICK,
+            on={FULFILLED: onward, REJECTED: to("confirm")},
         ),
         Module(
             id="click_setting",
