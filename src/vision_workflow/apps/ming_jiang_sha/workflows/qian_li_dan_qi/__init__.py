@@ -8,7 +8,6 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select impo
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.actions import (
     EventChoice,
-    RUN_ENDED,
     ShopChoice,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle import (
@@ -23,6 +22,10 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight import (
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.pocket_event import (
     FLOW as pocket_event,
+)
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.run_ended import (
+    FLOW as run_ended,
+    RUN_ENDED,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.shi_chang_shi import (
     FLOW as shi_chang_shi,
@@ -40,6 +43,14 @@ from vision_workflow.status import FlowStatus
 _BACK_TO_SELECT = FlowRouter(
     on={
         FlowStatus.FULFILLED: "battle_select",
+        FlowStatus.REJECTED: None,
+    }
+)
+
+_FIGHT_ROUTER = FlowRouter(
+    on={
+        FlowStatus.FULFILLED: "battle_select",
+        RUN_ENDED: "run_ended",
         FlowStatus.REJECTED: None,
     }
 )
@@ -65,7 +76,7 @@ WORKFLOW = Workflow(
                     EventChoice.ZHU_GE_LIANG: "zhu_ge_liang",
                     EventChoice.FEI_FEI: "fei_fei",
                     EventChoice.SHI_CHANG_SHI: "shi_chang_shi",
-                    RUN_ENDED: "enter_battle",
+                    RUN_ENDED: "run_ended",
                     FlowStatus.REJECTED: None,
                 }
             ),
@@ -92,7 +103,16 @@ WORKFLOW = Workflow(
                 }
             ),
         ),
-        FlowNode(in_battle, router=_BACK_TO_SELECT),
-        FlowNode(fight, router=_BACK_TO_SELECT),
+        FlowNode(in_battle, router=_FIGHT_ROUTER),
+        FlowNode(fight, router=_FIGHT_ROUTER),
+        FlowNode(
+            run_ended,
+            router=FlowRouter(
+                on={
+                    FlowStatus.FULFILLED: "enter_battle",
+                    FlowStatus.REJECTED: None,
+                }
+            ),
+        ),
     ],
 )

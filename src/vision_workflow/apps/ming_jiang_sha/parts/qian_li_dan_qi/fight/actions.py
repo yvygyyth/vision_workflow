@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.common.paths import COMMON_DIR, DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.params import (
     PARAM_GIFT,
     FightGift,
 )
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.run_ended import RUN_ENDED
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     GeneralPriority,
     RewardKind,
@@ -26,6 +27,7 @@ from vision_workflow.vision import grab_region, image_to_text
 logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/fight"
+_CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 CANCEL_IMAGE = f"{_DIR}/cancel.png"
 
@@ -59,6 +61,16 @@ click_challenge_end: EventFn = do(
     click(),
 )
 click_next_step: EventFn = do(move().image(f"{_DIR}/next_step.png"), click())
+
+
+def check_run_end(m: ModuleContext) -> OutcomeKey:
+    """下一步后：仍有公共确认框 → 本轮结束；否则继续结算分支。"""
+    if m.find(_CONFIRM, timeout=1.0, threshold=0.8).found:
+        m.reason = "下一步后仍有确认框，本轮结束"
+        logger.info("check_run_end → run_ended")
+        return RUN_ENDED
+    logger.info("check_run_end → continue settle")
+    return FULFILLED
 
 
 def cancel_visible(m: ModuleContext, *, timeout: float = 0.8) -> bool:

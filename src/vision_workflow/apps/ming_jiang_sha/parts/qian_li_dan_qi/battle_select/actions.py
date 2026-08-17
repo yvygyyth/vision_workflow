@@ -6,7 +6,7 @@ import logging
 import time
 from enum import Enum
 
-from vision_workflow.apps.ming_jiang_sha.common.paths import COMMON_DIR, DATA_ROOT
+from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     get_battle_state,
     refresh_copper_coins,
@@ -30,7 +30,6 @@ _POCKET_EVENT = f"{_DIR}/pocket_event.png"
 _REST = f"{_DIR}/rest.png"
 
 PENDING_EVENT_KEY = "pending_event_choice"
-RUN_ENDED = "run_ended"
 
 
 class ShopChoice(str, Enum):
@@ -90,7 +89,8 @@ def dismiss_up_panel(m: ModuleContext) -> OutcomeKey:
 
 
 def detect_choice(m: ModuleContext) -> OutcomeKey:
-    """判定：战斗 > 商店 > 事件 > 本轮结束确认框；未识别则 REJECTED（模块重试）。"""
+    """判定：战斗 > 商店 > 事件；都没有则 REJECTED（模块重试，耗尽后再交给进战）。
+    """
     if _probe_in_choice(m, _CHALLENGE):
         logger.info("detect_choice → battle")
         return "battle"
@@ -110,12 +110,7 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
             logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
-    if m.find(f"{COMMON_DIR}/confirm.png", timeout=0.0, threshold=0.8).found:
-        m.reason = "识别到结算确认，本轮结束"
-        logger.info("detect_choice → run_ended")
-        return RUN_ENDED
-
-    m.reason = "选择区内未识别到战斗/商店/事件，也无结算确认"
+    m.reason = "选择区内未识别到战斗/商店/事件"
     logger.info("detect_choice → rejected")
     return REJECTED
 
