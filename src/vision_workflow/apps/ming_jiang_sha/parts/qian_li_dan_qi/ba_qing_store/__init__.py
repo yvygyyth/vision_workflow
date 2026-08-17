@@ -6,6 +6,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.ba_qing_store.acti
     click_confirm,
     click_go_back,
     click_token_slot,
+    detect_no_buy,
     ensure_left,
 )
 from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
@@ -33,11 +34,22 @@ FLOW = Flow(
         Module(
             id="slot_confirm",
             name="确认买格子",
-            description="通用确认；没有确认框视为铜币不够",
+            description="通用确认；没有则看是否钱不够",
             event=confirm,
             on={
                 FULFILLED: to("choose_token"),
-                REJECTED: to("esc_go_back"),
+                REJECTED: to("slot_no_buy"),
+            },
+        ),
+        Module(
+            id="slot_no_buy",
+            name="格子钱不够判定",
+            description="识到 no_buy 才 Esc 关弹窗；否则继续买信物",
+            event=detect_no_buy,
+            on={
+                "no_buy": to("esc_go_back"),
+                FULFILLED: to("choose_token"),
+                REJECTED: to("choose_token"),
             },
         ),
         Module(
@@ -54,17 +66,28 @@ FLOW = Flow(
         Module(
             id="token_confirm",
             name="确认买信物",
-            description="通用确认；识别不到视为铜币不够",
+            description="通用确认；没有则看是否钱不够",
             event=confirm,
             on={
                 FULFILLED: to("click_go_back"),
-                REJECTED: to("esc_go_back"),
+                REJECTED: to("token_no_buy"),
+            },
+        ),
+        Module(
+            id="token_no_buy",
+            name="信物钱不够判定",
+            description="识到 no_buy 才 Esc 关弹窗；否则直接返回离店",
+            event=detect_no_buy,
+            on={
+                "no_buy": to("esc_go_back"),
+                FULFILLED: to("click_go_back"),
+                REJECTED: to("click_go_back"),
             },
         ),
         Module(
             id="esc_go_back",
             name="Esc关弹窗",
-            description="关掉买不起的确认弹窗，再走返回离店",
+            description="仅钱不够（no_buy）时 Esc 关弹窗，再返回离店",
             event=go_back(),
             on=_EXIT,
         ),

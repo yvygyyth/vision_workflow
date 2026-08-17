@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _DIR = f"{DATA_ROOT}/qian_li_dan_qi/ba_qing_store"
 _GO_BACK = f"{_DIR}/go_back.png"
+_NO_BUY = f"{_DIR}/no_buy.png"
 
 # 店内信物标题区（相对模板基准；grab_region / move.to 会 fit）
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
@@ -29,6 +30,16 @@ TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
 click_token_slot: EventFn = do(move().image(f"{_DIR}/token_slot.png"), click())
 click_go_back: EventFn = do(move().image(f"{_DIR}/go_back.png"), click())
 click_confirm: EventFn = do(move().image(f"{_DIR}/confirm.png"), click())
+
+
+def detect_no_buy(m: ModuleContext) -> OutcomeKey:
+    """识到 no_buy.png → 铜币不够；否则不是钱不够。"""
+    if m.find(_NO_BUY, timeout=1.0, threshold=0.8).found:
+        m.reason = "识别到钱不够提示"
+        logger.info("detect_no_buy → no_buy")
+        return "no_buy"
+    logger.info("detect_no_buy → ok")
+    return FULFILLED
 
 
 def ensure_left(m: ModuleContext) -> OutcomeKey:
