@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from vision_workflow.apps.ming_jiang_sha.common.paths import COMMON_DIR, DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.params import (
@@ -60,7 +61,24 @@ click_challenge_end: EventFn = do(
     move().image(f"{_DIR}/challenge_end.png").match(timeout=600, interval=5),
     click(),
 )
-click_next_step: EventFn = do(move().image(f"{_DIR}/next_step.png"), click())
+_NEXT_STEP = f"{_DIR}/next_step.png"
+
+
+def click_next_step_if_any(m: ModuleContext) -> OutcomeKey:
+    """有「下一步」就点（可连点几轮）；没有也算过，交给后续判定。"""
+    clicked = 0
+    for _ in range(5):
+        hit = m.find(_NEXT_STEP, timeout=1.2, threshold=0.8)
+        if not hit.found or not hit.center:
+            break
+        cx, cy = hit.center
+        logger.info("click_next_step_if_any @ (%s,%s)", cx, cy)
+        do(move().to(cx, cy).raw(), click())(m)
+        clicked += 1
+        time.sleep(0.4)
+    m.reason = f"点下一步×{clicked}" if clicked else "无下一步"
+    logger.info("click_next_step_if_any → %s", m.reason)
+    return FULFILLED
 
 
 def check_run_end(m: ModuleContext) -> OutcomeKey:

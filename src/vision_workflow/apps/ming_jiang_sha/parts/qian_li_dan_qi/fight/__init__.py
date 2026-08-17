@@ -17,7 +17,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.actions impo
     click_auto,
     click_cancel,
     click_challenge_end,
-    click_next_step,
+    click_next_step_if_any,
     click_setting,
     move_aside,
 )
@@ -81,15 +81,8 @@ def _fight_modules() -> list[Module]:
         Module(
             id="next_step",
             name="下一步",
-            description="点击「点击空白区域到下一步」",
-            event=click_next_step,
-            on=_CLICK,
-        ),
-        Module(
-            id="settle_confirm",
-            name="结算确认",
-            description="再点一次空白/下一步，随后判定是否本轮结束",
-            event=click_next_step,
+            description="有下一步就点；没有也继续判定",
+            event=click_next_step_if_any,
             on={FULFILLED: to("check_run_end"), REJECTED: to("check_run_end")},
         ),
         Module(
