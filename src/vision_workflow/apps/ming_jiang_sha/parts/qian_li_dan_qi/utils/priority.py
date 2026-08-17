@@ -30,9 +30,9 @@ PRIORITY: list[GeneralPriority] = [
 DEFAULT_KEY_REWARDS: tuple[RewardKind, ...] = (
     RewardKind.BUFF,
     RewardKind.HELP,
-    RewardKind.TOKEN,
     RewardKind.CARD,
     RewardKind.JOINT,
+    RewardKind.TOKEN,
 )
 
 # 主路径都不满足时按类别回退（与表外武将默认一致）
