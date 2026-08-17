@@ -23,6 +23,9 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight import (
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.pocket_event import (
     FLOW as pocket_event,
 )
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.rest import (
+    FLOW as rest,
+)
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.run_ended import (
     FLOW as run_ended,
     RUN_ENDED,
@@ -73,6 +76,7 @@ WORKFLOW = Workflow(
                     FlowStatus.FULFILLED: "fight",
                     ShopChoice.BA_QING_STORE: "ba_qing_store",
                     ShopChoice.POCKET_EVENT: "pocket_event",
+                    ShopChoice.REST: "rest",
                     EventChoice.ZHU_GE_LIANG: "zhu_ge_liang",
                     EventChoice.FEI_FEI: "fei_fei",
                     EventChoice.SHI_CHANG_SHI: "shi_chang_shi",
@@ -82,6 +86,7 @@ WORKFLOW = Workflow(
             ),
         ),
         FlowNode(ba_qing_store, router=_BACK_TO_SELECT),
+        FlowNode(rest, router=_BACK_TO_SELECT),
         FlowNode(
             pocket_event,
             router=FlowRouter(

@@ -62,7 +62,7 @@ FLOW = Flow(
             on={
                 ShopChoice.BA_QING_STORE: to("confirm_ba_qing_entered"),
                 ShopChoice.POCKET_EVENT: lambda m: m.end(),
-                ShopChoice.REST: to("dismiss_up"),
+                ShopChoice.REST: lambda m: m.end(),
                 REJECTED: abort,
             },
         ),
