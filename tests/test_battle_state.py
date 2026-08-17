@@ -2,6 +2,7 @@
 
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     VARS_KEY,
+    RewardKind,
     bind_battle_state,
     clear_battle_state,
     ensure_battle_state,
@@ -27,14 +28,16 @@ def test_workflow_lifecycle_manages_battle_state() -> None:
     def select_event(m):
         state = get_battle_state(m.ctx)
         state.copper_coins = 42
-        state.critical_tokens.add("关键信物")
+        state.mark_general_reward("吕布", RewardKind.TOKEN)
         seen["select"] = True
         return FULFILLED
 
     def fight_event(m):
         state = get_battle_state(m.ctx)
         seen["fight_copper"] = state.copper_coins
-        seen["fight_tokens"] = set(state.critical_tokens)
+        seen["fight_rewards"] = {
+            name: set(kinds) for name, kinds in state.general_rewards.items()
+        }
         return FULFILLED
 
     select = Flow(
@@ -66,7 +69,7 @@ def test_workflow_lifecycle_manages_battle_state() -> None:
     assert runner.run().success
     assert seen["select"] is True
     assert seen["fight_copper"] == 42
-    assert seen["fight_tokens"] == {"关键信物"}
+    assert seen["fight_rewards"] == {"吕布": {RewardKind.TOKEN}}
     assert VARS_KEY not in runner.ctx.vars
 
 

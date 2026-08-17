@@ -29,6 +29,7 @@ class GeneralPriority:
 
 
 class _RewardBag(Protocol):
+    def has_general_reward(self, name: str, kind: RewardKind) -> bool: ...
     def has_reward(self, kind: RewardKind) -> bool: ...
 
 
@@ -77,6 +78,11 @@ def _entry_by_name(name: str) -> GeneralPriority | None:
     return None
 
 
+def is_in_priority(name: str) -> bool:
+    """是否在 PRIORITY 配置表内。"""
+    return _entry_by_name(name) is not None
+
+
 def resolve_general_priority(name: str) -> GeneralPriority:
     """查优先表；不在表内则用 ``DEFAULT_KEY_REWARDS``。"""
     entry = _entry_by_name(name)
@@ -86,7 +92,22 @@ def resolve_general_priority(name: str) -> GeneralPriority:
 
 
 def _needed_key_rewards(entry: GeneralPriority, state: _RewardBag) -> list[RewardKind]:
-    return [kind for kind in entry.key_rewards if not state.has_reward(kind)]
+    return [
+        kind
+        for kind in entry.key_rewards
+        if not state.has_general_reward(entry.name, kind)
+    ]
+
+
+def _kind_already_have(
+    state: _RewardBag,
+    entry: GeneralPriority | None,
+    kind: RewardKind,
+) -> bool:
+    """按武将分别判断该类奖励是否已拿。"""
+    if entry is None or not entry.name:
+        return False
+    return state.has_general_reward(entry.name, kind)
 
 
 def _fallback_kind_rank(entry: GeneralPriority | None) -> int:
@@ -109,8 +130,9 @@ def pick_reward_slot(
 ) -> int:
     """根据 OCR 标题与局内状态选出要点的槽位下标（0-based）。
 
-    1. 按 PRIORITY 表顺序：本屏有该武将，且仍有未拿关键奖励 → 选他
-    2. 否则回退：本屏选项按 FALLBACK_KIND_ORDER，同档靠左
+    1. 按 PRIORITY 表顺序：本屏有该武将，且关键奖励尚未全部拿完 → 选他
+       （例如甘宁要信物+驰援，只拿过信物仍可选；两个都拿过才跳过）
+    2. 否则在「仍有未拿关键奖励」的槽位里按 FALLBACK 回退；都拿完则靠左
     """
     names = [parse_general_name(t) for t in titles]
     if not names:
@@ -122,13 +144,14 @@ def pick_reward_slot(
         if _needed_key_rewards(entry, state):
             return names.index(entry.name)
 
+    # 回退：优先仍有未拿关键奖励的武将，避免点进去无事可选
     best_slot = 0
-    best_key = (_fallback_kind_rank(None), 0)
+    best_key = (1, _fallback_kind_rank(None), 0)  # (已拿完?, 类别秩, 槽位)
     for slot, name in enumerate(names):
-        entry = _entry_by_name(name)
-        if entry is None and name:
-            entry = resolve_general_priority(name)
-        key = (_fallback_kind_rank(entry), slot)
+        entry = resolve_general_priority(name) if name else None
+        needed = _needed_key_rewards(entry, state) if entry is not None else []
+        exhausted = 0 if needed else 1
+        key = (exhausted, _fallback_kind_rank(entry), slot)
         if key < best_key:
             best_key = key
             best_slot = slot
@@ -156,7 +179,7 @@ def pick_reward_kind(
             order.append(kind)
 
     for kind in order:
-        if kind in avail and not state.has_reward(kind):
+        if kind in avail and not _kind_already_have(state, entry, kind):
             return kind
     for kind in order:
         if kind in avail:

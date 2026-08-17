@@ -7,7 +7,6 @@ import logging
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     TOKEN_PRIORITY,
-    get_battle_state,
 )
 from vision_workflow.events import click, do, move
 from vision_workflow.module import EventFn, ModuleContext
@@ -72,6 +71,4 @@ def choose_token(m: ModuleContext) -> OutcomeKey:
     m.value = {"titles": titles, "slot": slot, "token": name}
 
     key = do(move().to(cx, cy), click())(m)
-    if key == FULFILLED:
-        get_battle_state(m.ctx).critical_tokens.add(name)
     return key if key is not None else FULFILLED

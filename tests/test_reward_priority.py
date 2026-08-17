@@ -26,10 +26,24 @@ def test_pick_primary_table_order_when_needed() -> None:
     assert slot == 1
 
 
+def test_pick_skips_only_when_all_key_rewards_done() -> None:
+    """关键奖励要全部拿完才跳过；只拿过其中一个仍可选。"""
+    state = BattleState()
+    # 甘宁关键：信物 + 驰援；只记了信物 → 仍应选甘宁（比后面的刘表优先）
+    state.mark_general_reward("甘宁", RewardKind.TOKEN)
+    slot = pick_reward_slot(["刘表赠礼", "甘宁赠礼", "萧何赠礼"], state)
+    assert slot == 1
+
+    # 信物、驰援都拿过 → 跳过甘宁，选刘表
+    state.mark_general_reward("甘宁", RewardKind.BUFF)
+    slot = pick_reward_slot(["刘表赠礼", "甘宁赠礼", "萧何赠礼"], state)
+    assert slot == 0
+
+
 def test_pick_skips_obtained_key_rewards() -> None:
     state = BattleState()
-    state.mark_reward(RewardKind.TOKEN)
-    state.mark_reward(RewardKind.BUFF)
+    state.mark_general_reward("吕布", RewardKind.TOKEN)
+    state.mark_general_reward("马超", RewardKind.BUFF)
     # 吕布/马超关键已拿完；鲁肃仍要资助
     slot = pick_reward_slot(["马超赠礼", "吕布赠礼", "鲁肃赠礼"], state)
     assert slot == 2
@@ -37,16 +51,15 @@ def test_pick_skips_obtained_key_rewards() -> None:
 
 def test_pick_fallback_among_table_when_all_key_done() -> None:
     state = BattleState()
-    for kind in RewardKind:
-        state.mark_reward(kind)
+    for name in ("陆逊", "吕布", "马超"):
+        for kind in RewardKind:
+            state.mark_general_reward(name, kind)
     slot = pick_reward_slot(["陆逊赠礼", "吕布赠礼", "马超赠礼"], state)
     assert slot == 0
 
 
 def test_pick_unknown_defaults_leftmost() -> None:
     state = BattleState()
-    for kind in RewardKind:
-        state.mark_reward(kind)
     slot = pick_reward_slot(["张飞赠礼", "赵云赠礼", "刘备赠礼"], state)
     assert slot == 0
 
@@ -72,12 +85,12 @@ def test_pick_reward_kind_prefers_pending_key_then_fallback() -> None:
         pick_reward_kind({RewardKind.BUFF, RewardKind.TOKEN}, entry, state)
         == RewardKind.TOKEN
     )
-    state.mark_reward(RewardKind.TOKEN)
+    state.mark_general_reward("马超", RewardKind.TOKEN)
     assert (
         pick_reward_kind({RewardKind.BUFF, RewardKind.TOKEN}, entry, state)
         == RewardKind.BUFF
     )
-    state.mark_reward(RewardKind.BUFF)
+    state.mark_general_reward("马超", RewardKind.BUFF)
     assert (
         pick_reward_kind({RewardKind.JOINT, RewardKind.CARD}, entry, state)
         == RewardKind.CARD

@@ -186,12 +186,8 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
 
     key = do(move().to(cx, cy).raw(), click())(m)
     if key == FULFILLED:
-        state.mark_reward(kind)
-        if kind is RewardKind.TOKEN:
-            state.critical_tokens.add("关键信物")
-        elif kind is RewardKind.BUFF:
-            state.buffs.add("驰援")
-        elif kind is RewardKind.HELP:
-            state.buffs.add("资助")
+        if entry is not None and entry.name:
+            state.mark_general_reward(entry.name, kind)
+            logger.info("【背包】%s ← %s", entry.name, kind.value)
         m.vars.pop(PENDING_GENERAL_KEY, None)
     return key if key is not None else FULFILLED

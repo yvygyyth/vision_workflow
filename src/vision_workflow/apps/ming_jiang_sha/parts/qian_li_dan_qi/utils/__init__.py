@@ -15,6 +15,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.priority imp
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils.rewards import (
     GeneralPriority,
     RewardKind,
+    is_in_priority,
     parse_general_name,
     pick_reward_kind,
     pick_reward_slot,
@@ -43,6 +44,7 @@ __all__ = [
     "clear_battle_state",
     "ensure_battle_state",
     "get_battle_state",
+    "is_in_priority",
     "parse_copper_text",
     "parse_general_name",
     "pick_reward_kind",
