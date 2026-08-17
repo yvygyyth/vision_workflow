@@ -26,7 +26,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight.params impor
     FightGift,
 )
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.run_ended import RUN_ENDED
-from vision_workflow.module import Flow, Module, abort, onward, to
+from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
@@ -95,6 +95,7 @@ def _fight_modules() -> list[Module]:
                 FULFILLED: to("after_settle"),
                 REJECTED: abort,
             },
+            config=ModuleConfig(delay_ms=500),
         ),
         Module(
             id="after_settle",
