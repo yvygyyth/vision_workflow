@@ -12,7 +12,7 @@ from vision_workflow.status import FULFILLED, REJECTED
 FLOW = Flow(
     id="pocket_event",
     name="锦囊事件",
-    description="点花纹 → 取消进战斗 / 确认回三选一（见二者后不再有花纹）",
+    description="点花纹 → 直接取消进战，或先确认再等取消进无赠礼战斗",
     entry="pick_event_pattern",
     modules=[
         Module(
@@ -29,7 +29,7 @@ FLOW = Flow(
         Module(
             id="check_after",
             name="看取消或确认",
-            description="cancel→战斗；ok→点确认；都没有则继续点花纹或结束",
+            description="cancel→战斗；ok→点确认后回到本模块等取消；都没有则继续点花纹",
             event=check_after_pattern,
             on={
                 ENTER_BATTLE: lambda m: m.end(),
@@ -38,14 +38,19 @@ FLOW = Flow(
                 FULFILLED: lambda m: m.end(),
                 REJECTED: abort,
             },
+            config=ModuleConfig(
+                retry=12,
+                retry_delay_ms=500,
+                retry_on=[REJECTED],
+            ),
         ),
         Module(
             id="click_ok",
             name="点确认",
-            description="点击 ok.png，结束后回三选一（不会再点花纹）",
+            description="点击 ok.png，回到看取消/确认",
             event=click_ok,
             on={
-                FULFILLED: lambda m: m.end(),
+                FULFILLED: to("check_after"),
                 REJECTED: abort,
             },
             config=ModuleConfig(

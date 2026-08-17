@@ -33,6 +33,8 @@ _FIND_INTERVAL_SEC = 0.4
 ENTER_BATTLE = "in_battle"
 # 花纹已空：检查取消/确认后若都没有则结束（不再点花纹）
 _DONE_KEY = "pocket_event_done"
+# 已点确认：只等取消，不再点花纹、不再点确认
+_OK_CLICKED_KEY = "pocket_ok_clicked"
 
 
 def _ok_visible(m: ModuleContext, *, timeout: float = 0.5) -> bool:
@@ -86,19 +88,23 @@ def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
 
 
 def check_after_pattern(m: ModuleContext) -> OutcomeKey:
-    """点花纹后（或花纹已空）：取消→战斗；确认→点 ok；都没有则继续或结束。
-
-    看到取消或确认后不会再有花纹。
-    """
+    """看取消/确认：取消→战斗；确认→点 ok；点过确认后只等取消。"""
     if cancel_visible(m):
         m.vars.pop(_DONE_KEY, None)
-        m.reason = "取消已出现，进入战斗"
+        m.vars.pop(_OK_CLICKED_KEY, None)
+        m.reason = "取消已出现，进入无赠礼战斗"
         logger.info("check_after_pattern → in_battle")
         return ENTER_BATTLE
 
+    # 已点确认：只等取消出现
+    if m.vars.get(_OK_CLICKED_KEY):
+        m.reason = "已点确认，等待取消"
+        logger.info("check_after_pattern → rejected（等取消）")
+        return REJECTED
+
     if _ok_visible(m):
         m.vars.pop(_DONE_KEY, None)
-        m.reason = "确认已出现，去点击"
+        m.reason = "确认已出现，先点确认"
         logger.info("check_after_pattern → need_ok")
         return "need_ok"
 
@@ -113,7 +119,7 @@ def check_after_pattern(m: ModuleContext) -> OutcomeKey:
 
 
 def click_ok(m: ModuleContext) -> OutcomeKey:
-    """点击 ok 确认（进入本模块时确认已在画面上）；点完回三选一。"""
+    """点击 ok 确认，然后回到 check_after 等取消。"""
     hit = m.find(_OK, timeout=0.8, threshold=0.8)
     if not (hit.found and hit.center):
         m.reason = "确认按钮未找到"
@@ -124,5 +130,6 @@ def click_ok(m: ModuleContext) -> OutcomeKey:
     logger.info("click_ok @ (%s,%s) conf=%.3f", cx, cy, hit.confidence)
     do(move().to(cx, cy).raw(), click())(m)
     time.sleep(0.3)
-    m.reason = "点到确认，回三选一"
+    m.vars[_OK_CLICKED_KEY] = True
+    m.reason = "点到确认，去看取消"
     return FULFILLED
