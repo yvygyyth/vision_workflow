@@ -6,13 +6,13 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.pocket_event.actio
     click_ok,
     pick_event_pattern,
 )
-from vision_workflow.module import Flow, Module, ModuleConfig, abort, to
+from vision_workflow.module import Flow, Module, abort, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 FLOW = Flow(
     id="pocket_event",
     name="锦囊事件",
-    description="点花纹 → 直接取消进战，或先确认再等取消进无赠礼战斗",
+    description="点花纹 → 取消进战；或先确认，有取消进战、没有则回三选一",
     entry="pick_event_pattern",
     modules=[
         Module(
@@ -29,7 +29,7 @@ FLOW = Flow(
         Module(
             id="check_after",
             name="看取消或确认",
-            description="cancel→战斗；ok→点确认后回到本模块等取消；都没有则继续点花纹",
+            description="cancel→战斗；ok→点确认后再看；点确认后无取消→回三选一",
             event=check_after_pattern,
             on={
                 ENTER_BATTLE: lambda m: m.end(),
@@ -37,7 +37,7 @@ FLOW = Flow(
                 "continue": to("pick_event_pattern"),
                 FULFILLED: lambda m: m.end(),
                 REJECTED: abort,
-            }
+            },
         ),
         Module(
             id="click_ok",
@@ -47,7 +47,7 @@ FLOW = Flow(
             on={
                 FULFILLED: to("check_after"),
                 REJECTED: abort,
-            }
+            },
         ),
     ],
 )

@@ -88,7 +88,7 @@ def pick_event_pattern(m: ModuleContext) -> OutcomeKey:
 
 
 def check_after_pattern(m: ModuleContext) -> OutcomeKey:
-    """看取消/确认：取消→战斗；确认→点 ok；点过确认后只等取消。"""
+    """看取消/确认：取消→战斗；确认→点 ok；点过确认后有取消进战，没有则回三选一。"""
     if cancel_visible(m):
         m.vars.pop(_DONE_KEY, None)
         m.vars.pop(_OK_CLICKED_KEY, None)
@@ -96,11 +96,23 @@ def check_after_pattern(m: ModuleContext) -> OutcomeKey:
         logger.info("check_after_pattern → in_battle")
         return ENTER_BATTLE
 
-    # 已点确认：只等取消出现
+    # 已点确认：等一会儿取消；始终没有则回三选一
     if m.vars.get(_OK_CLICKED_KEY):
-        m.reason = "已点确认，等待取消"
-        logger.info("check_after_pattern → rejected（等取消）")
-        return REJECTED
+        for round_i in range(1, 9):
+            time.sleep(0.5)
+            if cancel_visible(m, timeout=0.5):
+                m.vars.pop(_DONE_KEY, None)
+                m.vars.pop(_OK_CLICKED_KEY, None)
+                m.reason = "点确认后出现取消，进入无赠礼战斗"
+                logger.info("check_after_pattern → in_battle（确认后第 %s 轮）", round_i)
+                return ENTER_BATTLE
+            logger.info("check_after_pattern 确认后等取消 %s/8", round_i)
+
+        m.vars.pop(_DONE_KEY, None)
+        m.vars.pop(_OK_CLICKED_KEY, None)
+        m.reason = "点确认后未见取消，回三选一"
+        logger.info("check_after_pattern → fulfilled（确认后回三选一）")
+        return FULFILLED
 
     if _ok_visible(m):
         m.vars.pop(_DONE_KEY, None)
@@ -119,8 +131,8 @@ def check_after_pattern(m: ModuleContext) -> OutcomeKey:
 
 
 def click_ok(m: ModuleContext) -> OutcomeKey:
-    """点击 ok 确认，然后回到 check_after 等取消。"""
-    hit = m.find(_OK, timeout=0.8, threshold=0.8)
+    """点击 ok 确认，然后回到 check_after（可能进战或回三选一）。"""
+    hit = m.find(f"{_DIR}/ok.png", timeout=0.8, threshold=0.8)
     if not (hit.found and hit.center):
         m.reason = "确认按钮未找到"
         logger.warning("click_ok → rejected")

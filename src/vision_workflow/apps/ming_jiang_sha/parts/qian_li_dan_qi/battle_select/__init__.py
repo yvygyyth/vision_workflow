@@ -77,12 +77,7 @@ FLOW = Flow(
                 ShopChoice.BA_QING_STORE: lambda m: m.end(),
                 "still_here": to("dismiss_up"),
                 REJECTED: abort,
-            },
-            config=ModuleConfig(
-                retry=2,
-                retry_delay_ms=400,
-                retry_on=["still_here"],
-            ),
+            }
         ),
         Module(
             id="choose_event",
@@ -107,12 +102,7 @@ FLOW = Flow(
                 EventChoice.SHI_CHANG_SHI: lambda m: m.end(),
                 "still_here": to("dismiss_up"),
                 REJECTED: abort,
-            },
-            config=ModuleConfig(
-                retry=2,
-                retry_delay_ms=400,
-                retry_on=["still_here"],
-            ),
+            }
         ),
         Module(
             id="run_end_confirm",
