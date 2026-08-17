@@ -27,7 +27,7 @@ TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
 )
 
 click_token_slot: EventFn = do(move().image(f"{_DIR}/token_slot.png"), click())
-click_go_back: EventFn = do(move().image(_GO_BACK), click())
+click_go_back: EventFn = do(move().image(f"{_DIR}/go_back.png"), click())
 click_confirm: EventFn = do(move().image(f"{_DIR}/confirm.png"), click())
 
 
