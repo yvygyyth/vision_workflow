@@ -10,6 +10,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
     TOKEN_PRIORITY,
 )
 from vision_workflow.events import click, do, move
+from vision_workflow.input import press_key
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey
 from vision_workflow.vision import grab_region, image_to_text
@@ -32,22 +33,35 @@ click_go_back: EventFn = do(move().image(f"{_DIR}/go_back.png"), click())
 click_confirm: EventFn = do(move().image(f"{_DIR}/confirm.png"), click())
 
 
-def detect_no_buy(m: ModuleContext) -> OutcomeKey:
-    """识到 no_buy.png → 铜币不够；否则不是钱不够。"""
-    if m.find(_NO_BUY, timeout=1.0, threshold=0.8).found:
-        m.reason = "识别到钱不够提示"
-        logger.info("detect_no_buy → no_buy")
-        return "no_buy"
-    logger.info("detect_no_buy → ok")
-    return FULFILLED
+def close_no_buy_popup(m: ModuleContext) -> OutcomeKey:
+    """钱不够弹窗还在才 Esc；识不到绝不按。"""
+    if not m.find(_NO_BUY, timeout=1.2, threshold=0.8).found:
+        m.reason = "无 no_buy 弹窗，不按 Esc"
+        logger.info("close_no_buy_popup → absent")
+        return FULFILLED
+    logger.info("close_no_buy_popup → 弹窗在，Esc")
+    press_key("esc")
+    time.sleep(0.3)
+    m.reason = "no_buy 弹窗存在，已 Esc"
+    return "closed"
+
+
+_EXIT_CONFIRM_TRIES = "ba_qing_exit_confirm_tries"
+_EXIT_CONFIRM_MAX = 3
 
 
 def ensure_left(m: ModuleContext) -> OutcomeKey:
-    """点确认后核验：go_back 消失才算离店；仍在则 still_here。"""
+    """点确认后核验：go_back 消失才算离店；仍在则 still_here（只重试确认）。"""
     time.sleep(0.6)
     if m.find(_GO_BACK, timeout=0.8, threshold=0.8).found:
-        m.reason = "go_back 仍在，未离开巴清商店"
-        logger.info("ensure_left → still_here")
+        tries = int(m.vars.get(_EXIT_CONFIRM_TRIES, 0)) + 1
+        m.vars[_EXIT_CONFIRM_TRIES] = tries
+        if tries > _EXIT_CONFIRM_MAX:
+            m.reason = f"go_back 仍在，确认已重试 {_EXIT_CONFIRM_MAX} 次"
+            logger.info("ensure_left → still_here 超限，结束以免再退层")
+            return FULFILLED
+        m.reason = f"go_back 仍在，未离开巴清商店（确认重试 {tries}/{_EXIT_CONFIRM_MAX}）"
+        logger.info("ensure_left → still_here (%s)", tries)
         return "still_here"
     logger.info("ensure_left → left")
     return FULFILLED

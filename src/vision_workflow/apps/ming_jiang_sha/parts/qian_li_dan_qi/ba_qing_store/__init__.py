@@ -1,24 +1,23 @@
 ﻿"""子流程：千里单骑巴清商店。"""
 
-from vision_workflow.apps.ming_jiang_sha.common.actions import confirm, go_back
+from vision_workflow.apps.ming_jiang_sha.common.actions import confirm
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.ba_qing_store.actions import (
     choose_token,
     click_confirm,
     click_go_back,
     click_token_slot,
-    detect_no_buy,
+    close_no_buy_popup,
     ensure_left,
 )
 from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: abort}
-_EXIT = {FULFILLED: to("click_go_back"), REJECTED: to("click_go_back")}
 
 FLOW = Flow(
     id="ba_qing_store",
     name="巴清商店",
-    description="可选买格子 → 按优先表买信物 → 返回+确认 → 核验离店后再回三选一",
+    description="可选买格子 → 按优先表买信物 → 返回+确认离店；Esc 仅在 no_buy 弹窗可见时按",
     entry="click_token_slot",
     modules=[
         Module(
@@ -34,7 +33,7 @@ FLOW = Flow(
         Module(
             id="slot_confirm",
             name="确认买格子",
-            description="通用确认；没有则看是否钱不够",
+            description="通用确认；没有则去看钱不够弹窗",
             event=confirm,
             on={
                 FULFILLED: to("choose_token"),
@@ -43,11 +42,11 @@ FLOW = Flow(
         ),
         Module(
             id="slot_no_buy",
-            name="格子钱不够判定",
-            description="识到 no_buy 才 Esc 关弹窗；否则继续买信物",
-            event=detect_no_buy,
+            name="格子钱不够关窗",
+            description="no_buy 还在才 Esc；关掉则跳过买信物，没有弹窗则继续买",
+            event=close_no_buy_popup,
             on={
-                "no_buy": to("esc_go_back"),
+                "closed": to("click_go_back"),
                 FULFILLED: to("choose_token"),
                 REJECTED: to("choose_token"),
             },
@@ -66,7 +65,7 @@ FLOW = Flow(
         Module(
             id="token_confirm",
             name="确认买信物",
-            description="通用确认；没有则看是否钱不够",
+            description="通用确认；没有则去看钱不够弹窗",
             event=confirm,
             on={
                 FULFILLED: to("click_go_back"),
@@ -75,26 +74,19 @@ FLOW = Flow(
         ),
         Module(
             id="token_no_buy",
-            name="信物钱不够判定",
-            description="识到 no_buy 才 Esc 关弹窗；否则直接返回离店",
-            event=detect_no_buy,
+            name="信物钱不够关窗",
+            description="no_buy 还在才 Esc；没有弹窗绝不按，然后离店",
+            event=close_no_buy_popup,
             on={
-                "no_buy": to("esc_go_back"),
+                "closed": to("click_go_back"),
                 FULFILLED: to("click_go_back"),
                 REJECTED: to("click_go_back"),
             },
         ),
         Module(
-            id="esc_go_back",
-            name="Esc关弹窗",
-            description="仅钱不够（no_buy）时 Esc 关弹窗，再返回离店",
-            event=go_back(),
-            on=_EXIT,
-        ),
-        Module(
             id="click_go_back",
             name="返回",
-            description="点本页 go_back，弹出退出确认",
+            description="点本页 go_back，弹出退出确认；只点一次",
             event=click_go_back,
             on=_CLICK,
             config=ModuleConfig(delay_ms=600),
@@ -102,21 +94,26 @@ FLOW = Flow(
         Module(
             id="click_confirm",
             name="确认退出",
-            description="点商店内 confirm；点完不论成败都去核验是否离店",
+            description="点商店内 confirm；失败只重试确认，不再点返回",
             event=click_confirm,
             on={
                 FULFILLED: to("ensure_left"),
                 REJECTED: to("ensure_left"),
             },
+            config=ModuleConfig(
+                retry=3,
+                retry_delay_ms=400,
+                retry_on=[REJECTED],
+            ),
         ),
         Module(
             id="ensure_left",
             name="确认已离店",
-            description="go_back 消失才结束回三选一；仍在则再点返回",
+            description="go_back 消失才结束；仍在则只重试确认，不再点返回/Esc",
             event=ensure_left,
             on={
                 FULFILLED: lambda m: m.end(),
-                "still_here": to("click_go_back"),
+                "still_here": to("click_confirm"),
                 REJECTED: abort,
             },
         ),
