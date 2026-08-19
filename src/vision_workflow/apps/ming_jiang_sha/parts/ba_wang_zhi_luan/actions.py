@@ -135,50 +135,45 @@ def wait_game_start(m: ModuleContext) -> OutcomeKey:
 
 
 def pick_all_sixes(m: ModuleContext) -> OutcomeKey:
-    """依次点击场上所有「6」，循环直到识图找不到。"""
-    total_clicked = 0
-    scan_rounds = 0
-    empty_rounds = 0
+    """扫描一次，依次点击场上所有「6」。"""
+    hits = find_all_images(m.resolve(_SIX), threshold=0.8, max_count=_MAX_SIX)
+    sorted_hits = sorted(
+        (hit for hit in hits if hit.center),
+        key=lambda hit: (hit.center[1], hit.center[0]),
+    )
 
-    while True:
-        hits = find_all_images(m.resolve(_SIX), threshold=0.8, max_count=_MAX_SIX)
-        if not hits:
-            empty_rounds += 1
-            if empty_rounds >= 3 or total_clicked:
-                break
-            logger.info("pick_all_sixes 未识别到6，等待 UI（%s/3）", empty_rounds)
-            time.sleep(_WAIT_INTERVAL_SEC)
-            continue
-
-        empty_rounds = 0
-        scan_rounds += 1
-        sorted_hits = sorted(
-            (hit for hit in hits if hit.center),
-            key=lambda hit: (hit.center[1], hit.center[0]),
+    for hit in sorted_hits:
+        cx, cy = hit.center
+        assert cx is not None and cy is not None
+        logger.info(
+            "pick_all_sixes @ (%s,%s) conf=%.3f",
+            cx,
+            cy,
+            hit.confidence,
         )
-        if not sorted_hits:
-            break
+        Mouse().move(cx, cy).click().sleep(0.2).perform()
+        time.sleep(_AFTER_SIX_CLICK_SEC)
 
-        for hit in sorted_hits:
-            cx, cy = hit.center
-            assert cx is not None and cy is not None
-            logger.info(
-                "pick_all_sixes @ (%s,%s) conf=%.3f（本轮候选=%s）",
-                cx,
-                cy,
-                hit.confidence,
-                len(sorted_hits),
-            )
-            Mouse().move(cx, cy).click().sleep(0.2).perform()
-            total_clicked += 1
-            time.sleep(_AFTER_SIX_CLICK_SEC)
-
-    if total_clicked:
-        m.reason = f"点6×{total_clicked}（{scan_rounds}轮）"
+    if sorted_hits:
+        m.reason = f"点6×{len(sorted_hits)}，等待进入战斗"
     else:
-        m.reason = "场上无6，直接进入战斗"
+        m.reason = "场上无6，等待取消出现"
     logger.info("pick_all_sixes → %s", m.reason)
     return FULFILLED
+
+
+def wait_for_cancel(m: ModuleContext) -> OutcomeKey:
+    """选将点完一轮后，等待战斗取消按钮出现。"""
+    deadline = time.monotonic() + _WAIT_TIMEOUT_SEC
+    while time.monotonic() < deadline:
+        if _cancel_visible(m, timeout=0.3):
+            m.reason = "取消已出现，进入战斗"
+            logger.info("wait_for_cancel → fulfilled")
+            return FULFILLED
+        time.sleep(_WAIT_INTERVAL_SEC)
+
+    m.reason = "等待取消超时"
+    return REJECTED
 
 
 # ── 无赠礼战斗 ────────────────────────────────────────────────────────

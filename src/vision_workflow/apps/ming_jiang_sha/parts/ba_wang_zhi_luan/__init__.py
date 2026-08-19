@@ -14,6 +14,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan.actions import (
     pick_all_sixes,
     poll_click_start,
     wait_click_cancel,
+    wait_for_cancel,
     wait_game_start,
 )
 from vision_workflow.module import Flow, Module, back, onward, to
@@ -21,7 +22,7 @@ from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: back}
 _TO_WAIT = {FULFILLED: to("wait_game_start"), REJECTED: back}
-_TO_FIGHT = {FULFILLED: to("move_aside"), REJECTED: back}
+_TO_CANCEL = {FULFILLED: to("move_aside"), REJECTED: back}
 _TO_READY = {FULFILLED: to("detect_role"), REJECTED: back}
 
 FLOW = Flow(
@@ -74,16 +75,23 @@ FLOW = Flow(
             event=wait_game_start,
             on={
                 FULFILLED: to("pick_six"),
-                ENTER_BATTLE: to("move_aside"),
+                ENTER_BATTLE: to("wait_for_cancel"),
                 REJECTED: back,
             },
         ),
         Module(
             id="pick_six",
             name="选将点6",
-            description="依次点场上所有 6，直到识图找不到",
+            description="扫描一次，依次点场上所有 6",
             event=pick_all_sixes,
-            on=_TO_FIGHT,
+            on={FULFILLED: to("wait_for_cancel"), REJECTED: back},
+        ),
+        Module(
+            id="wait_for_cancel",
+            name="等待取消",
+            description="点完6后等战斗取消按钮出现",
+            event=wait_for_cancel,
+            on=_TO_CANCEL,
         ),
         Module(
             id="move_aside",
