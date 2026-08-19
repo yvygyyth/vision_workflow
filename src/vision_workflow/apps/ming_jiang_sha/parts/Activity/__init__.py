@@ -1,14 +1,14 @@
-﻿"""子流程：巴清商店。"""
+﻿"""子流程：活动。"""
 
 from vision_workflow.apps.ming_jiang_sha.common.actions import confirm, click_max, go_back, space_close
-from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store.actions import (
-    click_copper_tab,
+from vision_workflow.apps.ming_jiang_sha.parts.Activity.actions import (
     click_huo_dong,
-    click_free_bingli,
-    click_jinlan_tab,
-    click_lingxi_box,
-    click_ming_jiang_ce,
+    click_yue_ling,
+    click_gua_xiang,
+    click_ling_qv,
     scroll_down,
+    move_aside,
+    
 )
 from vision_workflow.module import Flow, Module, abort, onward
 from vision_workflow.status import FULFILLED, REJECTED
@@ -17,25 +17,19 @@ _CLICK = {FULFILLED: onward, REJECTED: abort}
 _OK = {FULFILLED: onward}
 
 FLOW = Flow(
-    id="ba_qing_store",
-    name="巴清商店",
-    description="领取巴清商店免费兵力、灵犀宝匣与名将册",
+    id="activity",
+    name="活动",
+    description="领取活动奖励",
     entry="entry_icon",
     modules=[
         Module(id="entry_icon", name="打开活动", description="点击入口图标", event=click_huo_dong, on=_CLICK),
-        Module(id="bu_gua", name="卜卦", description="选中卜卦牌", event=click_free_bingli, on=_CLICK),
+        Module(id="bu_gua", name="移动鼠标至卜卦牌", description="移到 (1400,600)点击", event=move_aside, on=_CLICK,),
+        Module(id="bu_gua2", name="再次点击卜卦牌", description="再次点击",  config={"delay_ms": 500},on=_CLICK,),
         Module(id="space_close", name="关闭弹窗", description="Esc 关闭购买结果弹窗", event=space_close(), on=_OK),
-        Module(id="copper_tab", name="铜币页签", description="切换到铜币页签", event=click_copper_tab, on=_CLICK),
-        Module(id="lingxi_box", name="灵犀宝匣", description="选中灵犀宝匣", event=click_lingxi_box, on=_CLICK),
-        Module(id="max", name="数量最大", description="将购买数量拉满", event=click_max, on=_CLICK),
-        Module(id="buy_500", name="500 购买", description="点击 500 购买", event=confirm, on=_CLICK),
-        Module(id="space_close2", name="关闭弹窗", description="Esc 关闭购买结果弹窗", event=space_close(), on=_OK),
-        Module(id="space_close3", name="关闭弹窗", description="Esc 再关一次", event=space_close(), on=_OK),
-        Module(id="jinlan_tab", name="锦囊页签", description="切换到锦囊页签", event=click_jinlan_tab, on=_CLICK),
+        Module(id="gua_xiang", name="点击列表", description="点击列表", event=click_gua_xiang, on=_CLICK),
         Module(id="scroll", name="下滑列表", description="向下滚动列表", event=scroll_down, on=_OK),
-        Module(id="ming_jiang_ce", name="名将册", description="选中名将册", event=click_ming_jiang_ce, on=_CLICK),
-        Module(id="buy_200", name="200 购买", description="点击 200 购买", event=confirm, on=_CLICK),
-        Module(id="space_close4", name="关闭弹窗", description="Esc 关闭购买结果弹窗", event=space_close(), on=_OK),
+        Module(id="yue_ling", name="军需月令", description="点击军需月令", event=click_yue_ling, on=_CLICK),
+        Module(id="sui_yin", name="领取碎银", description="点击领取", event=click_ling_qv, on=_CLICK),
         Module(id="go_back", name="返回", description="Esc 返回主界面", event=go_back(), on=_OK),
     ],
 )
