@@ -8,13 +8,12 @@ from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan.actions import (
     click_next_step_if_any,
     click_ready,
     click_ok_if_any,
-    click_setting,
     confirm_ready,
     detect_role,
     move_aside,
     pick_all_sixes,
     poll_click_start,
-    wait_click_cancel,
+    wait_click_setting,
     wait_game_start,
 )
 from vision_workflow.module import Flow, Module, back, onward, to
@@ -71,7 +70,7 @@ FLOW = Flow(
         Module(
             id="wait_game_start",
             name="等待开局",
-            description="等 6 或取消出现；已有战斗 UI 则跳过选将",
+            description="等 6 或 setting 出现；已在战斗则跳过选将",
             event=wait_game_start,
             on={
                 FULFILLED: to("pick_six"),
@@ -101,23 +100,16 @@ FLOW = Flow(
             on=_CLICK,
         ),
         Module(
-            id="click_cancel",
-            name="等取消并点击",
-            description="轮询战斗取消按钮，出现即点击（战斗开始）",
-            event=wait_click_cancel,
+            id="wait_setting",
+            name="等 setting 并点击",
+            description="轮询 setting，出现即点击（战斗开始）",
+            event=wait_click_setting,
             on={FULFILLED: onward, REJECTED: back},
-        ),
-        Module(
-            id="click_setting",
-            name="点设置",
-            description="识别并点击 setting",
-            event=click_setting,
-            on=_CLICK,
         ),
         Module(
             id="click_auto",
             name="托管",
-            description="点击自动战斗；找不到则回到点设置",
+            description="点击自动战斗；找不到则回到等 setting",
             event=click_auto,
             on={FULFILLED: onward, REJECTED: back},
         ),

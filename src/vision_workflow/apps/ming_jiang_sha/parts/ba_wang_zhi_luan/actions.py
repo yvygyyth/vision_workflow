@@ -24,7 +24,6 @@ _START = f"{_DIR}/start.png"
 _SIX = f"{_DIR}/6.png"
 _OK = f"{_DIR}/ok.png"
 
-_CANCEL = f"{_FIGHT_DIR}/cancel.png"
 _SETTING = f"{_FIGHT_DIR}/setting.png"
 _AUTO = f"{_FIGHT_DIR}/auto.png"
 _CHALLENGE_END = f"{_FIGHT_DIR}/challenge_end.png"
@@ -51,8 +50,8 @@ def _probe(m: ModuleContext, image: str, *, timeout: float = 0.8) -> bool:
     return hit is not None and hit.found
 
 
-def _cancel_visible(m: ModuleContext, *, timeout: float = 0.8) -> bool:
-    return bool(m.find(_CANCEL, timeout=timeout, threshold=0.8).found)
+def _setting_visible(m: ModuleContext, *, timeout: float = 0.8) -> bool:
+    return bool(m.find(_SETTING, timeout=timeout, threshold=0.8).found)
 
 
 # ── 房间准备 ──────────────────────────────────────────────────────────
@@ -118,14 +117,14 @@ poll_click_start: EventFn = do(
 
 
 def wait_game_start(m: ModuleContext) -> OutcomeKey:
-    """等待选将或战斗 UI（6 / 取消）出现。"""
+    """等待选将或战斗 UI（6 / setting）出现。"""
     deadline = time.monotonic() + _WAIT_TIMEOUT_SEC
     while time.monotonic() < deadline:
         if find_all_images(m.resolve(_SIX), threshold=0.8, max_count=1):
             m.reason = "选将阶段已开始"
             logger.info("wait_game_start → pick_six")
             return FULFILLED
-        if _cancel_visible(m, timeout=0.3):
+        if _setting_visible(m, timeout=0.3):
             m.reason = "已进入战斗，跳过选将"
             logger.info("wait_game_start → in_battle")
             return ENTER_BATTLE
@@ -158,13 +157,13 @@ def pick_all_sixes(m: ModuleContext) -> OutcomeKey:
     if sorted_hits:
         m.reason = f"点6×{len(sorted_hits)}，等待进入战斗"
     else:
-        m.reason = "场上无6，等待取消出现"
+        m.reason = "场上无6，等待 setting 出现"
     logger.info("pick_all_sixes → %s", m.reason)
     return FULFILLED
 
 
 def click_ok_if_any(m: ModuleContext) -> OutcomeKey:
-    """识别确定按钮，有则点；没有也继续等取消。"""
+    """识别确定按钮，有则点；没有也继续等 setting。"""
     hit = m.find(_OK, timeout=1.0, threshold=0.8)
     if hit.found and hit.center:
         cx, cy = hit.center
@@ -181,12 +180,11 @@ def click_ok_if_any(m: ModuleContext) -> OutcomeKey:
 
 move_aside: EventFn = do(move().to(80, 80).raw())
 
-wait_click_cancel: EventFn = do(
-    move().image(_CANCEL).match(timeout=600, interval=0.5),
+wait_click_setting: EventFn = do(
+    move().image(_SETTING).match(timeout=600, interval=0.5),
     click().pause(0.3),
 )
 
-click_setting: EventFn = do(move().image(_SETTING), click())
 click_auto: EventFn = do(move().image(_AUTO), click())
 click_challenge_end: EventFn = do(
     move().image(_CHALLENGE_END).match(timeout=1200, interval=5),
