@@ -1,5 +1,6 @@
 """单流程调试用复杂流程：每个 Workflow 只包一个 Flow。"""
 
+from vision_workflow.apps.ming_jiang_sha.parts.Activity import FLOW as activity
 from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store import FLOW as ba_qing_store
 from vision_workflow.apps.ming_jiang_sha.parts.dang_qing_ge import FLOW as dang_qing_ge
 from vision_workflow.apps.ming_jiang_sha.parts.gong_hui import FLOW as gong_hui
@@ -31,6 +32,7 @@ WORKFLOWS: list[Workflow] = [
     _solo(zhu_jiu_store),
     _solo(zhan_yi_store),
     _solo(ba_qing_store),
+    _solo(activity),
     _solo(gong_hui),
     _solo(
         fight,
