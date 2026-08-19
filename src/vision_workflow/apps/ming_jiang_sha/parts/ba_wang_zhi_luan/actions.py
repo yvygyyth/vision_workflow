@@ -117,7 +117,7 @@ poll_click_start: EventFn = do(
 
 
 def wait_game_start(m: ModuleContext) -> OutcomeKey:
-    """房员已准备：等待选将或战斗 UI（6 / 取消）出现。"""
+    """等待选将或战斗 UI（6 / 取消）出现。"""
     deadline = time.monotonic() + _WAIT_TIMEOUT_SEC
     while time.monotonic() < deadline:
         if find_all_images(m.resolve(_SIX), threshold=0.8, max_count=1):
@@ -138,12 +138,19 @@ def pick_all_sixes(m: ModuleContext) -> OutcomeKey:
     """依次点击场上所有「6」，循环直到识图找不到。"""
     total_clicked = 0
     scan_rounds = 0
+    empty_rounds = 0
 
     while True:
         hits = find_all_images(m.resolve(_SIX), threshold=0.8, max_count=_MAX_SIX)
         if not hits:
-            break
+            empty_rounds += 1
+            if empty_rounds >= 3 or total_clicked:
+                break
+            logger.info("pick_all_sixes 未识别到6，等待 UI（%s/3）", empty_rounds)
+            time.sleep(_WAIT_INTERVAL_SEC)
+            continue
 
+        empty_rounds = 0
         scan_rounds += 1
         sorted_hits = sorted(
             (hit for hit in hits if hit.center),

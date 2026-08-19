@@ -20,7 +20,7 @@ from vision_workflow.module import Flow, Module, back, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: back}
-_TO_PICK = {FULFILLED: to("pick_six"), REJECTED: back}
+_TO_WAIT = {FULFILLED: to("wait_game_start"), REJECTED: back}
 _TO_FIGHT = {FULFILLED: to("move_aside"), REJECTED: back}
 _TO_READY = {FULFILLED: to("detect_role"), REJECTED: back}
 
@@ -65,12 +65,12 @@ FLOW = Flow(
             name="轮询开始",
             description="最长约 10 分钟、每 1.5 秒轮询 start 并点击",
             event=poll_click_start,
-            on=_TO_PICK,
+            on=_TO_WAIT,
         ),
         Module(
             id="wait_game_start",
             name="等待开局",
-            description="房员等 6 或取消出现；已有战斗 UI 则跳过选将",
+            description="等 6 或取消出现；已有战斗 UI 则跳过选将",
             event=wait_game_start,
             on={
                 FULFILLED: to("pick_six"),
