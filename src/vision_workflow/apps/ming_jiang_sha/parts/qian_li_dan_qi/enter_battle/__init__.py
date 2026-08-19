@@ -17,7 +17,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.utils import (
 from vision_workflow.module import Flow, FlowLifecycle, Module, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
-_CLICK = {FULFILLED: onward, REJECTED: abort}
+_CLICK = {FULFILLED: onward, REJECTED: to("recover_start")}
 _OK = {FULFILLED: onward}
 
 FLOW = Flow(
