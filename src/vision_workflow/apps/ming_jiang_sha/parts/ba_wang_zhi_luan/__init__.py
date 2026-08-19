@@ -15,7 +15,6 @@ from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan.actions import (
     pick_all_sixes,
     poll_click_start,
     wait_click_cancel,
-    wait_for_cancel,
     wait_game_start,
 )
 from vision_workflow.module import Flow, Module, back, onward, to
@@ -23,7 +22,7 @@ from vision_workflow.status import FULFILLED, REJECTED
 
 _CLICK = {FULFILLED: onward, REJECTED: back}
 _TO_WAIT = {FULFILLED: to("wait_game_start"), REJECTED: back}
-_TO_CANCEL = {FULFILLED: to("move_aside"), REJECTED: back}
+_TO_FIGHT = {FULFILLED: to("move_aside"), REJECTED: back}
 _TO_READY = {FULFILLED: to("detect_role"), REJECTED: back}
 
 FLOW = Flow(
@@ -76,7 +75,7 @@ FLOW = Flow(
             event=wait_game_start,
             on={
                 FULFILLED: to("pick_six"),
-                ENTER_BATTLE: to("wait_for_cancel"),
+                ENTER_BATTLE: to("move_aside"),
                 REJECTED: back,
             },
         ),
@@ -92,14 +91,7 @@ FLOW = Flow(
             name="点确定",
             description="识别 ok 有则点，无则跳过",
             event=click_ok_if_any,
-            on={FULFILLED: to("wait_for_cancel"), REJECTED: back},
-        ),
-        Module(
-            id="wait_for_cancel",
-            name="等待取消",
-            description="点完6后等战斗取消按钮出现",
-            event=wait_for_cancel,
-            on=_TO_CANCEL,
+            on=_TO_FIGHT,
         ),
         Module(
             id="move_aside",
@@ -110,8 +102,8 @@ FLOW = Flow(
         ),
         Module(
             id="click_cancel",
-            name="取消",
-            description="等待并点击战斗取消按钮",
+            name="等取消并点击",
+            description="轮询战斗取消按钮，出现即点击（战斗开始）",
             event=wait_click_cancel,
             on={FULFILLED: onward, REJECTED: back},
         ),

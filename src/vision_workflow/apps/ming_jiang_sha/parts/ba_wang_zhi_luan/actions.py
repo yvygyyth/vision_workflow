@@ -177,26 +177,12 @@ def click_ok_if_any(m: ModuleContext) -> OutcomeKey:
     return FULFILLED
 
 
-def wait_for_cancel(m: ModuleContext) -> OutcomeKey:
-    """选将点完一轮后，等待战斗取消按钮出现。"""
-    deadline = time.monotonic() + _WAIT_TIMEOUT_SEC
-    while time.monotonic() < deadline:
-        if _cancel_visible(m, timeout=0.3):
-            m.reason = "取消已出现，进入战斗"
-            logger.info("wait_for_cancel → fulfilled")
-            return FULFILLED
-        time.sleep(_WAIT_INTERVAL_SEC)
-
-    m.reason = "等待取消超时"
-    return REJECTED
-
-
 # ── 无赠礼战斗 ────────────────────────────────────────────────────────
 
 move_aside: EventFn = do(move().to(80, 80).raw())
 
 wait_click_cancel: EventFn = do(
-    move().image(_CANCEL).match(timeout=120, interval=0.5),
+    move().image(_CANCEL).match(timeout=600, interval=0.5),
     click().pause(0.3),
 )
 
