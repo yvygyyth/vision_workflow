@@ -7,6 +7,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan.actions import (
     click_challenge_end,
     click_next_step_if_any,
     click_ready,
+    click_ok_if_any,
     click_setting,
     confirm_ready,
     detect_role,
@@ -84,6 +85,13 @@ FLOW = Flow(
             name="选将点6",
             description="扫描一次，依次点场上所有 6",
             event=pick_all_sixes,
+            on={FULFILLED: to("click_ok"), REJECTED: back},
+        ),
+        Module(
+            id="click_ok",
+            name="点确定",
+            description="识别 ok 有则点，无则跳过",
+            event=click_ok_if_any,
             on={FULFILLED: to("wait_for_cancel"), REJECTED: back},
         ),
         Module(

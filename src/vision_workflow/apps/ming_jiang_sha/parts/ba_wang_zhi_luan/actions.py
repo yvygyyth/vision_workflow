@@ -22,6 +22,7 @@ _ZHUN_BEI = f"{_DIR}/zhun_bei.png"
 _UN_ZHUN_BEI = f"{_DIR}/un_zhun+bei.png"
 _START = f"{_DIR}/start.png"
 _SIX = f"{_DIR}/6.png"
+_OK = f"{_DIR}/ok.png"
 
 _CANCEL = f"{_FIGHT_DIR}/cancel.png"
 _SETTING = f"{_FIGHT_DIR}/setting.png"
@@ -159,6 +160,20 @@ def pick_all_sixes(m: ModuleContext) -> OutcomeKey:
     else:
         m.reason = "场上无6，等待取消出现"
     logger.info("pick_all_sixes → %s", m.reason)
+    return FULFILLED
+
+
+def click_ok_if_any(m: ModuleContext) -> OutcomeKey:
+    """识别确定按钮，有则点；没有也继续等取消。"""
+    hit = m.find(_OK, timeout=1.0, threshold=0.8)
+    if hit.found and hit.center:
+        cx, cy = hit.center
+        logger.info("click_ok_if_any @ (%s,%s) conf=%.3f", cx, cy, hit.confidence)
+        Mouse().move(cx, cy).click().sleep(0.2).perform()
+        m.reason = "已点确定"
+    else:
+        m.reason = "无确定按钮"
+    logger.info("click_ok_if_any → %s", m.reason)
     return FULFILLED
 
 
