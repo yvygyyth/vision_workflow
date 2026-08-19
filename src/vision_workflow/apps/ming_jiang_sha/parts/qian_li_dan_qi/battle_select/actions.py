@@ -28,6 +28,7 @@ _CHALLENGE = f"{_DIR}/challenge.png"
 _BA_QING_STORE = f"{_DIR}/ba_qing_store.png"
 _POCKET_EVENT = f"{_DIR}/pocket_event.png"
 _REST = f"{_DIR}/rest.png"
+_YI_WAI = f"{_DIR}/yi_wai.png"
 
 PENDING_EVENT_KEY = "pending_event_choice"
 
@@ -92,7 +93,7 @@ def dismiss_up_panel(m: ModuleContext) -> OutcomeKey:
 
 
 def detect_choice(m: ModuleContext) -> OutcomeKey:
-    """判定：战斗 > 商店 > 事件；都没有则去进战。"""
+    """判定：战斗 > 商店 > 事件 > 意外；都没有则去进战。"""
     if _probe_in_choice(m, _CHALLENGE):
         logger.info("detect_choice → battle")
         return "battle"
@@ -112,9 +113,23 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
             logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
-    m.reason = "选择区内未识别到战斗/商店/事件，去进战"
+    if _probe_in_choice(m, _YI_WAI):
+        logger.info("detect_choice → yi_wai")
+        return "yi_wai"
+
+    m.reason = "选择区内未识别到战斗/商店/事件/意外，去进战"
     logger.info("detect_choice → enter_battle")
     return "enter_battle"
+
+
+def choose_yi_wai(m: ModuleContext) -> OutcomeKey:
+    """点选「意外」节点，进入有赠礼的战斗。"""
+    hit = _find_in_choice(m, _YI_WAI, timeout=0.8)
+    if hit.found and _click_center(hit, label="yi_wai"):
+        return FULFILLED
+
+    m.reason = "意外分支未找到 yi_wai"
+    return REJECTED
 
 
 def choose_battle(m: ModuleContext) -> OutcomeKey:

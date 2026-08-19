@@ -6,6 +6,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.acti
     choose_battle,
     choose_event,
     choose_shop,
+    choose_yi_wai,
     confirm_ba_qing_entered,
     confirm_event_entered,
     detect_choice,
@@ -19,7 +20,7 @@ _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
 FLOW = Flow(
     id="battle_select",
     name="三选一",
-    description="判定并点选；战斗→fight；无选项→进战",
+    description="判定并点选；战斗→fight；意外→赠礼战；无选项→进战",
     entry="dismiss_up",
     modules=[
         Module(
@@ -32,12 +33,13 @@ FLOW = Flow(
         Module(
             id="detect_choice",
             name="判定选择类型",
-            description="选择区：战斗/商店/事件；识不到则直接进战",
+            description="选择区：战斗/商店/事件/意外；都识不到则直接进战",
             event=detect_choice,
             on={
                 "battle": to("choose_battle"),
                 "shop": to("choose_shop"),
                 "event": to("choose_event"),
+                "yi_wai": to("choose_yi_wai"),
                 "enter_battle": lambda m: m.end(),
             },
         ),
@@ -46,6 +48,13 @@ FLOW = Flow(
             name="战斗选择",
             description="有 challenge_help 点它，否则点第一个 challenge；然后结束本 Flow",
             event=choose_battle,
+            on=_END,
+        ),
+        Module(
+            id="choose_yi_wai",
+            name="意外选择",
+            description="点 yi_wai 进入有赠礼的战斗，然后结束本 Flow",
+            event=choose_yi_wai,
             on=_END,
         ),
         Module(
