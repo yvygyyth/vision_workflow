@@ -46,13 +46,15 @@ class EventChoice(str, Enum):
     ZHU_GE_LIANG = "zhu_ge_liang"
     FEI_FEI = "fei_fei"
     SHI_CHANG_SHI = "shi_chang_shi"
+    MO_ZI = "mo_zi"
 
 
-# 枚举 → 图标（点选 + 进场核验）
+# 枚举 → 图标（点选 + 进场核验；顺序即优先级，墨子最低）
 _EVENT_IMAGE: dict[EventChoice, str] = {
     EventChoice.FEI_FEI: f"{_DIR}/fei_fei.png",
     EventChoice.SHI_CHANG_SHI: f"{_DIR}/shi_chang_shi.png",
     EventChoice.ZHU_GE_LIANG: f"{_DIR}/zhu_ge_liangf.png",
+    EventChoice.MO_ZI: f"{_DIR}/mo_zi.png",
 }
 
 
@@ -180,7 +182,7 @@ def confirm_ba_qing_entered(m: ModuleContext) -> OutcomeKey:
 
 
 def choose_event(m: ModuleContext) -> OutcomeKey:
-    """在妃妃 / 十常侍 / 诸葛亮中点第一个找到的；写入 pending 供进场核验。"""
+    """按表顺序点第一个找到的事件（墨子最低）；写入 pending 供进场核验。"""
     for choice, path in _EVENT_IMAGE.items():
         hit = _find_in_choice(m, path, timeout=0.8)
         if hit.found and _click_center(hit, label=choice.value):
@@ -189,7 +191,7 @@ def choose_event(m: ModuleContext) -> OutcomeKey:
             logger.info("choose_event → %s", choice.value)
             return choice
 
-    m.reason = "事件分支未找到 fei_fei/shi_chang_shi/zhu_ge_liang"
+    m.reason = "事件分支未找到 fei_fei/shi_chang_shi/zhu_ge_liang/mo_zi"
     logger.error("choose_event 失败：%s", m.reason)
     return REJECTED
 

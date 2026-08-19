@@ -80,12 +80,13 @@ FLOW = Flow(
         Module(
             id="choose_event",
             name="事件选择",
-            description="点诸葛亮/妃妃/十常侍其一，再核验是否进入",
+            description="点诸葛亮/妃妃/十常侍/墨子其一，再核验是否进入",
             event=choose_event,
             on={
                 EventChoice.ZHU_GE_LIANG: to("confirm_event_entered"),
                 EventChoice.FEI_FEI: to("confirm_event_entered"),
                 EventChoice.SHI_CHANG_SHI: to("confirm_event_entered"),
+                EventChoice.MO_ZI: to("confirm_event_entered"),
                 REJECTED: abort,
             },
         ),
@@ -98,6 +99,7 @@ FLOW = Flow(
                 EventChoice.ZHU_GE_LIANG: lambda m: m.end(),
                 EventChoice.FEI_FEI: lambda m: m.end(),
                 EventChoice.SHI_CHANG_SHI: lambda m: m.end(),
+                EventChoice.MO_ZI: lambda m: m.end(),
                 "still_here": to("dismiss_up"),
                 REJECTED: abort,
             },

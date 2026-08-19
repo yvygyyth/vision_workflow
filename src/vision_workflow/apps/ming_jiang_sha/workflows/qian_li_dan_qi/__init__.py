@@ -16,6 +16,9 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle impor
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fei_fei import (
     FLOW as fei_fei,
 )
+from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.mo_zi import (
+    FLOW as mo_zi,
+)
 from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.fight import (
     FLOW as fight,
     FLOW_IN_BATTLE as in_battle,
@@ -80,6 +83,7 @@ WORKFLOW = Workflow(
                     EventChoice.ZHU_GE_LIANG: "zhu_ge_liang",
                     EventChoice.FEI_FEI: "fei_fei",
                     EventChoice.SHI_CHANG_SHI: "shi_chang_shi",
+                    EventChoice.MO_ZI: "mo_zi",
                     RUN_ENDED: "run_ended",
                     FlowStatus.REJECTED: None,
                 }
@@ -99,6 +103,7 @@ WORKFLOW = Workflow(
         ),
         FlowNode(zhu_ge_liang, router=_BACK_TO_SELECT),
         FlowNode(fei_fei, router=_BACK_TO_SELECT),
+        FlowNode(mo_zi, router=_BACK_TO_SELECT),
         FlowNode(
             shi_chang_shi,
             router=FlowRouter(
