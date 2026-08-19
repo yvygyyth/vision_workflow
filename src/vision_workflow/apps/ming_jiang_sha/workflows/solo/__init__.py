@@ -2,6 +2,7 @@
 
 from vision_workflow.apps.ming_jiang_sha.parts.Activity import FLOW as activity
 from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store import FLOW as ba_qing_store
+from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan import FLOW as ba_wang_zhi_luan
 from vision_workflow.apps.ming_jiang_sha.parts.dang_qing_ge import FLOW as dang_qing_ge
 from vision_workflow.apps.ming_jiang_sha.parts.gong_hui import FLOW as gong_hui
 from vision_workflow.apps.ming_jiang_sha.parts.mail import FLOW as mail
@@ -34,6 +35,7 @@ WORKFLOWS: list[Workflow] = [
     _solo(ba_qing_store),
     _solo(activity),
     _solo(gong_hui),
+    _solo(ba_wang_zhi_luan),
     _solo(
         fight,
         lifecycle=WorkflowLifecycle(

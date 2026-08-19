@@ -58,7 +58,7 @@ move_aside: EventFn = do(move().to(80, 80).raw())
 click_setting: EventFn = do(move().image(f"{_DIR}/setting.png"), click())
 click_auto: EventFn = do(move().image(f"{_DIR}/auto.png"), click())
 click_challenge_end: EventFn = do(
-    move().image(f"{_DIR}/challenge_end.png").match(timeout=600, interval=5),
+    move().image(f"{_DIR}/challenge_end.png").match(timeout=1200, interval=5),
     click(),
 )
 _NEXT_STEP = f"{_DIR}/next_step.png"
