@@ -84,6 +84,7 @@ WORKFLOW = Workflow(
                     EventChoice.FEI_FEI: "fei_fei",
                     EventChoice.SHI_CHANG_SHI: "shi_chang_shi",
                     EventChoice.MO_ZI: "mo_zi",
+                    "enter_battle": "enter_battle",
                     RUN_ENDED: "run_ended",
                     FlowStatus.REJECTED: None,
                 }

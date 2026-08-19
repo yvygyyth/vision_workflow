@@ -11,8 +11,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.acti
     detect_choice,
     dismiss_up_panel,
 )
-from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.run_ended import RUN_ENDED
-from vision_workflow.module import Flow, Module, ModuleConfig, abort, onward, to
+from vision_workflow.module import Flow, Module, abort, onward, to
 from vision_workflow.status import FULFILLED, REJECTED
 
 _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
@@ -20,7 +19,7 @@ _END = {FULFILLED: lambda m: m.end(), REJECTED: abort}
 FLOW = Flow(
     id="battle_select",
     name="三选一",
-    description="判定并点选；战斗→fight；久无选项→本轮结束 Flow",
+    description="判定并点选；战斗→fight；无选项→进战",
     entry="dismiss_up",
     modules=[
         Module(
@@ -33,19 +32,14 @@ FLOW = Flow(
         Module(
             id="detect_choice",
             name="判定选择类型",
-            description="选择区：战斗/商店/事件；重试仍无则交给本轮结束",
+            description="选择区：战斗/商店/事件；识不到则直接进战",
             event=detect_choice,
             on={
                 "battle": to("choose_battle"),
                 "shop": to("choose_shop"),
                 "event": to("choose_event"),
-                REJECTED: to("mark_run_ended"),
+                "enter_battle": lambda m: m.end(),
             },
-            config=ModuleConfig(
-                retry=9,
-                retry_delay_ms=500,
-                retry_on=[REJECTED],
-            ),
         ),
         Module(
             id="choose_battle",
@@ -103,13 +97,6 @@ FLOW = Flow(
                 "still_here": to("dismiss_up"),
                 REJECTED: abort,
             },
-        ),
-        Module(
-            id="mark_run_ended",
-            name="标记本轮结束",
-            description="久无三选一选项 → run_ended Flow",
-            event=lambda m: RUN_ENDED,
-            on={RUN_ENDED: lambda m: m.end()},
         ),
     ],
 )

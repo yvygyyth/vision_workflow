@@ -92,8 +92,7 @@ def dismiss_up_panel(m: ModuleContext) -> OutcomeKey:
 
 
 def detect_choice(m: ModuleContext) -> OutcomeKey:
-    """判定：战斗 > 商店 > 事件；都没有则 REJECTED（模块重试，耗尽后再交给进战）。
-    """
+    """判定：战斗 > 商店 > 事件；都没有则去进战。"""
     if _probe_in_choice(m, _CHALLENGE):
         logger.info("detect_choice → battle")
         return "battle"
@@ -113,9 +112,9 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
             logger.info("detect_choice → event (%s)", path.rsplit("/", 1)[-1])
             return "event"
 
-    m.reason = "选择区内未识别到战斗/商店/事件"
-    logger.info("detect_choice → rejected")
-    return REJECTED
+    m.reason = "选择区内未识别到战斗/商店/事件，去进战"
+    logger.info("detect_choice → enter_battle")
+    return "enter_battle"
 
 
 def choose_battle(m: ModuleContext) -> OutcomeKey:
