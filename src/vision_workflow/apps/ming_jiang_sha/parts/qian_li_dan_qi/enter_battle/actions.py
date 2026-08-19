@@ -8,7 +8,7 @@ import time
 from vision_workflow.apps.ming_jiang_sha.common.paths import DATA_ROOT
 from vision_workflow.events import click, do, input_text, move
 from vision_workflow.events.support.find import wait_image
-from vision_workflow.input import Mouse
+from vision_workflow.input import Mouse, press_key
 from vision_workflow.module import EventFn, ModuleContext
 from vision_workflow.status import FULFILLED, OutcomeKey, REJECTED
 
@@ -94,3 +94,20 @@ def try_click_start(m: ModuleContext) -> OutcomeKey:
     m.reason = "点击开始后仍未进入战斗，进入武将选择"
     logger.info("try_click_start → need_select（开始无效）")
     return "need_select"
+
+
+def recover_start(m: ModuleContext) -> OutcomeKey:
+    """开始失败：Esc×3 → 点 (1980,700) → 等 200ms → 点 (1130,700)。"""
+    for i in range(3):
+        logger.info("recover_start go_back Esc (%s/3)", i + 1)
+        press_key("esc")
+        time.sleep(0.2)
+
+    logger.info("recover_start 点击 (1980,700)")
+    do(move().to(1980, 700).raw(), click())(m)
+    time.sleep(0.2)
+
+    logger.info("recover_start 点击 (1130,700)")
+    key = do(move().to(1130, 700).raw(), click())(m)
+    m.reason = "Esc×3 → (1980,700) → (1130,700)"
+    return key if key is not None else FULFILLED

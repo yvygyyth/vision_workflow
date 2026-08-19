@@ -7,6 +7,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.enter_battle.actio
     click_search,
     click_select_wu_jiang,
     focus_search_input,
+    recover_start,
     try_click_start,
     type_wu_jiang,
 )
@@ -46,7 +47,17 @@ FLOW = Flow(
             on={
                 FULFILLED: to("check_battle"),
                 "need_select": to("select_wu_jiang"),
-                REJECTED: abort,
+                REJECTED: to("recover_start"),
+            },
+        ),
+        Module(
+            id="recover_start",
+            name="开始失败恢复",
+            description="Esc 返回三次 → 点 (1980,700) → 等 200ms → 点 (1130,700) → 再点开始",
+            event=recover_start,
+            on={
+                FULFILLED: to("try_start"),
+                REJECTED: to("try_start"),
             },
         ),
         Module(
