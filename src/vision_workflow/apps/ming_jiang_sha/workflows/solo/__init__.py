@@ -1,6 +1,6 @@
 """单流程调试用复杂流程：每个 Workflow 只包一个 Flow。"""
 
-from vision_workflow.apps.ming_jiang_sha.parts.Activity import FLOW as activity
+from vision_workflow.apps.ming_jiang_sha.parts.actaivity import FLOW as activity
 from vision_workflow.apps.ming_jiang_sha.parts.ba_qing_store import FLOW as ba_qing_store
 from vision_workflow.apps.ming_jiang_sha.parts.ba_wang_zhi_luan import FLOW as ba_wang_zhi_luan
 from vision_workflow.apps.ming_jiang_sha.parts.dang_qing_ge import FLOW as dang_qing_ge
