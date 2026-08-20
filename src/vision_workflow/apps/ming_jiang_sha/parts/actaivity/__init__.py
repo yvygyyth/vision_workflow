@@ -1,7 +1,7 @@
 ﻿"""子流程：活动。"""
 
 from vision_workflow.apps.ming_jiang_sha.common.actions import go_back, space_close
-from vision_workflow.apps.ming_jiang_sha.parts.Activity.actions import (
+from vision_workflow.apps.ming_jiang_sha.parts.actaivity.actions import (
     click_huo_dong,
     click_yue_ling,
     click_gua_xiang,
