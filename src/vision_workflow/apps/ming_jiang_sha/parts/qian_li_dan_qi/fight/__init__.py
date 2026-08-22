@@ -122,9 +122,13 @@ def _fight_modules() -> list[Module]:
         Module(
             id="choose_reward_kind",
             name="选择赠礼类别",
-            description="识图信物/并肩作战/武将牌/资助/驰援，按武将关键奖励与背包点击",
+            description="识图信物/并肩作战/武将牌/资助/驰援；漏识则回三选一",
             event=choose_reward_kind,
-            on=_END,
+            on={
+                FULFILLED: lambda m: m.end(),
+                "no_kind": to("settle_done"),
+                REJECTED: abort,
+            },
         ),
         Module(
             id="settle_done",

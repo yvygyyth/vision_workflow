@@ -180,13 +180,8 @@ def choose_reward_title(m: ModuleContext) -> OutcomeKey:
     return key if key is not None else FULFILLED
 
 
-def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
-    """识图信物/并肩/武将牌/资助/驰援，按 ctx.vars 里的武将 + 背包点最高优先项。"""
-    state = get_battle_state(m.ctx)
-    entry = m.vars.get(PENDING_GENERAL_KEY)
-    if not isinstance(entry, GeneralPriority):
-        entry = None
-
+def _scan_reward_kinds(m: ModuleContext) -> dict[RewardKind, tuple[int, int]]:
+    """扫一遍赠礼类别模板，返回可用项中心点。"""
     available: dict[RewardKind, tuple[int, int]] = {}
     for kind, path in REWARD_KIND_TEMPLATES.items():
         hit = m.find(path, timeout=0.0)
@@ -198,15 +193,38 @@ def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
                 hit.center,
                 hit.confidence,
             )
+    return available
+
+
+def choose_reward_kind(m: ModuleContext) -> OutcomeKey:
+    """识图信物/并肩/武将牌/资助/驰援，按 ctx.vars 里的武将 + 背包点最高优先项。
+
+    点完武将标题后面板有动画，先等再扫；扫空再短等重试一次。
+    仍识不到则 no_kind（回三选一），避免整局因瞬时漏识中止。
+    """
+    state = get_battle_state(m.ctx)
+    entry = m.vars.get(PENDING_GENERAL_KEY)
+    if not isinstance(entry, GeneralPriority):
+        entry = None
+
+    time.sleep(0.6)
+    available = _scan_reward_kinds(m)
+    if not available:
+        time.sleep(0.5)
+        available = _scan_reward_kinds(m)
 
     if not available:
         m.reason = "未识别到信物/并肩作战/武将牌/资助/驰援"
-        return REJECTED
+        logger.warning("choose_reward_kind → no_kind")
+        m.vars.pop(PENDING_GENERAL_KEY, None)
+        return "no_kind"
 
     kind = pick_reward_kind(available.keys(), entry, state)
     if kind is None:
         m.reason = "无可选赠礼类别"
-        return REJECTED
+        logger.warning("choose_reward_kind → no_kind（无可选项）")
+        m.vars.pop(PENDING_GENERAL_KEY, None)
+        return "no_kind"
 
     cx, cy = available[kind]
     general = entry.name if entry else "?"

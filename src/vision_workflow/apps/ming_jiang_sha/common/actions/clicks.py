@@ -28,7 +28,7 @@ def click_confirm(*, pause: float = 0.2, below_px: int = _CONFIRM_BELOW_PX) -> E
         hit = wait_image(
             m,
             (_CONFIRM_IMAGE,),
-            threshold=0.8,
+            threshold=0.6,
             timeout=3.0,
             interval=0.5,
             region=None,

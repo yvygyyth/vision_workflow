@@ -123,13 +123,24 @@ def detect_choice(m: ModuleContext) -> OutcomeKey:
 
 
 def choose_yi_wai(m: ModuleContext) -> OutcomeKey:
-    """点选「意外」节点，进入有赠礼的战斗。"""
+    """点选「意外」节点（点两次，与商店一致），再交给进场核验。"""
     hit = _find_in_choice(m, _YI_WAI, timeout=0.8)
-    if hit.found and _click_center(hit, label="yi_wai"):
+    if hit.found and _click_center(hit, label="yi_wai", times=2):
         return FULFILLED
 
     m.reason = "意外分支未找到 yi_wai"
     return REJECTED
+
+
+def confirm_yi_wai_entered(m: ModuleContext) -> OutcomeKey:
+    """点意外后核验：图标消失 → 已进战；仍在 → 未进入。"""
+    time.sleep(0.6)
+    if _probe_in_choice(m, _YI_WAI):
+        m.reason = "意外图标仍在，未进入战斗"
+        logger.info("confirm_yi_wai_entered → still_here")
+        return "still_here"
+    logger.info("confirm_yi_wai_entered → fulfilled")
+    return FULFILLED
 
 
 def choose_battle(m: ModuleContext) -> OutcomeKey:

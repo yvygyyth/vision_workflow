@@ -9,6 +9,7 @@ from vision_workflow.apps.ming_jiang_sha.parts.qian_li_dan_qi.battle_select.acti
     choose_yi_wai,
     confirm_ba_qing_entered,
     confirm_event_entered,
+    confirm_yi_wai_entered,
     detect_choice,
     dismiss_up_panel,
 )
@@ -53,9 +54,23 @@ FLOW = Flow(
         Module(
             id="choose_yi_wai",
             name="意外选择",
-            description="点 yi_wai 进入有赠礼的战斗，然后结束本 Flow",
+            description="点 yi_wai（两次），再核验是否进入赠礼战",
             event=choose_yi_wai,
-            on=_END,
+            on={
+                FULFILLED: to("confirm_yi_wai_entered"),
+                REJECTED: abort,
+            },
+        ),
+        Module(
+            id="confirm_yi_wai_entered",
+            name="确认进入意外",
+            description="点击后看 yi_wai 是否消失；消失才结束本 Flow 进战",
+            event=confirm_yi_wai_entered,
+            on={
+                FULFILLED: lambda m: m.end(),
+                "still_here": to("dismiss_up"),
+                REJECTED: abort,
+            },
         ),
         Module(
             id="choose_shop",
