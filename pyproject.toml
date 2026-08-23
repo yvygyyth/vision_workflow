@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vision-workflow"
-version = "0.1.0"
-description = "模块组成流程、流程组成工作流：模板识别 + 鼠标操作 + Python 配置"
+name = "vision-bot"
+version = "0.2.0"
+description = "千里单骑自动化（Flow + 识图）"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -38,8 +38,8 @@ ocr = [
 ]
 
 [project.scripts]
-vision-workflow = "vision_workflow.cli:app"
-vision-workflow-ui = "vision_workflow.ui.app:run_app"
+vision-bot = "vision_bot.cli:app"
+vision-bot-ui = "vision_bot.ui.app:run_app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -54,12 +54,11 @@ target-version = "py310"
 
 # 类似 npm scripts：poe <任务名>
 [tool.poe.tasks]
-flow = "vision-workflow flow"
-ui = "vision-workflow ui"
-info = "vision-workflow info"
-version = "vision-workflow version"
-test = "pytest"
-lint = "ruff check src tests"
+run = "vision-bot run"
+ui = "vision-bot ui"
+version = "vision-bot version"
+test = "pytest tests/test_vision_bot.py"
+lint = "ruff check src/vision_bot tests/test_vision_bot.py"
 build = "python scripts/build_exe.py"
 
 #虚拟环境
