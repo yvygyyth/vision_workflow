@@ -6,7 +6,8 @@ import logging
 from dataclasses import dataclass
 
 from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.flow import Flow, StepFn, StepResult
+from vision_bot.runtime.cancel import CancelledError
+from vision_bot.runtime.flow import Flow, StepResult
 from vision_bot.runtime.types import END, ESCALATE, FAIL, OK
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,8 @@ def run_flow(flow: Flow, ctx: RunContext, *, parent: Flow | None = None) -> str:
 
         if isinstance(step, Flow):
             outcome = run_flow(step, ctx, parent=flow)
+            if outcome == FAIL and ctx.cancelled():
+                return FAIL
             if outcome == ESCALATE:
                 det = _try_relocate(flow, ctx)
                 if det:
@@ -65,8 +68,12 @@ def run_flow(flow: Flow, ctx: RunContext, *, parent: Flow | None = None) -> str:
             current = nxt  # type: ignore[assignment]
             continue
 
-        assert isinstance(step, StepFn)
-        result = step(ctx)
+        if not callable(step):
+            raise TypeError(f"Flow [{flow.id}] 步骤 {current!r} 不可调用")
+        try:
+            result = step(ctx)
+        except CancelledError:
+            return FAIL
 
         if result.failed:
             routed = flow.resolve_route(current, result.outcome)
@@ -112,6 +119,10 @@ def run_root(flow: Flow, ctx: RunContext) -> RunReport:
 
         if isinstance(step, Flow):
             outcome = run_flow(step, ctx, parent=flow)
+            if outcome == FAIL:
+                if ctx.cancelled():
+                    return RunReport(success=False, outcome=FAIL, message="用户取消", path=path)
+                return RunReport(success=False, outcome=FAIL, message="子流程失败", path=path)
             if outcome == ESCALATE:
                 det = _try_relocate(flow, ctx)
                 if det:
@@ -135,8 +146,12 @@ def run_root(flow: Flow, ctx: RunContext) -> RunReport:
                 continue
             return RunReport(success=True, outcome=outcome, path=path)
 
-        assert isinstance(step, StepFn)
-        result = step(ctx)
+        if not callable(step):
+            raise TypeError(f"Flow [{flow.id}] 步骤 {current!r} 不可调用")
+        try:
+            result = step(ctx)
+        except CancelledError:
+            return RunReport(success=False, outcome=FAIL, message="用户取消", path=path)
         if result.failed:
             routed = flow.resolve_route(current, result.outcome)
             if isinstance(routed, str):

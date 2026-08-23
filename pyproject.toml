@@ -43,6 +43,7 @@ vision-bot-ui = "vision_bot.ui.app:run_app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["vision_bot*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

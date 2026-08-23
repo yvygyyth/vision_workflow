@@ -8,6 +8,7 @@ from pathlib import Path
 
 from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchResult
+from vision_bot.runtime.cancel import raise_if_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ def wait_image(
     last: MatchResult | None = None
 
     while True:
+        raise_if_cancelled(ctx.cancelled)
         for path in images:
             hit = ctx.find(path, timeout=0.0, **kw)
             last = hit
@@ -48,4 +50,5 @@ def wait_image(
             ctx.reason = f"识图未找到 [{labels}]"
             logger.info("未找到 [%s]", labels)
             return None
+        raise_if_cancelled(ctx.cancelled)
         time.sleep(interval)

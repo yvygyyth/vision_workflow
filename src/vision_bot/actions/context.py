@@ -57,4 +57,8 @@ class ActionContext:
             opts.region_fit = region_fit
         if grayscale is not None:
             opts.grayscale = grayscale
-        return find_image_with_options(self.resolve(image), opts)
+        return find_image_with_options(
+            self.resolve(image),
+            opts,
+            cancelled=self.cancelled,
+        )

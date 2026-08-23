@@ -38,6 +38,7 @@ class FlowWorker:
 
     def stop(self) -> None:
         self._cancel.set()
+        logger.info("已请求停止，等待当前步骤退出…")
 
     def _run(self, request: RunRequest) -> None:
         report: RunReport | None = None

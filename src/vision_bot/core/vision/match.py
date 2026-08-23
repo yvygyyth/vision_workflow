@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from vision_bot.core.models import MatchOptions, MatchResult
+from vision_bot.runtime.cancel import raise_if_cancelled
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -25,6 +27,7 @@ def find_image(
     region_fit: bool = True,
     grayscale: bool = True,
     screenshot: "Image.Image | None" = None,
+    cancelled: Callable[[], bool] | None = None,
 ) -> MatchResult:
     """在屏幕或给定截图中查找模板图。
 
@@ -64,11 +67,13 @@ def find_image(
     last: MatchResult | None = None
 
     while True:
+        raise_if_cancelled(cancelled)
         last = _match_once(path, options, screenshot=screenshot)
         if last.found:
             return last
         if options.timeout <= 0 or time.monotonic() >= deadline:
             return last or MatchResult(found=False, image=str(path), message="未匹配到")
+        raise_if_cancelled(cancelled)
         time.sleep(options.interval)
 
 
@@ -77,6 +82,7 @@ def find_image_with_options(
     options: MatchOptions,
     *,
     screenshot: "Image.Image | None" = None,
+    cancelled: Callable[[], bool] | None = None,
 ) -> MatchResult:
     return find_image(
         template,
@@ -87,6 +93,7 @@ def find_image_with_options(
         region_fit=options.region_fit,
         grayscale=options.grayscale,
         screenshot=screenshot,
+        cancelled=cancelled,
     )
 
 

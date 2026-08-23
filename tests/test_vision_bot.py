@@ -78,13 +78,63 @@ def test_routes_and_build_root() -> None:
 
 
 def test_jobs_registry() -> None:
-    assert len(JOBS) >= 1
+    assert len(JOBS) == 3
     assert len(job_choices()) == len(JOBS)
     assert get_job("qian_li_dan_qi").name == "千里单骑"
+    assert get_job("ba_wang_zhi_luan").name == "八王之乱"
+    assert get_job("fee_day").name == "名将杀免费资源每日领取"
     with pytest.raises(KeyError):
         get_job("no_such_job")
+
+
+def test_ba_wang_build() -> None:
+    from vision_bot.apps.ming_jiang_sha.ba_wang_zhi_luan.build import build
+
+    flow = build()
+    assert flow.id == "ba_wang_zhi_luan"
+    assert flow.entry == "detect_role"
+    assert "battle_done" in flow.steps
+
+
+def test_fee_day_build() -> None:
+    from vision_bot.apps.ming_jiang_sha.fee_day.build import build_fee_day
+
+    flow = build_fee_day()
+    assert flow.id == "fee_day"
+    assert flow.entry == "mail"
+    assert "gong_hui" in flow.steps
+    assert flow.on["mail_done"] == "dang_qing_ge"
 
 
 def test_start_unknown_job() -> None:
     with pytest.raises(KeyError):
         start("no_such_job")
+
+
+def test_cancel_during_wait() -> None:
+    import threading
+    import time
+    from pathlib import Path
+
+    from vision_bot.actions.context import ActionContext
+    from vision_bot.actions.wait import wait_image
+    from vision_bot.runtime.cancel import CancelledError
+
+    cancel = threading.Event()
+    ctx = ActionContext(base_dir=Path("."), cancelled=cancel.is_set)
+
+    def _set_cancel() -> None:
+        time.sleep(0.15)
+        cancel.set()
+
+    threading.Thread(target=_set_cancel, daemon=True).start()
+    with pytest.raises(CancelledError):
+        wait_image(
+            ctx,
+            ("data/ming_jiang_sha/mail/email.png",),
+            threshold=0.8,
+            timeout=30.0,
+            interval=0.1,
+            region=None,
+            grayscale=None,
+        )

@@ -30,9 +30,33 @@ def _run_qian_li_dan_qi(
     return run(base_dir=base_dir, cancel_event=cancel_event, wu_jiang=wu_jiang)
 
 
+def _run_ba_wang_zhi_luan(
+    *,
+    base_dir: Path | None = None,
+    cancel_event: threading.Event | None = None,
+    **_: object,
+) -> RunReport:
+    from vision_bot.apps.ming_jiang_sha.ba_wang_zhi_luan.run import run
+
+    return run(base_dir=base_dir, cancel_event=cancel_event)
+
+
+def _run_fee_day(
+    *,
+    base_dir: Path | None = None,
+    cancel_event: threading.Event | None = None,
+    **_: object,
+) -> RunReport:
+    from vision_bot.apps.ming_jiang_sha.fee_day.run import run
+
+    return run(base_dir=base_dir, cancel_event=cancel_event)
+
+
 # 新增任务：在此追加一项即可，UI 下拉会自动出现
 JOBS: list[Job] = [
     Job(id="qian_li_dan_qi", name="千里单骑", run=_run_qian_li_dan_qi),
+    Job(id="ba_wang_zhi_luan", name="八王之乱", run=_run_ba_wang_zhi_luan),
+    Job(id="fee_day", name="名将杀免费资源每日领取", run=_run_fee_day),
 ]
 
 DEFAULT_JOB_ID = JOBS[0].id if JOBS else ""

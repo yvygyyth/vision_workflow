@@ -24,6 +24,16 @@ class RunContext:
     def cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
 
+    def check_cancelled(self) -> None:
+        from vision_bot.runtime.cancel import raise_if_cancelled
+
+        raise_if_cancelled(self.cancelled)
+
+    def sleep(self, seconds: float, *, interval: float = 0.1) -> None:
+        from vision_bot.runtime.cancel import sleep_interruptible
+
+        sleep_interruptible(self.cancelled, seconds, interval=interval)
+
     def action_ctx(self) -> ActionContext:
         return ActionContext(
             base_dir=self.base_dir,
