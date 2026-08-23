@@ -1,6 +1,6 @@
 """vision_bot：Flow 游戏脚本框架。"""
 
-from vision_bot.start import DEFAULT_JOB_ID, JOBS, Job, get_job, job_choices, start
+from vision_bot.jobs import DEFAULT_JOB_ID, JOBS, Job, get_job, job_choices, start
 
 __version__ = "0.2.0"
 

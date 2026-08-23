@@ -1,8 +1,6 @@
-"""识图与运行结果类型。"""
+"""识图类型。"""
 
 from __future__ import annotations
-
-from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,17 +21,3 @@ class MatchResult(BaseModel):
     box: tuple[int, int, int, int] | None = None
     center: tuple[int, int] | None = None
     message: str = ""
-
-
-class StepResult(BaseModel):
-    step: str
-    success: bool = True
-    message: str = ""
-
-
-class RunResult(BaseModel):
-    success: bool
-    message: str = ""
-    phases: list[str] = Field(default_factory=list)
-    steps: list[StepResult] = Field(default_factory=list)
-    value: Any = None

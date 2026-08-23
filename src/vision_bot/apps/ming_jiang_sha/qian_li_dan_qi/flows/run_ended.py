@@ -10,7 +10,7 @@ from vision_bot.runtime.result import Result
 
 def _confirm(ctx) -> Result:
     r = step_confirm(ctx)
-    if r.failed:
+    if not r.ok:
         ctx.goto("qldq.run_ended.close")
     return r
 

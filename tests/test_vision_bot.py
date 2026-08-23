@@ -15,7 +15,7 @@ from vision_bot.runtime import RunContext, flow, mod, run_root
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
 from vision_bot.jobs import JOBS, job_choices
-from vision_bot.start import get_job, start
+from vision_bot.jobs import get_job, start
 
 
 def test_registry_unique() -> None:

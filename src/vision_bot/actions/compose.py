@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Callable, Protocol
+from typing import Protocol
 
 from vision_bot.actions.context import ActionContext
-from vision_bot.actions.outcome import ActionOutcome, ActionStatus
-
-ActionFn = Callable[[ActionContext], ActionOutcome]
+from vision_bot.actions.fn import ActionFn
+from vision_bot.runtime.result import Result
 
 
 class Executable(Protocol):
@@ -20,11 +19,11 @@ def do(*steps: ActionFn | Executable) -> ActionFn:
         for s in steps
     ]
 
-    def _run(ctx: ActionContext) -> ActionOutcome:
+    def _run(ctx: ActionContext) -> Result:
         for fn in fns:
-            outcome = fn(ctx)
-            if not outcome.ok:
-                return outcome
-        return ActionOutcome(ActionStatus.OK)
+            result = fn(ctx)
+            if not result.ok:
+                return result
+        return Result.success()
 
     return _run

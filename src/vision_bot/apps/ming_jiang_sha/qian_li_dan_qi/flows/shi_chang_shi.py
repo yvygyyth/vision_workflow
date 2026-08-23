@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def _confirm(ctx) -> Result:
     r = step_confirm(ctx)
-    if r.failed:
+    if not r.ok:
         ctx.goto(qmod("shi_chang_shi", "attack"))
     return r
 
@@ -37,7 +37,7 @@ def _check_cancel(ctx) -> Result:
     snap = ctx.snap({"fight.cancel"})
     if snap_found(snap, "fight.cancel"):
         r = click_confirm(ctx.action_ctx())
-        if r.failed:
+        if not r.ok:
             return Result.fail(r.message)
         ctx.goto("qldq.fight")
         return Result.success()

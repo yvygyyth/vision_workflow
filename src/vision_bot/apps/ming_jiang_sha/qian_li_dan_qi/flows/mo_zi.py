@@ -18,7 +18,7 @@ _OPTS = ((1130, 360), (1130, 630), (1130, 900))
 
 def _confirm(ctx) -> Result:
     r = step_confirm(ctx)
-    if r.failed:
+    if not r.ok:
         ctx.goto("qldq.mo_zi.click")
     return r
 

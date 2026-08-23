@@ -21,7 +21,7 @@ _OPTS = (
 
 def _confirm(ctx) -> Result:
     r = step_confirm(ctx)
-    if r.failed:
+    if not r.ok:
         ctx.goto("qldq.fei_fei.choose")
     return r
 

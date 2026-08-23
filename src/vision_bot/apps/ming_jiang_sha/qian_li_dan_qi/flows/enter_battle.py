@@ -62,7 +62,7 @@ def _focus_search(ctx) -> Result:
         move().by(-160, 0),
         click().pause(0.3),
     )(act)
-    if r.failed:
+    if not r.ok:
         return Result.fail("聚焦搜索框失败")
     ctx.goto(qmod("enter_battle", "type_name"))
     return Result.success()

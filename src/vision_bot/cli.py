@@ -7,11 +7,11 @@ from rich.console import Console
 
 from vision_bot import __version__
 from vision_bot.logging_utils import setup_logging
-from vision_bot.start import DEFAULT_JOB_ID, start
+from vision_bot.jobs import DEFAULT_JOB_ID, start
 
 app = typer.Typer(
     name="vision-bot",
-    help="千里单骑自动化",
+    help="名将杀自动化（千里单骑 / 八王之乱 / 每日免费）",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -26,7 +26,7 @@ def run_cmd(
     """命令行直接运行。"""
     setup_logging()
     report = start(job_id, wu_jiang=wu_jiang)
-    console.print(f"完成 success={report.success} outcome={report.outcome}")
+    console.print(f"完成 success={report.success} message={report.message}")
     if report.path:
         console.print("路径: " + " → ".join(report.path))
     raise typer.Exit(code=0 if report.success else 1)

@@ -7,9 +7,9 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from vision_bot.jobs import start
 from vision_bot.logging_utils import setup_logging
 from vision_bot.runtime.runner import RunReport
-from vision_bot.start import start
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class RunRequest:
     job_id: str
 
 
-class FlowWorker:
+class JobWorker:
     def __init__(self, *, on_finished: Callable[[RunReport | None, BaseException | None], None]) -> None:
         self._on_finished = on_finished
         self._thread: threading.Thread | None = None
@@ -33,7 +33,7 @@ class FlowWorker:
         if self.busy:
             raise RuntimeError("已有任务在运行")
         self._cancel.clear()
-        self._thread = threading.Thread(target=self._run, args=(request,), name="flow-worker", daemon=True)
+        self._thread = threading.Thread(target=self._run, args=(request,), name="job-worker", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:

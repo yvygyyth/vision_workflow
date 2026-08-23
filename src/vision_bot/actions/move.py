@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Callable, Literal
+from typing import Literal
 
 from vision_bot.actions.anchor import PointAnchor, resolve_anchor
 from vision_bot.actions.context import ActionContext
-from vision_bot.actions.outcome import ActionOutcome, ActionStatus
+from vision_bot.actions.fn import ActionFn
 from vision_bot.actions.wait import wait_image
 from vision_bot.core.display import cached_template_scale
 from vision_bot.core.input import Mouse
-
-ActionFn = Callable[[ActionContext], ActionOutcome]
+from vision_bot.runtime.result import Result
 _Mode = Literal["abs", "rel", "image", "anchor"]
 
 
@@ -97,7 +96,7 @@ class Move:
         sleep = self.sleep
         fit = self.fit_display
 
-        def _run(ctx: ActionContext) -> ActionOutcome:
+        def _run(ctx: ActionContext) -> Result:
             mouse = Mouse()
             if mode == "abs":
                 sx, sy = _fit_xy(x, y, fit=fit)
@@ -125,14 +124,14 @@ class Move:
                 if hit is None or not hit.center:
                     if not ctx.reason:
                         ctx.reason = "识图未命中" if hit is None else "识图命中但无中心点"
-                    return ActionOutcome(ActionStatus.FAIL, reason=ctx.reason)
+                    return Result.fail(ctx.reason)
                 cx, cy = hit.center
                 mouse.move(cx, cy, duration=duration)
 
             if sleep > 0:
                 mouse.sleep(sleep)
             mouse.perform()
-            return ActionOutcome(ActionStatus.OK)
+            return Result.success()
 
         return _run
 

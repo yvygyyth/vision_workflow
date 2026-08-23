@@ -10,14 +10,14 @@ import customtkinter as ctk
 from vision_bot.core.settings import MatchSettings
 from vision_bot.logging_utils import setup_logging
 from vision_bot.runtime.runner import RunReport
-from vision_bot.start import DEFAULT_JOB_ID, job_choices
+from vision_bot.jobs import DEFAULT_JOB_ID, job_choices
 from vision_bot.ui import theme
 from vision_bot.ui.panels.control_panel import ControlPanel
 from vision_bot.ui.panels.log_panel import LogPanel
 from vision_bot.ui.panels.settings_dialog import SettingsDialog
 from vision_bot.ui.panels.status_bar import StatusBar
-from vision_bot.ui.services.flow_worker import FlowWorker, RunRequest
 from vision_bot.ui.services.hotkeys import TOGGLE_LABEL, GlobalHotkeys
+from vision_bot.ui.services.job_worker import JobWorker, RunRequest
 from vision_bot.ui.services.log_bridge import attach_queue_handler, drain_queue
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class MainWindow(ctk.CTk):
         self.status = StatusBar(self)
         self.status.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
 
-        self.worker = FlowWorker(on_finished=self._on_done)
+        self.worker = JobWorker(on_finished=self._on_done)
         self._hotkeys = GlobalHotkeys(on_toggle=self._toggle, schedule=lambda fn: self.after(0, fn))
         self._hotkeys.start()
 

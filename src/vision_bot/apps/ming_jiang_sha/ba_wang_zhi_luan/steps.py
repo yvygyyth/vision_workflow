@@ -99,12 +99,12 @@ def confirm_ready(ctx) -> Result:
 
 def poll_click_start(ctx) -> Result:
     act = ctx.action_ctx()
-    outcome = do(
+    result = do(
         move().image(_START).match(timeout=600, interval=1.5),
         click().pause(0.3),
     )(act)
-    if not outcome.ok:
-        return Result.fail(act.reason or "未找到开始按钮")
+    if not result.ok:
+        return Result.fail(result.message or act.reason or "未找到开始按钮")
     ctx.goto("ba_wang.wait_game_start")
     return Result.success()
 
@@ -161,19 +161,19 @@ def move_aside(ctx) -> Result:
 
 def wait_click_setting(ctx) -> Result:
     act = ctx.action_ctx()
-    outcome = do(
+    result = do(
         move().image(_SETTING).match(timeout=600, interval=0.5),
         click().pause(0.3),
     )(act)
-    if not outcome.ok:
-        return Result.fail(act.reason or "未找到 setting")
+    if not result.ok:
+        return Result.fail(result.message or act.reason or "未找到 setting")
     ctx.goto("ba_wang.click_auto")
     return Result.success()
 
 
 def click_auto(ctx) -> Result:
     r = do_click(ctx, _AUTO, timeout=3.0)
-    if r.failed:
+    if not r.ok:
         ctx.goto("ba_wang.wait_setting")
     else:
         ctx.goto("ba_wang.click_challenge_end")
@@ -182,12 +182,12 @@ def click_auto(ctx) -> Result:
 
 def click_challenge_end(ctx) -> Result:
     act = ctx.action_ctx()
-    outcome = do(
+    result = do(
         move().image(_CHALLENGE_END).match(timeout=1200, interval=5),
         click(),
     )(act)
-    if not outcome.ok:
-        return Result.fail(act.reason or "挑战未结束")
+    if not result.ok:
+        return Result.fail(result.message or act.reason or "挑战未结束")
     ctx.goto("ba_wang.next_step")
     return Result.success()
 

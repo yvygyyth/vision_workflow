@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Callable
 
 from vision_bot.actions.context import ActionContext
-from vision_bot.actions.outcome import ActionOutcome, ActionStatus
+from vision_bot.actions.fn import ActionFn
 from vision_bot.core.input import Button, Mouse
-
-ActionFn = Callable[[ActionContext], ActionOutcome]
+from vision_bot.runtime.result import Result
 
 
 @dataclass(frozen=True)
@@ -32,12 +30,12 @@ class Click:
         clicks = self.clicks
         sleep = self.sleep
 
-        def _run(_ctx: ActionContext) -> ActionOutcome:
+        def _run(_ctx: ActionContext) -> Result:
             chain = Mouse().click(button=button, clicks=clicks)
             if sleep > 0:
                 chain = chain.sleep(sleep)
             chain.perform()
-            return ActionOutcome(ActionStatus.OK)
+            return Result.success()
 
         return _run
 

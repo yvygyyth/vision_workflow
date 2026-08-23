@@ -21,12 +21,12 @@ def do_click(
     builder = move()
     for image in images:
         builder = builder.image(image)
-    outcome = do(
+    result = do(
         builder.match(timeout=timeout, interval=interval, threshold=threshold),
         click(),
     )(act)
-    if not outcome.ok:
-        return Result.fail(act.reason or "识图点击失败")
+    if not result.ok:
+        return Result.fail(result.message or act.reason or "识图点击失败")
     return Result.success()
 
 
