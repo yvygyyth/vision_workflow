@@ -54,10 +54,11 @@ line-length = 100
 target-version = "py310"
 
 # 类似 npm scripts：poe <任务名>
+# 用 python -m 启动，避免未 pip install -e 时找不到 vision-bot.exe
 [tool.poe.tasks]
-run = "vision-bot run"
-ui = "vision-bot ui"
-version = "vision-bot version"
+run = "python -m vision_bot run"
+ui = "python -m vision_bot ui"
+version = "python -m vision_bot version"
 test = "pytest tests/test_vision_bot.py"
 lint = "ruff check src/vision_bot tests/test_vision_bot.py"
 build = "python scripts/build_exe.py"
