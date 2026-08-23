@@ -5,26 +5,20 @@ from __future__ import annotations
 from vision_bot.apps.ming_jiang_sha.actions import step_go_back, step_space_close
 from vision_bot.apps.ming_jiang_sha.flow_helpers import do_click
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
-from vision_bot.runtime.flow import Flow, StepResult
+from vision_bot.runtime.builders import flow, mod
+from vision_bot.runtime.flow import Flow
 
 _DIR = f"{DATA_ROOT}/dang_qing_ge"
-DONE = "dang_done"
-
-
-def _finish(ctx) -> StepResult:
-    step_go_back(ctx)
-    return StepResult.end(DONE)
 
 
 def build() -> Flow:
-    return Flow(
-        id="dang_qing_ge",
-        name="丹青阁",
-        entry="icon",
-        steps={
-            "icon": lambda ctx: do_click(ctx, f"{_DIR}/dang_qing_ge-icon.png"),
-            "day_libao": lambda ctx: do_click(ctx, f"{_DIR}/day-libao.png"),
-            "space_close": step_space_close,
-            "go_back": _finish,
-        },
+    return flow(
+        "fee_day.dang_qing_ge",
+        "丹青阁",
+        children=[
+            mod("fee_day.dang_qing_ge.icon", "打开丹青阁", lambda ctx: do_click(ctx, f"{_DIR}/dang_qing_ge-icon.png")),
+            mod("fee_day.dang_qing_ge.day_libao", "每日礼包", lambda ctx: do_click(ctx, f"{_DIR}/day-libao.png")),
+            mod("fee_day.dang_qing_ge.space_close", "关闭弹窗", step_space_close),
+            mod("fee_day.dang_qing_ge.back", "返回", step_go_back),
+        ],
     )

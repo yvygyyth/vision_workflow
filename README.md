@@ -1,13 +1,14 @@
 # vision-bot
 
-基于识图的自动化框架，当前实现「名将杀 · 千里单骑」。运行时只有 **Flow** 一层：`steps` 里放子 Flow 或步骤函数，失败时走 `routes` / `relocate` 纠偏。
+基于识图的自动化框架，当前支持「千里单骑」「八王之乱」「每日免费资源」。运行时使用 **Flow / Module** 编排：`children` 顺序执行，失败走 `relocate` 纠偏，模块内 `ctx.goto` / `ctx.call` 跳转。
 
 ## 架构
 
 ```text
-Flow        步骤表：id → Flow | StepFn
-StepFn      (ctx) -> StepResult（ok / fail + outcome）
-RunContext  截图、点击、取消信号
+Flow        id, name, children: list[Flow | Module], relocate?
+Module      id, name, active(ctx) -> Result
+Result      ok / message
+RunContext  截图、点击、取消信号、goto/call
 jobs.py     任务注册表 + start(job_id)
 ```
 

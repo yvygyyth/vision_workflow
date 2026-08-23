@@ -14,50 +14,26 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.pocket_event import bui
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.rest import build as build_rest
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.run_ended import build as build_run_ended
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.shi_chang_shi import build as build_shi
+from vision_bot.runtime.builders import flow
 from vision_bot.runtime.flow import Flow
-from vision_bot.runtime.types import (
-    BACK_TO_HUB,
-    BA_QING_STORE,
-    ENTER_BATTLE,
-    FEI_FEI,
-    FIGHT,
-    MO_ZI,
-    POCKET_EVENT,
-    REST,
-    RUN_ENDED,
-    SHI_CHANG_SHI,
-)
 
 
 def build_qian_li_dan_qi() -> Flow:
-    return Flow(
-        id="qian_li_dan_qi",
-        name="千里单骑",
-        entry="enter_battle",
-        relocate=relocate_qian_li,
-        steps={
-            "home_recovery": build_home(),
-            "enter_battle": build_enter(),
-            "battle_hub": build_hub(),
-            "fight": build_fight(),
-            "ba_qing_store": build_ba_qing(),
-            "pocket_event": build_pocket(),
-            "rest": build_rest(),
-            "fei_fei": build_fei_fei(),
-            "mo_zi": build_mo_zi(),
-            "shi_chang_shi": build_shi(),
-            "run_ended": build_run_ended(),
-        },
-        on={
-            BACK_TO_HUB: "battle_hub",
-            FIGHT: "fight",
-            BA_QING_STORE: "ba_qing_store",
-            POCKET_EVENT: "pocket_event",
-            REST: "rest",
-            FEI_FEI: "fei_fei",
-            MO_ZI: "mo_zi",
-            SHI_CHANG_SHI: "shi_chang_shi",
-            RUN_ENDED: "run_ended",
-            ENTER_BATTLE: "enter_battle",
-        },
+    return flow(
+        "qldq",
+        "千里单骑",
+        children=[
+            build_home(),
+            build_enter(),
+            build_hub(),
+            build_fight(),
+            build_ba_qing(),
+            build_pocket(),
+            build_rest(),
+            build_fei_fei(),
+            build_mo_zi(),
+            build_shi(),
+            build_run_ended(),
+        ],
+        relocate=[relocate_qian_li],
     )

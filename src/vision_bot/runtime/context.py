@@ -5,11 +5,14 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchOptions
 from vision_bot.perception.signal import SignalRegistry
+
+if TYPE_CHECKING:
+    from vision_bot.runtime.registry import FlowRegistry
 
 
 @dataclass
@@ -20,6 +23,8 @@ class RunContext:
     vars: dict[str, Any] = field(default_factory=dict)
     cancel_event: threading.Event | None = None
     params: dict[str, Any] = field(default_factory=dict)
+    _flow_registry: FlowRegistry | None = field(default=None, repr=False)
+    _runner: Any = field(default=None, repr=False)
 
     def cancelled(self) -> bool:
         return self.cancel_event is not None and self.cancel_event.is_set()
@@ -47,3 +52,13 @@ class RunContext:
         from vision_bot.perception.snapshot import capture
 
         return capture(self.registry, self.base_dir, signal_ids)
+
+    def goto(self, target_id: str) -> None:
+        if self._runner is None:
+            raise RuntimeError("goto 需要在 run_root 内调用")
+        self._runner.goto(target_id)
+
+    def call(self, target_id: str) -> None:
+        if self._runner is None:
+            raise RuntimeError("call 需要在 run_root 内调用")
+        self._runner.call(target_id)

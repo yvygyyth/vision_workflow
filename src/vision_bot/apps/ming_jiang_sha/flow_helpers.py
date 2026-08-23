@@ -5,7 +5,7 @@ from __future__ import annotations
 from vision_bot.actions import click, do, move
 from vision_bot.actions.anchor import resolve_anchor
 from vision_bot.core.input import Mouse
-from vision_bot.runtime.flow import StepResult
+from vision_bot.runtime.result import Result
 
 
 def do_click(
@@ -14,10 +14,10 @@ def do_click(
     timeout: float = 3.0,
     interval: float = 0.5,
     threshold: float = 0.8,
-) -> StepResult:
+) -> Result:
     act = ctx.action_ctx()
     if not images:
-        return StepResult.fail("未指定模板图")
+        return Result.fail("未指定模板图")
     builder = move()
     for image in images:
         builder = builder.image(image)
@@ -26,14 +26,14 @@ def do_click(
         click(),
     )(act)
     if not outcome.ok:
-        return StepResult.fail(act.reason or "识图点击失败")
-    return StepResult.ok()
+        return Result.fail(act.reason or "识图点击失败")
+    return Result.success()
 
 
-def scroll_center(ctx, amount: int, *, times: int = 1) -> StepResult:
+def scroll_center(ctx, amount: int, *, times: int = 1) -> Result:
     cx, cy = resolve_anchor("center")
     chain = Mouse().move(cx, cy)
     for _ in range(times):
         chain = chain.scroll(amount).sleep(0.05)
     chain.perform()
-    return StepResult.ok()
+    return Result.success()

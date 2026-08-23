@@ -1,15 +1,19 @@
 """vision_bot 测试。"""
 
+import threading
+import time
+from pathlib import Path
+
 import pytest
 
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import detect_hub, detect_qian_li
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import build_registry, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import build_registry
 from vision_bot.core.models import MatchResult
 from vision_bot.perception.snapshot import ScreenSnapshot
-from vision_bot.runtime import Flow
-from vision_bot.runtime.flow import StepResult
-from vision_bot.runtime.types import BACK_TO_HUB, END, ENTER_BATTLE, FAIL, FIGHT
+from vision_bot.runtime import RunContext, flow, mod, run_root
+from vision_bot.runtime.registry import FlowRegistry
+from vision_bot.runtime.result import Result
 from vision_bot.jobs import JOBS, job_choices
 from vision_bot.start import get_job, start
 
@@ -25,7 +29,7 @@ def test_detect_qian_li_hub() -> None:
             "choice.challenge": MatchResult(found=True, image="x.png", center=(1, 2)),
         }
     )
-    assert detect_qian_li(snap, None) == "battle_hub"  # type: ignore[arg-type]
+    assert detect_qian_li(snap, None) == "qldq.battle_hub"  # type: ignore[arg-type]
 
 
 def test_detect_hub_pick_battle() -> None:
@@ -37,44 +41,100 @@ def test_detect_hub_pick_battle() -> None:
     assert detect_hub(snap, None) == HUB_PICK_BATTLE  # type: ignore[arg-type]
 
 
-def test_step_result_end() -> None:
-    r = StepResult.end(FIGHT)
-    assert r.next_id is END
-    assert r.outcome == FIGHT
-
-
-def test_normalize_steps_from_callable() -> None:
-    def step(ctx):
-        return StepResult.ok()
-
-    flow = Flow(
-        id="t",
-        entry="a",
-        steps={"a": step},
-    )
-    assert callable(flow.steps["a"])
-    assert flow.steps["a"] is step
-
-
-def test_routes_and_build_root() -> None:
-    def step(ctx):
-        return StepResult.ok()
-
-    flow = Flow(
-        id="t",
-        entry="a",
-        steps={"a": step, "b": step},
-        routes={"a": {FAIL: "b"}},
-    )
-    assert flow.routes["a"][FAIL] == "b"
-
+def test_flow_registry_build() -> None:
     root = build_qian_li_dan_qi()
-    assert root.entry == "enter_battle"
-    assert "battle_hub" in root.steps
-    assert isinstance(root.steps["fight"], Flow)
-    assert root.on[BACK_TO_HUB] == "battle_hub"
-    assert root.on[FIGHT] == "fight"
-    assert root.on[ENTER_BATTLE] == "enter_battle"
+    reg = FlowRegistry.build(root)
+    assert reg.get("qldq") is root
+    assert reg.get("qldq.fight").id == "qldq.fight"
+
+
+def test_flow_registry_duplicate_id() -> None:
+    child = mod("dup", "子", lambda ctx: Result.success())
+    root = flow("root", "根", children=[child, mod("dup", "重复", lambda ctx: Result.success())])
+    with pytest.raises(ValueError, match="重复"):
+        FlowRegistry.build(root)
+
+
+def test_sequential_modules() -> None:
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        return Result.success()
+
+    def b(ctx):
+        log.append("b")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "测试",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.b", "B", b),
+        ],
+    )
+    ctx = RunContext(base_dir=Path("."), registry=build_registry())
+    report = run_root(root, ctx)
+    assert report.success
+    assert log == ["a", "b"]
+
+
+def test_goto_jumps_to_target() -> None:
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        ctx.goto("t.c")
+        return Result.success()
+
+    def b(ctx):
+        log.append("b")
+        return Result.success()
+
+    def c(ctx):
+        log.append("c")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "测试",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.b", "B", b),
+            mod("t.c", "C", c),
+        ],
+    )
+    ctx = RunContext(base_dir=Path("."), registry=build_registry())
+    report = run_root(root, ctx)
+    assert report.success
+    assert log == ["a", "c"]
+
+
+def test_relocate_on_entry() -> None:
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        return Result.success()
+
+    def b(ctx):
+        log.append("b")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "测试",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.b", "B", b),
+        ],
+        relocate=[lambda ctx: "t.b"],
+    )
+    ctx = RunContext(base_dir=Path("."), registry=build_registry())
+    report = run_root(root, ctx)
+    assert report.success
+    assert log == ["b"]
 
 
 def test_jobs_registry() -> None:
@@ -90,20 +150,20 @@ def test_jobs_registry() -> None:
 def test_ba_wang_build() -> None:
     from vision_bot.apps.ming_jiang_sha.ba_wang_zhi_luan.build import build
 
-    flow = build()
-    assert flow.id == "ba_wang_zhi_luan"
-    assert flow.entry == "detect_role"
-    assert "battle_done" in flow.steps
+    root = build()
+    assert root.id == "ba_wang"
+    reg = FlowRegistry.build(root)
+    assert "ba_wang.battle_done" in reg.nodes
 
 
 def test_fee_day_build() -> None:
     from vision_bot.apps.ming_jiang_sha.fee_day.build import build_fee_day
 
-    flow = build_fee_day()
-    assert flow.id == "fee_day"
-    assert flow.entry == "mail"
-    assert "gong_hui" in flow.steps
-    assert flow.on["mail_done"] == "dang_qing_ge"
+    root = build_fee_day()
+    assert root.id == "fee_day"
+    assert len(root.children) == 7
+    reg = FlowRegistry.build(root)
+    assert "fee_day.mail.open" in reg.nodes
 
 
 def test_start_unknown_job() -> None:
@@ -112,10 +172,6 @@ def test_start_unknown_job() -> None:
 
 
 def test_cancel_during_wait() -> None:
-    import threading
-    import time
-    from pathlib import Path
-
     from vision_bot.actions.context import ActionContext
     from vision_bot.actions.wait import wait_image
     from vision_bot.runtime.cancel import CancelledError

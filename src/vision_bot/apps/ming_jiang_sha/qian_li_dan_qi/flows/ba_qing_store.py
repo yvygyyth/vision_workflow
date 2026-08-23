@@ -8,44 +8,43 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import relocate_ba_qing_store
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
-from vision_bot.runtime.flow import Flow, StepResult
-from vision_bot.runtime.types import BACK_TO_HUB, END
+from vision_bot.runtime.builders import flow, mod
+from vision_bot.runtime.flow import Flow
+from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
 
-def _go_back(ctx) -> StepResult:
+def _go_back(ctx) -> Result:
     do(move().image("data/ming_jiang_sha/qian_li_dan_qi/ba_qing_store/go_back.png"), click())(
         ctx.action_ctx()
     )
-    return StepResult.ok(next_id="confirm")
+    return Result.success()
 
 
-def _confirm(ctx) -> StepResult:
+def _confirm(ctx) -> Result:
     do(move().image("data/ming_jiang_sha/qian_li_dan_qi/ba_qing_store/confirm.png"), click())(
         ctx.action_ctx()
     )
-    return StepResult.ok(next_id="ensure_left")
+    return Result.success()
 
 
-def _ensure_left(ctx) -> StepResult:
+def _ensure_left(ctx) -> Result:
     time.sleep(0.6)
     snap = ctx.snap({"shop.go_back"})
     if snap_found(snap, "shop.go_back"):
-        return StepResult.fail("仍在店内")
-    return StepResult.end(BACK_TO_HUB)
+        return Result.fail("仍在店内")
+    return Result.success()
 
 
 def build() -> Flow:
-    return Flow(
-        id="ba_qing_store",
-        name="巴清商店",
-        entry="go_back",
-        relocate=relocate_ba_qing_store,
-        steps={
-            "go_back": _go_back,
-            "confirm": _confirm,
-            "ensure_left": _ensure_left,
-        },
-        on={BACK_TO_HUB: END},
+    return flow(
+        "qldq.ba_qing_store",
+        "巴清商店",
+        children=[
+            mod("qldq.ba_qing_store.go_back", "返回", _go_back),
+            mod("qldq.ba_qing_store.confirm", "确认", _confirm),
+            mod("qldq.ba_qing_store.ensure_left", "确认离店", _ensure_left),
+        ],
+        relocate=[relocate_ba_qing_store],
     )

@@ -6,24 +6,26 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import press_esc
-from vision_bot.runtime.flow import Flow, StepResult
-from vision_bot.runtime.types import ENTER_BATTLE, END
+from vision_bot.runtime.builders import flow, mod
+from vision_bot.runtime.flow import Flow
+from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
 
-def _esc_home(ctx) -> StepResult:
+def _esc_home(ctx) -> Result:
     logger.info("home_recovery: Esc×5")
     press_esc(ctx.action_ctx(), times=5, pause=0.25)
     time.sleep(0.5)
-    return StepResult.end(ENTER_BATTLE)
+    ctx.goto("qldq.enter_battle")
+    return Result.success()
 
 
 def build() -> Flow:
-    return Flow(
-        id="home_recovery",
-        name="回首页恢复",
-        entry="esc_home",
-        steps={"esc_home": _esc_home},
-        on={ENTER_BATTLE: END},
+    return flow(
+        "qldq.home_recovery",
+        "回首页恢复",
+        children=[
+            mod("qldq.home_recovery.esc_home", "Esc回首页", _esc_home),
+        ],
     )

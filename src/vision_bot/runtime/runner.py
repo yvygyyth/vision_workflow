@@ -1,195 +1,194 @@
-"""Flow 执行器。"""
-
-from __future__ import annotations
-
-import logging
-from dataclasses import dataclass
-
-from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.cancel import CancelledError
-from vision_bot.runtime.flow import Flow, StepResult
-from vision_bot.runtime.types import END, ESCALATE, FAIL, OK
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class RunReport:
-    success: bool
-    outcome: str = ""
-    message: str = ""
-    path: list[str] = None  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.path is None:
-            self.path = []
-
-
-def _try_relocate(flow: Flow, ctx: RunContext) -> str | None:
-    if flow.relocate is None:
-        return None
-    detected = flow.relocate(ctx)
-    if detected and detected in flow.steps:
-        return detected
-    return None
-
-
-def _route_after_outcome(flow: Flow, current: str, outcome: str) -> tuple[str | None, bool]:
-    """返回 (下一 step id, 是否结束本 Flow 并向上返回 outcome)。"""
-    nxt = flow.on.get(outcome)
-    if nxt is END:
-        return None, True
-    if isinstance(nxt, str):
-        return nxt, False
-    return None, True
-
-
-def run_flow(flow: Flow, ctx: RunContext, *, parent: Flow | None = None) -> str:
-    """执行嵌套 Flow；返回 outcome 或 ESCALATE。"""
-    current = flow.entry
-
-    while not ctx.cancelled():
-        step = flow.get(current)
-        logger.info("[%s] → %s", flow.id, current)
-
-        if isinstance(step, Flow):
-            outcome = run_flow(step, ctx, parent=flow)
-            if outcome == FAIL and ctx.cancelled():
-                return FAIL
-            if outcome == ESCALATE:
-                det = _try_relocate(flow, ctx)
-                if det:
-                    current = det
-                    continue
-                return ESCALATE
-            nxt, done = _route_after_outcome(flow, current, outcome)
-            if done:
-                return outcome
-            current = nxt  # type: ignore[assignment]
-            continue
-
-        if not callable(step):
-            raise TypeError(f"Flow [{flow.id}] 步骤 {current!r} 不可调用")
-        try:
-            result = step(ctx)
-        except CancelledError:
-            return FAIL
-
-        if result.failed:
-            routed = flow.resolve_route(current, result.outcome)
-            if isinstance(routed, str):
-                current = routed
-                continue
-            det = _try_relocate(flow, ctx)
-            if det:
-                current = det
-                continue
-            return ESCALATE
-
-        if result.next_id is END:
-            return result.outcome
-
-        if result.next_id and isinstance(result.next_id, str):
-            current = result.next_id
-            continue
-
-        routed = flow.resolve_route(current, result.outcome)
-        if routed is END:
-            return result.outcome
-        if isinstance(routed, str):
-            current = routed
-            continue
-
-        nxt = _default_next(flow, current)
-        if nxt is None:
-            return result.outcome if result.outcome != OK else OK
-        current = nxt
-
-    return FAIL
-
-
-def run_root(flow: Flow, ctx: RunContext) -> RunReport:
-    """顶层循环：子 Flow 结束后按 flow.on 路由；冒泡失败走 home_recovery。"""
-    current = flow.entry
-    path: list[str] = []
-
-    while not ctx.cancelled():
-        step = flow.get(current)
-        path.append(f"{flow.id}.{current}")
-
-        if isinstance(step, Flow):
-            outcome = run_flow(step, ctx, parent=flow)
-            if outcome == FAIL:
-                if ctx.cancelled():
-                    return RunReport(success=False, outcome=FAIL, message="用户取消", path=path)
-                return RunReport(success=False, outcome=FAIL, message="子流程失败", path=path)
-            if outcome == ESCALATE:
-                det = _try_relocate(flow, ctx)
-                if det:
-                    current = det
-                    continue
-                if "home_recovery" in flow.steps:
-                    logger.warning("顶层 relocate 失败 → home_recovery")
-                    current = "home_recovery"
-                    continue
-                return RunReport(success=False, outcome=ESCALATE, message="无法识别界面", path=path)
-
-            nxt, done = _route_after_outcome(flow, current, outcome)
-            if not done and isinstance(nxt, str):
-                current = nxt
-                continue
-            if done and flow.on.get(outcome) is END:
-                return RunReport(success=True, outcome=outcome, path=path)
-            hub = flow.on.get("back_to_hub")
-            if isinstance(hub, str):
-                current = hub
-                continue
-            return RunReport(success=True, outcome=outcome, path=path)
-
-        if not callable(step):
-            raise TypeError(f"Flow [{flow.id}] 步骤 {current!r} 不可调用")
-        try:
-            result = step(ctx)
-        except CancelledError:
-            return RunReport(success=False, outcome=FAIL, message="用户取消", path=path)
-        if result.failed:
-            routed = flow.resolve_route(current, result.outcome)
-            if isinstance(routed, str):
-                current = routed
-                continue
-            det = _try_relocate(flow, ctx)
-            if det:
-                current = det
-                continue
-            return RunReport(success=False, outcome=FAIL, message=result.message, path=path)
-
-        if result.next_id is END:
-            nxt = flow.on.get(result.outcome)
-            if isinstance(nxt, str):
-                current = nxt
-                continue
-            return RunReport(success=True, outcome=result.outcome, path=path)
-
-        routed = flow.resolve_route(current, result.outcome)
-        if isinstance(routed, str):
-            current = routed
-            continue
-
-        nxt = _default_next(flow, current)
-        if nxt:
-            current = nxt
-            continue
-        return RunReport(success=True, outcome=result.outcome, path=path)
-
-    return RunReport(success=False, outcome=FAIL, message="用户取消", path=path)
-
-
-def _default_next(flow: Flow, step_id: str) -> str | None:
-    ids = list(flow.steps.keys())
-    try:
-        idx = ids.index(step_id)
-    except ValueError:
-        return None
-    if idx + 1 < len(ids):
-        return ids[idx + 1]
-    return None
+"""流程执行器。"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+
+from vision_bot.runtime.cancel import CancelledError
+from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.flow import Flow
+from vision_bot.runtime.jump import Jump, JumpTargetError
+from vision_bot.runtime.module import Module
+from vision_bot.runtime.registry import FlowRegistry
+from vision_bot.runtime.result import Result
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class RunReport:
+    success: bool
+    outcome: str = ""
+    message: str = ""
+    path: list[str] = field(default_factory=list)
+
+
+@dataclass
+class _Resume:
+    flow: Flow
+    child_index: int
+
+
+@dataclass
+class _FlowAdvance:
+    flow: Flow
+    start_index: int
+
+
+class Runner:
+    def __init__(self, ctx: RunContext, registry: FlowRegistry) -> None:
+        self.ctx = ctx
+        self.registry = registry
+        self.path: list[str] = []
+        self._call_stack: list[_Resume] = []
+
+    def goto(self, target_id: str) -> None:
+        self.registry.get(target_id)
+        raise Jump("goto", target_id)
+
+    def call(self, target_id: str) -> None:
+        self.registry.get(target_id)
+        raise Jump("call", target_id)
+
+    def run_flow(self, flow: Flow) -> Result:
+        try:
+            return self._run_flow(flow)
+        except JumpTargetError as exc:
+            return Result.fail(str(exc))
+
+    def _try_relocate(self, flow: Flow) -> str | None:
+        for rule in flow.relocate:
+            self.ctx.check_cancelled()
+            target = rule(self.ctx)
+            if target:
+                return target
+        return None
+
+    def _run_flow(self, flow: Flow) -> Result:
+        logger.info("[%s]", flow.name)
+        self.path.append(flow.id)
+        self.ctx.check_cancelled()
+
+        entry = self._try_relocate(flow)
+        if entry:
+            result = self._run_subtree(entry)
+            self.path.pop()
+            return result
+
+        result = self._run_flow_children(flow, 0)
+        self.path.pop()
+        return result
+
+    def _run_flow_children(self, flow: Flow, start_index: int) -> Result:
+        for i in range(start_index, len(flow.children)):
+            self.ctx.check_cancelled()
+            result = self._run_node(flow.children[i], parent_flow=flow, child_index=i)
+            outcome = self._consume_node_result(flow, i, result)
+            if outcome is not None:
+                return outcome
+        return Result.success()
+
+    def _consume_node_result(self, flow: Flow, child_index: int, result: Result | _FlowAdvance) -> Result | None:
+        if isinstance(result, _FlowAdvance):
+            return self._run_flow_children(result.flow, result.start_index)
+        if not result.ok:
+            recovery = self._try_relocate(flow)
+            if recovery:
+                rec = self._run_subtree(recovery)
+                if not rec.ok:
+                    return rec
+                retry = self._run_node(flow.children[child_index], parent_flow=flow, child_index=child_index)
+                return self._consume_node_result(flow, child_index, retry)
+            return result
+        return None
+
+    def _run_node(self, node: Flow | Module, *, parent_flow: Flow, child_index: int) -> Result | _FlowAdvance:
+        if isinstance(node, Flow):
+            return self._run_flow(node)
+
+        logger.info("[%s]", node.name)
+        self.path.append(node.id)
+        self.ctx.check_cancelled()
+        try:
+            result = node.active(self.ctx)
+        except Jump as jump:
+            self.path.pop()
+            return self._handle_jump(jump, parent_flow=parent_flow, child_index=child_index)
+        except CancelledError:
+            self.path.pop()
+            return Result.fail("用户取消")
+        self.path.pop()
+
+        if not result.ok:
+            return result
+        return Result.success()
+
+    def _handle_jump(self, jump: Jump, *, parent_flow: Flow, child_index: int) -> Result | _FlowAdvance:
+        if jump.kind == "call":
+            self._call_stack.append(_Resume(flow=parent_flow, child_index=child_index + 1))
+        result = self._run_subtree(jump.target_id)
+        if not result.ok:
+            return result
+        if jump.kind == "call":
+            resume = self._call_stack.pop()
+            return _FlowAdvance(resume.flow, resume.child_index)
+        return self._continue_after_node(jump.target_id)
+
+    def _run_subtree(self, node_id: str) -> Result:
+        node = self.registry.get(node_id)
+        if isinstance(node, Module):
+            logger.info("[%s]", node.name)
+            self.path.append(node.id)
+            self.ctx.check_cancelled()
+            try:
+                result = node.active(self.ctx)
+            except Jump as jump:
+                self.path.pop()
+                parent_id = self.registry.parent_flow[node_id]
+                parent = self.registry.get(parent_id)
+                assert isinstance(parent, Flow)
+                idx = self.registry.child_index[node_id]
+                handled = self._handle_jump(jump, parent_flow=parent, child_index=idx)
+                if isinstance(handled, _FlowAdvance):
+                    return self._run_flow_children(handled.flow, handled.start_index)
+                return handled
+            except CancelledError:
+                self.path.pop()
+                return Result.fail("用户取消")
+            self.path.pop()
+            return result
+        return self._run_flow(node)
+
+    def _continue_after_node(self, node_id: str) -> Result | _FlowAdvance:
+        nxt = self.registry.next_sibling_index(node_id)
+        if nxt is not None:
+            parent_id, index = nxt
+            parent = self.registry.get(parent_id)
+            assert isinstance(parent, Flow)
+            return _FlowAdvance(parent, index)
+        parent_id = self.registry.parent_flow.get(node_id)
+        if parent_id is None:
+            return Result.success()
+        parent = self.registry.get(parent_id)
+        assert isinstance(parent, Flow)
+        return _FlowAdvance(parent, len(parent.children))
+
+
+def run_root(flow: Flow, ctx: RunContext, *, loop: bool = False) -> RunReport:
+    registry = FlowRegistry.build(flow)
+    runner = Runner(ctx, registry)
+    ctx._flow_registry = registry
+    ctx._runner = runner
+
+    while not ctx.cancelled():
+        result = runner.run_flow(flow)
+        if not result.ok:
+            if ctx.cancelled():
+                return RunReport(success=False, message="用户取消", path=runner.path)
+            return RunReport(success=False, message=result.message or "执行失败", path=runner.path)
+        if not loop:
+            return RunReport(success=True, message="完成", path=runner.path)
+
+    return RunReport(success=False, message="用户取消", path=runner.path)
+

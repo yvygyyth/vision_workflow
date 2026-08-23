@@ -33,6 +33,6 @@ def run(
     logger.info("千里单骑启动 base_dir=%s", root)
     try:
         flow = build_qian_li_dan_qi()
-        return run_root(flow, ctx)
+        return run_root(flow, ctx, loop=True)
     finally:
         clear_battle_state(ctx)
