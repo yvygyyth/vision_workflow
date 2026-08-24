@@ -10,13 +10,21 @@ from vision_bot.apps.ming_jiang_sha.actions import (
     step_go_back,
     step_space_close,
 )
-from vision_bot.apps.ming_jiang_sha.flow_helpers import do_click
+from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
 
 _DIR = f"{DATA_ROOT}/zhu_jiu_store"
+
+
+def _entry(ctx) -> Result:
+    return click_image(f"{_DIR}/entry.png")
+
+
+def _qing_mei_store(ctx) -> Result:
+    return click_image(f"{_DIR}/qing_mei-store.png")
 
 
 def _finish(ctx) -> Result:
@@ -29,8 +37,8 @@ def build() -> Flow:
         "fee_day.zhu_jiu_store",
         "煮酒店铺",
         children=[
-            mod("fee_day.zhu_jiu_store.entry", "打开入口", lambda ctx: do_click(ctx, f"{_DIR}/entry.png")),
-            mod("fee_day.zhu_jiu_store.qing_mei_store", "青梅店", lambda ctx: do_click(ctx, f"{_DIR}/qing_mei-store.png")),
+            mod("fee_day.zhu_jiu_store.entry", "打开入口", _entry),
+            mod("fee_day.zhu_jiu_store.qing_mei_store", "青梅店", _qing_mei_store),
             mod("fee_day.zhu_jiu_store.ming_jiang_ce", "名将册", step_click_ming_jiang_ce),
             mod("fee_day.zhu_jiu_store.buy", "购买", step_confirm),
             mod("fee_day.zhu_jiu_store.space_close", "关闭弹窗", step_space_close),

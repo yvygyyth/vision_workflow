@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from vision_bot.apps.ming_jiang_sha.flow_helpers import do_click
+from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
 from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR
 from vision_bot.events import click_below_box, press_esc
 from vision_bot.runtime.result import Result
@@ -65,14 +65,14 @@ def step_go_back(ctx, *, times: int = 1) -> Result:
 
 def step_click_max(ctx) -> Result:
     """Flow 步骤：点击 max 按钮。"""
-    return do_click(ctx, _MAX)
+    return click_image(_MAX)
 
 
 def step_click_ming_jiang_ce(ctx) -> Result:
     """Flow 步骤：点击名将册。"""
-    return do_click(ctx, _MING_JIANG_CE)
+    return click_image(_MING_JIANG_CE)
 
 
 def step_click_ling_xi_box(ctx) -> Result:
     """Flow 步骤：点击灵犀盒。"""
-    return do_click(ctx, _LING_XI_BOX)
+    return click_image(_LING_XI_BOX)

@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.flow_helpers import do_click
+from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
 from vision_bot.apps.ming_jiang_sha.paths import BA_WANG, QLDQ
 from vision_bot.events import click_at
 from vision_bot.runtime.result import Result
@@ -152,7 +152,7 @@ def wait_click_setting(ctx) -> Result:
 
 
 def click_auto(ctx) -> Result:
-    r = do_click(ctx, _AUTO, timeout=3.0)
+    r = click_image(_AUTO, timeout=3.0)
     if not r.ok:
         ctx.goto("ba_wang.wait_setting")
     else:
