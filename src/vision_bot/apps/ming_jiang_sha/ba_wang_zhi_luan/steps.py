@@ -186,5 +186,7 @@ def click_next_step_if_any(ctx) -> Result:
 
 
 def battle_round_done(ctx) -> Result:
-    logger.info("battle_round_done → relocate")
-    return Result.fail("round_done")
+    target = relocate_role(ctx)
+    logger.info("battle_round_done → call %s", target)
+    ctx.call(target)
+    return Result.success()
