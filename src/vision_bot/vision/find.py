@@ -17,6 +17,21 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_path(image: str | Path, base_dir: Path | None = None) -> Path:
+    """将模板图路径解析为绝对路径。
+
+    Parameters
+    ----------
+    image:
+        模板图路径。绝对路径原样返回；相对路径拼在 ``base_dir``（或已 bind
+        的项目根）之下。
+    base_dir:
+        可选的项目根。未传时使用 :func:`vision.bind` 绑定的 ``base_dir``。
+
+    Returns
+    -------
+    Path
+        解析后的绝对路径。
+    """
     root = base_dir if base_dir is not None else session().base_dir
     path = Path(image)
     if path.is_absolute():
@@ -61,7 +76,30 @@ def find(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> Result:
-    """在屏幕上查找单张模板图；命中时 ``value`` 为 ``MatchResult``。"""
+    """在屏幕上查找单张模板图。
+
+    Parameters
+    ----------
+    image:
+        模板图路径（相对路径相对于已 bind 的 ``base_dir``）。
+    timeout:
+        最长等待秒数。``None`` 继承 bind 的默认值；底层 ``0`` 表示只查一次。
+    threshold:
+        匹配分数下限（0~1）。``None`` 继承 bind 的默认值（通常 0.8）。
+    interval:
+        轮询间隔秒数。``None`` 继承 bind 的默认值（通常 0.5）。
+    region:
+        搜索区域 ``(left, top, width, height)``，像素坐标。
+        ``None`` 表示全屏；``None`` 且未 bind 区域时搜全屏。
+    grayscale:
+        是否灰度匹配。``None`` 继承 bind 的默认值（通常 ``True``）。
+
+    Returns
+    -------
+    Result
+        命中：``ok=True``，``value`` 为 :class:`~vision_bot.core.models.MatchResult`。
+        未命中：``ok=False``，``message`` 说明原因。
+    """
     cfg = session()
     path = resolve_path(image)
     opts = _merge_options(
@@ -87,7 +125,31 @@ def wait_any(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> Result:
-    """超时内按顺序轮询多张模板；命中时 ``value`` 为 ``MatchResult``。"""
+    """在超时内按顺序轮询多张模板，任一命中即返回。
+
+    每一轮按 ``images`` 从左到右依次尝试；全部未命中则 sleep 后进入下一轮。
+
+    Parameters
+    ----------
+    *images:
+        一个或多个模板图路径。至少传一张。
+    timeout:
+        最长等待秒数，默认 ``3.0``。
+    threshold:
+        匹配分数下限（0~1）。``None`` 继承 bind 默认值。
+    interval:
+        每轮之间的轮询间隔秒数。``None`` 继承 bind 默认值。
+    region:
+        搜索区域 ``(left, top, width, height)``。``None`` 表示全屏。
+    grayscale:
+        是否灰度匹配。``None`` 继承 bind 默认值。
+
+    Returns
+    -------
+    Result
+        命中：``ok=True``，``value`` 为命中的 :class:`~vision_bot.core.models.MatchResult`。
+        超时：``ok=False``，``message`` 形如 ``识图未找到 [a.png/b.png]``。
+    """
     if not images:
         return Result.fail("未指定模板图")
     cfg = session()
@@ -127,7 +189,23 @@ def find_all(
     threshold: float | None = None,
     max_count: int = 32,
 ) -> Result:
-    """查找所有高于阈值的匹配；命中时 ``value`` 为 ``list[MatchResult]``。"""
+    """查找屏幕上所有高于阈值的匹配（多目标）。
+
+    Parameters
+    ----------
+    image:
+        模板图路径。
+    threshold:
+        匹配分数下限（0~1）。``None`` 继承 bind 默认值。
+    max_count:
+        最多返回的匹配数量，默认 ``32``。按置信度降序截断。
+
+    Returns
+    -------
+    Result
+        有匹配：``ok=True``，``value`` 为 ``list[MatchResult]``。
+        无匹配：``ok=False``，``message`` 说明未找到。
+    """
     cfg = session()
     path = resolve_path(image)
     th = cfg.options.threshold if threshold is None else threshold

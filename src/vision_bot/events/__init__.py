@@ -1,4 +1,8 @@
-"""输入事件（独立于运行时上下文）。"""
+"""输入事件公共 API。
+
+使用前需先 :func:`bind` 绑定取消回调（``run_root`` 会自动完成）。
+返回值统一为 :class:`~vision_bot.runtime.result.Result`。
+"""
 
 from vision_bot.events.keyboard import press_esc, press_key
 from vision_bot.events.mouse import click_at, click_below_box, click_match
