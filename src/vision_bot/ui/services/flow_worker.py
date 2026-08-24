@@ -8,7 +8,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from vision_bot.logging_utils import setup_logging
 from vision_bot.runtime.catalog import get_root_flow
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.runner import RunReport, run
@@ -49,7 +48,6 @@ class FlowWorker:
         report: RunReport | None = None
         error: BaseException | None = None
         try:
-            setup_logging(gui=True)
             flow = get_root_flow(request.root_id)
             config = RunConfig(
                 entry_id=request.entry_id,

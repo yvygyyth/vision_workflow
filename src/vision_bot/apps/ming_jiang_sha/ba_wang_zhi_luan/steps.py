@@ -42,12 +42,17 @@ def _setting_visible(*, timeout: float = 0.8) -> bool:
 
 
 def relocate_role(ctx) -> str | None:
-    if _probe(_UN_ZHUN_BEI):
-        logger.info("relocate_role → wait_game_start")
-        return "ba_wang.wait_game_start"
+    """根据当前界面决定下一轮的入口（房主 / 房客共用）。"""
     if _probe(_ZHUN_BEI):
         logger.info("relocate_role → click_ready")
         return "ba_wang.click_ready"
+    # 房客：优先等「开始」；勿因房主已准备（取消准备可见）误进 wait_game_start
+    if _probe(_START, timeout=0.5):
+        logger.info("relocate_role → poll_start")
+        return "ba_wang.poll_start"
+    if _probe(_UN_ZHUN_BEI):
+        logger.info("relocate_role → wait_game_start")
+        return "ba_wang.wait_game_start"
     logger.info("relocate_role → poll_start")
     return "ba_wang.poll_start"
 
