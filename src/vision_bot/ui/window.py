@@ -34,7 +34,6 @@ class MainWindow(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
 
         self._log_queue: queue.Queue[str] = queue.Queue()
-        self._log_handler = attach_queue_handler(self._log_queue)
         self._pending: tuple[RunReport | None, BaseException | None] | None = None
 
         self.controls = FlowRunPanel(
@@ -51,9 +50,10 @@ class MainWindow(ctk.CTk):
         self._hotkeys.start()
 
         self.protocol("WM_DELETE_WINDOW", self._close)
+        setup_logging(gui=True)
+        self._log_handler = attach_queue_handler(self._log_queue)
         self.after(80, self._pump)
         self.after(100, self._load_flows)
-        setup_logging(gui=True)
 
     def _load_flows(self) -> None:
         try:

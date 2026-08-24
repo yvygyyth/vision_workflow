@@ -13,7 +13,13 @@ def setup_logging(*, gui: bool = False, level: int = logging.INFO) -> logging.Lo
     log_file = log_dir / "vision_bot.log"
 
     root = logging.getLogger()
+    # 保留 UI 队列等非标准 handler，避免重复 setup 时清掉界面日志
+    kept = [h for h in root.handlers if not isinstance(h, logging.FileHandler) and not (
+        hasattr(h, "__class__") and h.__class__.__name__ == "RichHandler"
+    )]
     root.handlers.clear()
+    for handler in kept:
+        root.addHandler(handler)
     root.setLevel(level)
 
     if not gui:
