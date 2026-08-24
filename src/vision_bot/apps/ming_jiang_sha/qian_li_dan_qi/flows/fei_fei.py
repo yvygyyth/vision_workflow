@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import step_confirm
+from vision_bot.events import click_match
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
+from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +28,10 @@ def _confirm(ctx) -> Result:
 
 
 def _choose(ctx) -> Result:
-    act = ctx.action_ctx()
     for path in _OPTS:
-        hit = act.find(path, timeout=0.8)
-        if hit.found and hit.center:
-            do(move().to(*hit.center).raw(), click())(act)
-            return Result.success()
+        result = find(path, base_dir=ctx.base_dir, cancelled=ctx.cancelled, timeout=0.8)
+        if result.ok:
+            return click_match(result.value)
     return Result.fail("妃妃选项未识别")
 
 

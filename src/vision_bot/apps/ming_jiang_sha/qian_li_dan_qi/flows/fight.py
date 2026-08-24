@@ -4,15 +4,25 @@ from __future__ import annotations
 
 import logging
 
-from vision_bot.actions import click, do, move
+from vision_bot.actions import do, move
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import relocate_fight
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_center
 from vision_bot.core.input import Mouse
+from vision_bot.events import click_match
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
+from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
+
+_AUTO = "data/ming_jiang_sha/qian_li_dan_qi/fight/auto.png"
+_CHALLENGE_END = "data/ming_jiang_sha/qian_li_dan_qi/fight/challenge_end.png"
+_NEXT_STEP = "data/ming_jiang_sha/qian_li_dan_qi/fight/next_step.png"
+
+
+def _vision(ctx):
+    return {"base_dir": ctx.base_dir, "cancelled": ctx.cancelled}
 
 
 def _move_aside(ctx) -> Result:
@@ -39,29 +49,25 @@ def _click_setting(ctx) -> Result:
 
 
 def _click_auto(ctx) -> Result:
-    act = ctx.action_ctx()
-    hit = act.find("data/ming_jiang_sha/qian_li_dan_qi/fight/auto.png", timeout=1.0)
-    if hit.found and hit.center:
-        Mouse().move(*hit.center).click().sleep(0.2).perform()
-        return Result.success()
-    return Result.fail("无 auto")
+    result = find(_AUTO, timeout=1.0, **_vision(ctx))
+    if not result.ok:
+        return Result.fail("无 auto")
+    return click_match(result.value, pause=0.2)
 
 
 def _wait_end(ctx) -> Result:
-    act = ctx.action_ctx()
-    hit = act.find("data/ming_jiang_sha/qian_li_dan_qi/fight/challenge_end.png", timeout=1200, interval=5)
-    if hit.found and hit.center:
-        Mouse().move(*hit.center).click().sleep(0.2).perform()
-        return Result.success()
-    return Result.fail("挑战未结束")
+    result = find(_CHALLENGE_END, timeout=1200, interval=5, **_vision(ctx))
+    if not result.ok:
+        return Result.fail("挑战未结束")
+    return click_match(result.value, pause=0.2)
 
 
 def _next_step(ctx) -> Result:
     for _ in range(5):
-        hit = ctx.action_ctx().find("data/ming_jiang_sha/qian_li_dan_qi/fight/next_step.png", timeout=1.2)
-        if not (hit.found and hit.center):
+        result = find(_NEXT_STEP, timeout=1.2, **_vision(ctx))
+        if not result.ok or not result.value.center:
             break
-        Mouse().move(*hit.center).click().sleep(0.4).perform()
+        click_match(result.value, pause=0.4)
     return Result.success()
 
 

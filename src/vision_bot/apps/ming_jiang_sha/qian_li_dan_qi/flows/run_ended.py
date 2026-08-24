@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.actions import press_esc, step_confirm
+from vision_bot.apps.ming_jiang_sha.actions import step_confirm
+from vision_bot.events import press_esc
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
@@ -16,7 +17,7 @@ def _confirm(ctx) -> Result:
 
 
 def _close(ctx) -> Result:
-    press_esc(ctx.action_ctx(), times=2)
+    press_esc(cancelled=ctx.cancelled, times=2)
     ctx.goto("qldq.enter_battle")
     return Result.success()
 

@@ -11,8 +11,11 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
+from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
+
+_ATTACK = "data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png"
 
 
 def _confirm(ctx) -> Result:
@@ -23,22 +26,22 @@ def _confirm(ctx) -> Result:
 
 
 def _attack(ctx) -> Result:
+    result = find(_ATTACK, base_dir=ctx.base_dir, cancelled=ctx.cancelled, timeout=0.8)
+    if not result.ok or not result.value.center:
+        return Result.fail("无 attack")
     act = ctx.action_ctx()
-    hit = act.find("data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png", timeout=0.8)
-    if hit.found and hit.center:
-        for _ in range(5):
-            do(move().to(*hit.center).raw(), click())(act)
-        ctx.goto(qmod("shi_chang_shi", "check_cancel"))
-        return Result.success()
-    return Result.fail("无 attack")
+    for _ in range(5):
+        do(move().to(*result.value.center).raw(), click())(act)
+    ctx.goto(qmod("shi_chang_shi", "check_cancel"))
+    return Result.success()
 
 
 def _check_cancel(ctx) -> Result:
     snap = ctx.snap({"fight.cancel"})
     if snap_found(snap, "fight.cancel"):
-        r = click_confirm(ctx.action_ctx())
+        r = click_confirm(base_dir=ctx.base_dir, cancelled=ctx.cancelled)
         if not r.ok:
-            return Result.fail(r.message)
+            return r
         ctx.goto("qldq.fight")
         return Result.success()
     ctx.goto(qmod("shi_chang_shi", "attack"))

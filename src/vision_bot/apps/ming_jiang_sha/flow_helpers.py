@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from vision_bot.actions import click, do, move
 from vision_bot.actions.anchor import resolve_anchor
 from vision_bot.core.input import Mouse
+from vision_bot.events import click_match
 from vision_bot.runtime.result import Result
+from vision_bot.vision import wait_any
 
 
 def do_click(
@@ -15,19 +16,20 @@ def do_click(
     interval: float = 0.5,
     threshold: float = 0.8,
 ) -> Result:
-    act = ctx.action_ctx()
     if not images:
         return Result.fail("未指定模板图")
-    builder = move()
-    for image in images:
-        builder = builder.image(image)
-    result = do(
-        builder.match(timeout=timeout, interval=interval, threshold=threshold),
-        click(),
-    )(act)
+    result = wait_any(
+        *images,
+        base_dir=ctx.base_dir,
+        options=ctx.defaults,
+        timeout=timeout,
+        interval=interval,
+        threshold=threshold,
+        cancelled=ctx.cancelled,
+    )
     if not result.ok:
-        return Result.fail(result.message or act.reason or "识图点击失败")
-    return Result.success()
+        return result
+    return click_match(result.value)
 
 
 def scroll_center(ctx, amount: int, *, times: int = 1) -> Result:
