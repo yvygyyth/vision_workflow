@@ -29,7 +29,7 @@ def _open_entry(ctx) -> Result:
 
 def _open_store(ctx) -> Result:
     return do(
-        move().image(f"{_DIR}/zhan-yi-store.png"),
+        move().image(f"{_DIR}/zhan_yi-store.png"),
         click(),
     )(ctx.action_ctx())
 
