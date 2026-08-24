@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from vision_bot.core.input import press_key as _press_key
+from vision_bot.events.session import cancelled as default_cancelled
 from vision_bot.runtime.cancel import raise_if_cancelled, sleep_interruptible
 from vision_bot.runtime.result import Result
 
@@ -14,12 +15,8 @@ def press_key(key: str) -> Result:
     return Result.success()
 
 
-def press_esc(
-    *,
-    times: int = 1,
-    pause: float = 0.2,
-    cancelled: Callable[[], bool] | None = None,
-) -> Result:
+def press_esc(*, times: int = 1, pause: float = 0.2) -> Result:
+    cancelled = default_cancelled()
     for _ in range(times):
         raise_if_cancelled(cancelled)
         _press_key("esc")

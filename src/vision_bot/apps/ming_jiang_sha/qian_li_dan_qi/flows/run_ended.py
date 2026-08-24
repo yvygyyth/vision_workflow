@@ -17,7 +17,7 @@ def _confirm(ctx) -> Result:
 
 
 def _close(ctx) -> Result:
-    press_esc(cancelled=ctx.cancelled, times=2)
+    press_esc(times=2)
     ctx.goto("qldq.enter_battle")
     return Result.success()
 

@@ -2,8 +2,10 @@
 
 from vision_bot.events.keyboard import press_esc, press_key
 from vision_bot.events.mouse import click_at, click_below_box, click_match
+from vision_bot.events.session import bind
 
 __all__ = [
+    "bind",
     "click_at",
     "click_below_box",
     "click_match",

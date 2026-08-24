@@ -7,7 +7,7 @@ from pathlib import Path
 
 from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchResult
-from vision_bot.vision import wait_any
+from vision_bot.vision.find import _wait_any_with
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +26,16 @@ def wait_image(
     if not images:
         raise ValueError("至少需要一张模板图")
     labels = "/".join(Path(p).name for p in images)
-    result = wait_any(
+    result = _wait_any_with(
         *images,
         base_dir=ctx.base_dir,
         options=ctx.defaults,
+        cancelled=ctx.cancelled,
         threshold=threshold,
         timeout=timeout,
         interval=interval,
         region=region,
         grayscale=grayscale,
-        cancelled=ctx.cancelled,
     )
     ctx.value = result.value
     if result.ok:

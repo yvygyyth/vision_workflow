@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def _esc_home(ctx) -> Result:
     logger.info("home_recovery: Esc×5")
-    press_esc(cancelled=ctx.cancelled, times=5, pause=0.25)
+    press_esc(times=5, pause=0.25)
     time.sleep(0.5)
     ctx.goto("qldq.enter_battle")
     return Result.success()

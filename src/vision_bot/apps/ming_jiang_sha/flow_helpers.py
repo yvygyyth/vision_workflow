@@ -20,12 +20,9 @@ def do_click(
         return Result.fail("未指定模板图")
     result = wait_any(
         *images,
-        base_dir=ctx.base_dir,
-        options=ctx.defaults,
         timeout=timeout,
         interval=interval,
         threshold=threshold,
-        cancelled=ctx.cancelled,
     )
     if not result.ok:
         return result

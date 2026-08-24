@@ -29,7 +29,7 @@ def _confirm(ctx) -> Result:
 
 def _choose(ctx) -> Result:
     for path in _OPTS:
-        result = find(path, base_dir=ctx.base_dir, cancelled=ctx.cancelled, timeout=0.8)
+        result = find(path, timeout=0.8)
         if result.ok:
             return click_match(result.value)
     return Result.fail("妃妃选项未识别")

@@ -26,7 +26,7 @@ def _confirm(ctx) -> Result:
 
 
 def _attack(ctx) -> Result:
-    result = find(_ATTACK, base_dir=ctx.base_dir, cancelled=ctx.cancelled, timeout=0.8)
+    result = find(_ATTACK, timeout=0.8)
     if not result.ok or not result.value.center:
         return Result.fail("无 attack")
     act = ctx.action_ctx()
@@ -39,7 +39,7 @@ def _attack(ctx) -> Result:
 def _check_cancel(ctx) -> Result:
     snap = ctx.snap({"fight.cancel"})
     if snap_found(snap, "fight.cancel"):
-        r = click_confirm(base_dir=ctx.base_dir, cancelled=ctx.cancelled)
+        r = click_confirm()
         if not r.ok:
             return r
         ctx.goto("qldq.fight")

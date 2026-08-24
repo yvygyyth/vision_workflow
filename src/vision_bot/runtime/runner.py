@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from vision_bot.runtime.bind import bind_runtime
 from vision_bot.runtime.cancel import CancelledError
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
@@ -175,6 +176,7 @@ class Runner:
 
 
 def run_root(flow: Flow, ctx: RunContext, *, loop: bool = False) -> RunReport:
+    bind_runtime(ctx)
     registry = FlowRegistry.build(flow)
     runner = Runner(ctx, registry)
     ctx._runner = runner

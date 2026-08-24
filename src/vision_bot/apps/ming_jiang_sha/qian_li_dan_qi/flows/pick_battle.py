@@ -53,7 +53,7 @@ def _choose_yi_wai(ctx) -> Result:
 
 
 def _pre_confirm(ctx) -> Result:
-    r = click_confirm(base_dir=ctx.base_dir, cancelled=ctx.cancelled)
+    r = click_confirm()
     if not r.ok:
         return Result.fail(r.message)
     ctx.goto("qldq.fight")

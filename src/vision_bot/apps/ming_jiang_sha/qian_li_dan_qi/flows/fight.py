@@ -21,10 +21,6 @@ _CHALLENGE_END = "data/ming_jiang_sha/qian_li_dan_qi/fight/challenge_end.png"
 _NEXT_STEP = "data/ming_jiang_sha/qian_li_dan_qi/fight/next_step.png"
 
 
-def _vision(ctx):
-    return {"base_dir": ctx.base_dir, "cancelled": ctx.cancelled}
-
-
 def _move_aside(ctx) -> Result:
     do(move().to(80, 80).raw())(ctx.action_ctx())
     return Result.success()
@@ -49,14 +45,14 @@ def _click_setting(ctx) -> Result:
 
 
 def _click_auto(ctx) -> Result:
-    result = find(_AUTO, timeout=1.0, **_vision(ctx))
+    result = find(_AUTO, timeout=1.0)
     if not result.ok:
         return Result.fail("无 auto")
     return click_match(result.value, pause=0.2)
 
 
 def _wait_end(ctx) -> Result:
-    result = find(_CHALLENGE_END, timeout=1200, interval=5, **_vision(ctx))
+    result = find(_CHALLENGE_END, timeout=1200, interval=5)
     if not result.ok:
         return Result.fail("挑战未结束")
     return click_match(result.value, pause=0.2)
@@ -64,7 +60,7 @@ def _wait_end(ctx) -> Result:
 
 def _next_step(ctx) -> Result:
     for _ in range(5):
-        result = find(_NEXT_STEP, timeout=1.2, **_vision(ctx))
+        result = find(_NEXT_STEP, timeout=1.2)
         if not result.ok or not result.value.center:
             break
         click_match(result.value, pause=0.4)

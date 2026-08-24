@@ -15,7 +15,7 @@ _ONE_CLICK = f"{_DIR}/email_one_click_receive.png"
 
 
 def _open_mail(ctx) -> Result:
-    if find(_ONE_CLICK, base_dir=ctx.base_dir, cancelled=ctx.cancelled, timeout=0.5).ok:
+    if find(_ONE_CLICK, timeout=0.5).ok:
         return Result.success()
     return do_click(ctx, f"{_DIR}/email.png")
 
