@@ -10,7 +10,7 @@ from vision_bot.vision import bind as bind_vision
 def bind_runtime(ctx: RunContext) -> None:
     """从运行上下文注入 vision / events 模块默认值。
 
-    由 :func:`~vision_bot.runtime.runner.run_root` 在任务开始时自动调用，
+    由 :func:`~vision_bot.runtime.runner.run` 在任务开始时自动调用，
     一般无需手动调用。
 
     Parameters

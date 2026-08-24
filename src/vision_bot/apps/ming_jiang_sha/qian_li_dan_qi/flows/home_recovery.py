@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import build_registry
 from vision_bot.events import press_esc
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 def _esc_home(ctx) -> Result:
     logger.info("home_recovery: Esc×5")
+    if not ctx.registry.ids():
+        ctx.registry = build_registry()
     press_esc(times=5, pause=0.25)
     time.sleep(0.5)
     ctx.goto("qldq.enter_battle")

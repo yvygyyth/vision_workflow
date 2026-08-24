@@ -98,6 +98,7 @@ def build() -> Flow:
     return flow(
         "qldq.enter_battle",
         "进入战斗",
+        params={"wu_jiang": "吕布"},
         children=[
             mod("qldq.enter_battle.check_done", "检查进战", _check_done),
             mod("qldq.enter_battle.try_start", "点击开始", _try_start),

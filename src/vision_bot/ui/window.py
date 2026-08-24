@@ -9,15 +9,15 @@ import customtkinter as ctk
 
 from vision_bot.core.settings import MatchSettings
 from vision_bot.logging_utils import setup_logging
+from vision_bot.runtime.catalog import DEFAULT_ROOT_ID, root_flow_choices
 from vision_bot.runtime.runner import RunReport
-from vision_bot.jobs import DEFAULT_JOB_ID, job_choices
 from vision_bot.ui import theme
-from vision_bot.ui.panels.control_panel import ControlPanel
+from vision_bot.ui.panels.flow_run_panel import FlowRunPanel
 from vision_bot.ui.panels.log_panel import LogPanel
 from vision_bot.ui.panels.settings_dialog import SettingsDialog
 from vision_bot.ui.panels.status_bar import StatusBar
+from vision_bot.ui.services.flow_worker import FlowWorker
 from vision_bot.ui.services.hotkeys import TOGGLE_LABEL, GlobalHotkeys
-from vision_bot.ui.services.job_worker import JobWorker, RunRequest
 from vision_bot.ui.services.log_bridge import attach_queue_handler, drain_queue
 
 logger = logging.getLogger(__name__)
@@ -27,8 +27,8 @@ class MainWindow(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Vision Bot")
-        self.geometry("880x640")
-        self.minsize(720, 480)
+        self.geometry("880x720")
+        self.minsize(720, 520)
         self.configure(fg_color=theme.BG)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -37,7 +37,7 @@ class MainWindow(ctk.CTk):
         self._log_handler = attach_queue_handler(self._log_queue)
         self._pending: tuple[RunReport | None, BaseException | None] | None = None
 
-        self.controls = ControlPanel(
+        self.controls = FlowRunPanel(
             self, on_run=self._start, on_stop=self._stop, on_clear=self.logs_clear, on_settings=self._settings
         )
         self.controls.grid(row=0, column=0, sticky="ew", padx=16, pady=(16, 8))
@@ -46,24 +46,24 @@ class MainWindow(ctk.CTk):
         self.status = StatusBar(self)
         self.status.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 12))
 
-        self.worker = JobWorker(on_finished=self._on_done)
+        self.worker = FlowWorker(on_finished=self._on_done)
         self._hotkeys = GlobalHotkeys(on_toggle=self._toggle, schedule=lambda fn: self.after(0, fn))
         self._hotkeys.start()
 
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(80, self._pump)
-        self.after(100, self._load_jobs)
+        self.after(100, self._load_flows)
         setup_logging(gui=True)
 
-    def _load_jobs(self) -> None:
+    def _load_flows(self) -> None:
         try:
-            choices = job_choices()
+            choices = root_flow_choices()
         except Exception as exc:  # noqa: BLE001
-            self.controls.set_job_choices([])
+            self.controls.set_root_choices([])
             self.status.set_status(f"加载失败: {exc}", ok=False)
             return
-        self.controls.set_job_choices(choices, selected_id=DEFAULT_JOB_ID)
-        self.status.set_status(f"已加载 {len(choices)} 个任务")
+        self.controls.set_root_choices(choices, selected_id=DEFAULT_ROOT_ID)
+        self.status.set_status(f"已加载 {len(choices)} 个根 Flow")
         self.logs.append(f"全局快捷键：{TOGGLE_LABEL} = 运行/停止")
 
     def logs_clear(self) -> None:
@@ -84,18 +84,19 @@ class MainWindow(ctk.CTk):
     def _start(self) -> None:
         if self.worker.busy:
             return
-        job_id = self.controls.selected_job_id()
-        job_name = self.controls.selected_job_name()
-        if not job_id:
-            self.status.set_status("请先选择任务", ok=False)
+        request, err = self.controls.prepare_run()
+        self.controls.params_hint.configure(text=err)
+        if request is None:
+            self.status.set_status(err, ok=False)
             return
-        self.controls.set_running(True)
-        self.status.set_status(f"运行中：{job_name}")
-        self.logs.append(f"—— 开始：{job_name}（{job_id}）——")
+        label = self.controls.selected_label()
+        self.status.set_status(f"运行中：{label}")
+        self.logs.append(f"—— 开始：{label}（{request.entry_id}）——")
         try:
-            self.worker.start(RunRequest(job_id=job_id))
+            self.worker.start(request)
+            self.controls.set_locked(True)
         except Exception as exc:  # noqa: BLE001
-            self.controls.set_running(False)
+            self.controls.set_locked(False)
             self.status.set_status(str(exc), ok=False)
 
     def _stop(self) -> None:
@@ -111,7 +112,7 @@ class MainWindow(ctk.CTk):
         if self._pending is not None:
             result, error = self._pending
             self._pending = None
-            self.controls.set_running(False)
+            self.controls.set_locked(False)
             if error:
                 self.status.set_status(str(error), ok=False)
             elif result:

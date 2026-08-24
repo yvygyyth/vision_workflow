@@ -1,6 +1,6 @@
 """识图公共 API。
 
-使用前需先 :func:`bind` 绑定 ``base_dir`` 等默认值（``run_root`` 会自动完成）。
+使用前需先 :func:`bind` 绑定 ``base_dir`` 等默认值（:func:`~vision_bot.runtime.runner.run` 会自动完成）。
 业务代码通常只需传入模板图路径；其余参数按需特调。
 
 返回值统一为 :class:`~vision_bot.runtime.result.Result`：

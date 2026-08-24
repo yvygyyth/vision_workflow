@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from vision_bot.apps.ming_jiang_sha.actions import step_confirm
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import clear_battle_state
 from vision_bot.events import press_esc
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -18,6 +19,7 @@ def _confirm(ctx) -> Result:
 
 def _close(ctx) -> Result:
     press_esc(times=2)
+    clear_battle_state(ctx)
     ctx.goto("qldq.enter_battle")
     return Result.success()
 

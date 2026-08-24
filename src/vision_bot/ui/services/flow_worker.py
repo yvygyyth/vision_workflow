@@ -1,25 +1,30 @@
-"""后台运行 start(job_id)。"""
+"""后台运行 Flow。"""
 
 from __future__ import annotations
 
 import logging
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
-from vision_bot.jobs import start
 from vision_bot.logging_utils import setup_logging
-from vision_bot.runtime.runner import RunReport
+from vision_bot.runtime.catalog import get_root_flow
+from vision_bot.runtime.config import RunConfig
+from vision_bot.runtime.runner import RunReport, run
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class RunRequest:
-    job_id: str
+    root_id: str
+    entry_id: str
+    loop: bool = False
+    params: dict[str, Any] = field(default_factory=dict)
 
 
-class JobWorker:
+class FlowWorker:
     def __init__(self, *, on_finished: Callable[[RunReport | None, BaseException | None], None]) -> None:
         self._on_finished = on_finished
         self._thread: threading.Thread | None = None
@@ -33,7 +38,7 @@ class JobWorker:
         if self.busy:
             raise RuntimeError("已有任务在运行")
         self._cancel.clear()
-        self._thread = threading.Thread(target=self._run, args=(request,), name="job-worker", daemon=True)
+        self._thread = threading.Thread(target=self._run, args=(request,), name="flow-worker", daemon=True)
         self._thread.start()
 
     def stop(self) -> None:
@@ -45,8 +50,14 @@ class JobWorker:
         error: BaseException | None = None
         try:
             setup_logging(gui=True)
-            logger.info("启动任务 %s", request.job_id)
-            report = start(request.job_id, cancel_event=self._cancel)
+            flow = get_root_flow(request.root_id)
+            config = RunConfig(
+                entry_id=request.entry_id,
+                loop=request.loop,
+                params=request.params,
+            )
+            logger.info("启动 Flow %s entry=%s loop=%s", request.root_id, request.entry_id, request.loop)
+            report = run(flow, config, cancel_event=self._cancel)
         except BaseException as exc:
             error = exc
             logger.exception("执行失败")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow, Node, RelocateFn
@@ -21,6 +22,13 @@ def flow(
     name: str,
     children: list[Node],
     *,
+    params: dict[str, Any] | None = None,
     relocate: list[RelocateFn] | None = None,
 ) -> Flow:
-    return Flow(id=id, name=name, children=children, relocate=relocate or [])
+    return Flow(
+        id=id,
+        name=name,
+        children=children,
+        params=params or {},
+        relocate=relocate or [],
+    )

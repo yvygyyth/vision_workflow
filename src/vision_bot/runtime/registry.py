@@ -14,10 +14,11 @@ class FlowRegistry:
     nodes: dict[str, Flow | Module] = field(default_factory=dict)
     parent_flow: dict[str, str] = field(default_factory=dict)
     child_index: dict[str, int] = field(default_factory=dict)
+    root_id: str = ""
 
     @classmethod
     def build(cls, root: Flow) -> FlowRegistry:
-        reg = cls()
+        reg = cls(root_id=root.id)
         reg._walk(root, parent_id=None)
         return reg
 
@@ -36,12 +37,35 @@ class FlowRegistry:
                 self.parent_flow[child.id] = flow.id
                 self.child_index[child.id] = i
             else:
+                self.child_index[child.id] = i
                 self._walk(child, parent_id=flow.id)
 
     def get(self, node_id: str) -> Flow | Module:
         if node_id not in self.nodes:
             raise JumpTargetError(f"节点不存在: {node_id}")
         return self.nodes[node_id]
+
+    def flow_of(self, node_id: str) -> str:
+        """节点所属 Flow 的 id（Flow 节点自身即所属 Flow）。"""
+        node = self.get(node_id)
+        if isinstance(node, Flow):
+            return node.id
+        return self.parent_flow[node_id]
+
+    def entry_point(self, node_id: str) -> tuple[Flow, int]:
+        """返回从 node_id 开始执行时的 (父 Flow, 起始 child index)。"""
+        node = self.get(node_id)
+        if isinstance(node, Flow):
+            if node_id not in self.parent_flow:
+                return node, 0
+            parent_id = self.parent_flow[node_id]
+            parent = self.get(parent_id)
+            assert isinstance(parent, Flow)
+            return parent, self.child_index[node_id]
+        parent_id = self.parent_flow[node_id]
+        parent = self.get(parent_id)
+        assert isinstance(parent, Flow)
+        return parent, self.child_index[node_id]
 
     def next_sibling_index(self, node_id: str) -> tuple[str, int] | None:
         """返回 (父 Flow id, 下一兄弟 index)；无兄弟则 None。"""

@@ -1,6 +1,6 @@
 """输入事件公共 API。
 
-使用前需先 :func:`bind` 绑定取消回调（``run_root`` 会自动完成）。
+使用前需先 :func:`bind` 绑定取消回调（:func:`~vision_bot.runtime.runner.run` 会自动完成）。
 返回值统一为 :class:`~vision_bot.runtime.result.Result`。
 """
 

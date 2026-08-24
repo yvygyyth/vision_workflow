@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
+from vision_bot.core.paths import project_root
+from vision_bot.perception.signal import SignalRegistry
 from vision_bot.runtime.bind import bind_runtime
 from vision_bot.runtime.cancel import CancelledError
+from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.jump import Jump, JumpTargetError
@@ -37,9 +41,10 @@ class _FlowAdvance:
 
 
 class Runner:
-    def __init__(self, ctx: RunContext, registry: FlowRegistry) -> None:
+    def __init__(self, ctx: RunContext, registry: FlowRegistry, *, root: Flow) -> None:
         self.ctx = ctx
         self.registry = registry
+        self.root = root
         self.path: list[str] = []
         self._call_stack: list[_Resume] = []
 
@@ -57,6 +62,17 @@ class Runner:
         except JumpTargetError as exc:
             return Result.fail(str(exc))
 
+    def run_from(self, entry_id: str) -> Result:
+        node = self.registry.get(entry_id)
+        if isinstance(node, Flow) and entry_id == self.root.id:
+            return self.run_flow(node)
+        parent, start_index = self.registry.entry_point(entry_id)
+        self.ctx.enter_flow(parent.id, parent.params)
+        try:
+            return self._run_flow_children(parent, start_index)
+        finally:
+            self.ctx.exit_flow()
+
     def _try_relocate(self, flow: Flow) -> str | None:
         for rule in flow.relocate:
             self.ctx.check_cancelled()
@@ -69,16 +85,15 @@ class Runner:
         logger.info("[%s]", flow.name)
         self.path.append(flow.id)
         self.ctx.check_cancelled()
-
-        entry = self._try_relocate(flow)
-        if entry:
-            result = self._run_subtree(entry)
+        self.ctx.enter_flow(flow.id, flow.params)
+        try:
+            entry = self._try_relocate(flow)
+            if entry:
+                return self._run_subtree(entry)
+            return self._run_flow_children(flow, 0)
+        finally:
+            self.ctx.exit_flow()
             self.path.pop()
-            return result
-
-        result = self._run_flow_children(flow, 0)
-        self.path.pop()
-        return result
 
     def _run_flow_children(self, flow: Flow, start_index: int) -> Result:
         for i in range(start_index, len(flow.children)):
@@ -141,23 +156,32 @@ class Runner:
             logger.info("[%s]", node.name)
             self.path.append(node.id)
             self.ctx.check_cancelled()
+            parent_id = self.registry.parent_flow[node_id]
+            parent = self.registry.get(parent_id)
+            assert isinstance(parent, Flow)
+            if not self.ctx._params_stack:
+                self.ctx.enter_flow(parent.id, parent.params)
+                need_pop = True
+            else:
+                need_pop = False
             try:
-                result = node.active(self.ctx)
-            except Jump as jump:
+                try:
+                    result = node.active(self.ctx)
+                except Jump as jump:
+                    self.path.pop()
+                    idx = self.registry.child_index[node_id]
+                    handled = self._handle_jump(jump, parent_flow=parent, child_index=idx)
+                    if isinstance(handled, _FlowAdvance):
+                        return self._run_flow_children(handled.flow, handled.start_index)
+                    return handled
+                except CancelledError:
+                    self.path.pop()
+                    return Result.fail("用户取消")
                 self.path.pop()
-                parent_id = self.registry.parent_flow[node_id]
-                parent = self.registry.get(parent_id)
-                assert isinstance(parent, Flow)
-                idx = self.registry.child_index[node_id]
-                handled = self._handle_jump(jump, parent_flow=parent, child_index=idx)
-                if isinstance(handled, _FlowAdvance):
-                    return self._run_flow_children(handled.flow, handled.start_index)
-                return handled
-            except CancelledError:
-                self.path.pop()
-                return Result.fail("用户取消")
-            self.path.pop()
-            return result
+                return result
+            finally:
+                if need_pop:
+                    self.ctx.exit_flow()
         return self._run_flow(node)
 
     def _continue_after_node(self, node_id: str) -> Result | _FlowAdvance:
@@ -175,20 +199,47 @@ class Runner:
         return _FlowAdvance(parent, len(parent.children))
 
 
-def run_root(flow: Flow, ctx: RunContext, *, loop: bool = False) -> RunReport:
+def _prepare(
+    flow: Flow,
+    ctx: RunContext,
+    config: RunConfig,
+) -> Runner:
+    reg = FlowRegistry.build(flow)
+    entry_id = config.entry_id or flow.id
+    ctx._entry_flow_id = reg.flow_of(entry_id)
+    ctx._run_param_overrides = dict(config.params)
     bind_runtime(ctx)
-    registry = FlowRegistry.build(flow)
-    runner = Runner(ctx, registry)
+    runner = Runner(ctx, reg, root=flow)
     ctx._runner = runner
+    return runner
 
+
+def _run_loop(runner: Runner, ctx: RunContext, flow: Flow, config: RunConfig) -> RunReport:
     while not ctx.cancelled():
-        result = runner.run_flow(flow)
+        if config.entry_id and config.entry_id != flow.id:
+            result = runner.run_from(config.entry_id)
+        else:
+            result = runner.run_flow(flow)
         if not result.ok:
             if ctx.cancelled():
                 return RunReport(success=False, message="用户取消", path=runner.path)
             return RunReport(success=False, message=result.message or "执行失败", path=runner.path)
-        if not loop:
+        if not config.loop:
             return RunReport(success=True, message="完成", path=runner.path)
-
     return RunReport(success=False, message="用户取消", path=runner.path)
 
+
+def run(
+    flow: Flow,
+    config: RunConfig,
+    *,
+    cancel_event=None,
+    base_dir: Path | None = None,
+) -> RunReport:
+    ctx = RunContext(
+        base_dir=(base_dir or project_root()).resolve(),
+        registry=SignalRegistry(),
+        cancel_event=cancel_event,
+    )
+    runner = _prepare(flow, ctx, config)
+    return _run_loop(runner, ctx, flow, config)

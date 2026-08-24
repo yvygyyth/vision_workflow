@@ -11,11 +11,11 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import detect_hub, det
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import build_registry
 from vision_bot.core.models import MatchResult
 from vision_bot.perception.snapshot import ScreenSnapshot
-from vision_bot.runtime import RunContext, flow, mod, run_root
+from vision_bot.runtime import flow, mod, run
+from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, root_flow_choices
+from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
-from vision_bot.jobs import JOBS, job_choices
-from vision_bot.jobs import get_job, start
 
 
 def test_registry_unique() -> None:
@@ -74,8 +74,7 @@ def test_sequential_modules() -> None:
             mod("t.b", "B", b),
         ],
     )
-    ctx = RunContext(base_dir=Path("."), registry=build_registry())
-    report = run_root(root, ctx)
+    report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
     assert log == ["a", "b"]
 
@@ -105,8 +104,7 @@ def test_goto_jumps_to_target() -> None:
             mod("t.c", "C", c),
         ],
     )
-    ctx = RunContext(base_dir=Path("."), registry=build_registry())
-    report = run_root(root, ctx)
+    report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
     assert log == ["a", "c"]
 
@@ -131,20 +129,81 @@ def test_relocate_on_entry() -> None:
         ],
         relocate=[lambda ctx: "t.b"],
     )
-    ctx = RunContext(base_dir=Path("."), registry=build_registry())
-    report = run_root(root, ctx)
+    report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
     assert log == ["b"]
 
 
-def test_jobs_registry() -> None:
-    assert len(JOBS) == 3
-    assert len(job_choices()) == len(JOBS)
-    assert get_job("qian_li_dan_qi").name == "千里单骑"
-    assert get_job("ba_wang_zhi_luan").name == "八王之乱"
-    assert get_job("fee_day").name == "名将杀免费资源每日领取"
+def test_root_flow_catalog() -> None:
+    assert len(ROOT_FLOWS) == 3
+    assert len(root_flow_choices()) == 3
+    assert get_root_flow("qldq").name == "千里单骑"
+    assert get_root_flow("ba_wang").name == "八王之乱"
+    assert get_root_flow("fee_day").name == "名将杀免费资源每日领取"
     with pytest.raises(KeyError):
-        get_job("no_such_job")
+        get_root_flow("no_such")
+
+
+def test_run_from_entry() -> None:
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        return Result.success()
+
+    def b(ctx):
+        log.append("b")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "测试",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.b", "B", b),
+        ],
+    )
+    report = run(root, RunConfig(entry_id="t.b"))
+    assert report.success
+    assert log == ["b"]
+
+
+def test_params_scope() -> None:
+    seen: list[str] = []
+
+    def child_mod(ctx):
+        seen.append(ctx.params.get("k", ""))
+        return Result.success()
+
+    def root_mod(ctx):
+        seen.append(f"root:{ctx.params.get('k', '')}")
+        return Result.success()
+
+    inner = flow("t.inner", "内", params={"k": "inner"}, children=[mod("t.inner.m", "M", child_mod)])
+    root = flow(
+        "t",
+        "测试",
+        params={"k": "root"},
+        children=[
+            mod("t.r", "R", root_mod),
+            inner,
+        ],
+    )
+    run(root, RunConfig())
+    assert seen == ["root:root", "inner"]
+
+
+def test_params_override_on_entry_flow() -> None:
+    got: list[str] = []
+
+    def m(ctx):
+        got.append(ctx.params.get("x", ""))
+        return Result.success()
+
+    inner = flow("t.inner", "内", params={"x": "default"}, children=[mod("t.inner.m", "M", m)])
+    root = flow("t", "测试", children=[inner])
+    run(root, RunConfig(entry_id="t.inner.m", params={"x": "override"}))
+    assert got == ["override"]
 
 
 def test_ba_wang_build() -> None:
@@ -164,11 +223,6 @@ def test_fee_day_build() -> None:
     assert len(root.children) == 7
     reg = FlowRegistry.build(root)
     assert "fee_day.mail.open" in reg.nodes
-
-
-def test_start_unknown_job() -> None:
-    with pytest.raises(KeyError):
-        start("no_such_job")
 
 
 def test_cancel_during_wait() -> None:
