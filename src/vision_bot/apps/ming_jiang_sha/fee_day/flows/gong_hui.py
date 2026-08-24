@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import (
     step_click_ling_xi_box,
     step_click_ming_jiang_ce,
@@ -10,7 +11,6 @@ from vision_bot.apps.ming_jiang_sha.actions import (
     step_go_back,
     step_space_close,
 )
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -20,31 +20,30 @@ _DIR = f"{DATA_ROOT}/gong_hui"
 
 
 def _open_entry(ctx) -> Result:
-    return click_image(
-        f"{_DIR}/gong-hui-ru-kou.png",
-        f"{_DIR}/gong-hui-ru-kou-2.png",
-        timeout=5.0,
-    )
+    return do(
+        move().image(f"{_DIR}/gong-hui-ru-kou.png", f"{_DIR}/gong-hui-ru-kou-2.png").match(timeout=5.0),
+        click(),
+    )(ctx.action_ctx())
 
 
 def _open_store(ctx) -> Result:
-    return click_image(f"{_DIR}/gong-hui-store.png")
+    return do(move().image(f"{_DIR}/gong-hui-store.png"), click())(ctx.action_ctx())
 
 
 def _wen_ding_ling(ctx) -> Result:
-    return click_image(f"{_DIR}/wen_ding_ling.png")
+    return do(move().image(f"{_DIR}/wen_ding_ling.png"), click())(ctx.action_ctx())
 
 
 def _tian_ming_ling(ctx) -> Result:
-    return click_image(f"{_DIR}/tian_ming_ling.png")
+    return do(move().image(f"{_DIR}/tian_ming_ling.png"), click())(ctx.action_ctx())
 
 
 def _tian_fa_ling(ctx) -> Result:
-    return click_image(f"{_DIR}/tian_fa_ling.png")
+    return do(move().image(f"{_DIR}/tian_fa_ling.png"), click())(ctx.action_ctx())
 
 
 def _jun_ling_zhuang(ctx) -> Result:
-    return click_image(f"{_DIR}/jun_ling_zhuang.png")
+    return do(move().image(f"{_DIR}/jun_ling_zhuang.png"), click())(ctx.action_ctx())
 
 
 def _finish(ctx) -> Result:

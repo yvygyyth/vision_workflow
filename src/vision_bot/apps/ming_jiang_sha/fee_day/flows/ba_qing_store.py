@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import (
     step_click_ming_jiang_ce,
     step_click_max,
@@ -9,7 +10,7 @@ from vision_bot.apps.ming_jiang_sha.actions import (
     step_go_back,
     step_space_close,
 )
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image, scroll_center
+from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -19,27 +20,27 @@ _DIR = f"{DATA_ROOT}/ba_qing_store"
 
 
 def _entry(ctx) -> Result:
-    return click_image(f"{_DIR}/entry-icon.png")
+    return do(move().image(f"{_DIR}/entry-icon.png"), click())(ctx.action_ctx())
 
 
 def _gold_tab(ctx) -> Result:
-    return click_image(f"{_DIR}/gold-tab.png")
+    return do(move().image(f"{_DIR}/gold-tab.png"), click())(ctx.action_ctx())
 
 
 def _free_bingli(ctx) -> Result:
-    return click_image(f"{_DIR}/free-bingli.png")
+    return do(move().image(f"{_DIR}/free-bingli.png"), click())(ctx.action_ctx())
 
 
 def _copper_tab(ctx) -> Result:
-    return click_image(f"{_DIR}/copper-tab.png")
+    return do(move().image(f"{_DIR}/copper-tab.png"), click())(ctx.action_ctx())
 
 
 def _lingxi_box(ctx) -> Result:
-    return click_image(f"{_DIR}/lingxi-box.png")
+    return do(move().image(f"{_DIR}/lingxi-box.png"), click())(ctx.action_ctx())
 
 
 def _jinlan_tab(ctx) -> Result:
-    return click_image(f"{_DIR}/jinlan-tab.png")
+    return do(move().image(f"{_DIR}/jinlan-tab.png"), click())(ctx.action_ctx())
 
 
 def _scroll(ctx) -> Result:

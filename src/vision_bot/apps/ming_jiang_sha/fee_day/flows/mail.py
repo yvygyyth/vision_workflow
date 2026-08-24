@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import step_go_back, step_space_close
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -17,11 +17,11 @@ _ONE_CLICK = f"{_DIR}/email_one_click_receive.png"
 def _open_mail(ctx) -> Result:
     if find(_ONE_CLICK, timeout=0.5).ok:
         return Result.success()
-    return click_image(f"{_DIR}/email.png")
+    return do(move().image(f"{_DIR}/email.png"), click())(ctx.action_ctx())
 
 
 def _one_click(ctx) -> Result:
-    return click_image(_ONE_CLICK, timeout=5.0)
+    return do(move().image(_ONE_CLICK).match(timeout=5.0), click())(ctx.action_ctx())
 
 
 def build() -> Flow:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import (
     step_click_ling_xi_box,
     step_click_ming_jiang_ce,
@@ -10,7 +11,7 @@ from vision_bot.apps.ming_jiang_sha.actions import (
     step_go_back,
     step_space_close,
 )
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image, scroll_center
+from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -20,11 +21,17 @@ _DIR = f"{DATA_ROOT}/zhan_yi_store"
 
 
 def _open_entry(ctx) -> Result:
-    return click_image(f"{_DIR}/entry.png", f"{_DIR}/entry2.png", timeout=5.0)
+    return do(
+        move().image(f"{_DIR}/entry.png", f"{_DIR}/entry2.png").match(timeout=5.0),
+        click(),
+    )(ctx.action_ctx())
 
 
 def _open_store(ctx) -> Result:
-    return click_image(f"{_DIR}/zhan-yi-store.png")
+    return do(
+        move().image(f"{_DIR}/zhan-yi-store.png"),
+        click(),
+    )(ctx.action_ctx())
 
 
 def _scroll(ctx) -> Result:

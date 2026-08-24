@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image
+from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR
 from vision_bot.events import click_below_box, press_esc
 from vision_bot.runtime.result import Result
@@ -20,18 +20,7 @@ _LING_XI_BOX = f"{COMMON_DIR}/ling_xi-box.png"
 
 
 def click_confirm(*, pause: float = 0.2) -> Result:
-    """识图 confirm 按钮并点击其下方区域。
-
-    Parameters
-    ----------
-    pause:
-        点击后等待秒数，默认 ``0.2``。
-
-    Returns
-    -------
-    Result
-        找到并点击时 ``ok=True``；未找到 confirm 时 ``ok=False``。
-    """
+    """识图 confirm 按钮并点击其下方区域。"""
     result = find(_CONFIRM, timeout=3.0, threshold=0.6)
     if not result.ok:
         return result
@@ -51,28 +40,20 @@ def step_space_close(ctx) -> Result:
 
 
 def step_go_back(ctx, *, times: int = 1) -> Result:
-    """Flow 步骤：按 Esc 返回。
-
-    Parameters
-    ----------
-    ctx:
-        运行上下文（保留以兼容步骤签名，未使用）。
-    times:
-        连按 Esc 次数，默认 ``1``。
-    """
+    """Flow 步骤：按 Esc 返回。"""
     return press_esc(times=times)
 
 
 def step_click_max(ctx) -> Result:
     """Flow 步骤：点击 max 按钮。"""
-    return click_image(_MAX)
+    return do(move().image(_MAX), click())(ctx.action_ctx())
 
 
 def step_click_ming_jiang_ce(ctx) -> Result:
     """Flow 步骤：点击名将册。"""
-    return click_image(_MING_JIANG_CE)
+    return do(move().image(_MING_JIANG_CE), click())(ctx.action_ctx())
 
 
 def step_click_ling_xi_box(ctx) -> Result:
     """Flow 步骤：点击灵犀盒。"""
-    return click_image(_LING_XI_BOX)
+    return do(move().image(_LING_XI_BOX), click())(ctx.action_ctx())

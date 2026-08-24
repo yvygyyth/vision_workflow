@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import step_go_back, step_space_close
-from vision_bot.apps.ming_jiang_sha.flow_helpers import click_image, scroll_center
+from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -14,7 +14,7 @@ _DIR = f"{DATA_ROOT}/actaivity"
 
 
 def _open_entry(ctx) -> Result:
-    return click_image(f"{_DIR}/huo_dong.png")
+    return do(move().image(f"{_DIR}/huo_dong.png"), click())(ctx.action_ctx())
 
 
 def _bu_gua_wait(ctx) -> Result:
@@ -29,7 +29,7 @@ def _bu_gua_click(ctx) -> Result:
 
 
 def _gua_xiang(ctx) -> Result:
-    return click_image(f"{_DIR}/gua_xiang.png")
+    return do(move().image(f"{_DIR}/gua_xiang.png"), click())(ctx.action_ctx())
 
 
 def _scroll(ctx) -> Result:
@@ -37,11 +37,11 @@ def _scroll(ctx) -> Result:
 
 
 def _yue_ling(ctx) -> Result:
-    return click_image(f"{_DIR}/yue_ling.png")
+    return do(move().image(f"{_DIR}/yue_ling.png"), click())(ctx.action_ctx())
 
 
 def _ling_qv(ctx) -> Result:
-    return click_image(f"{_DIR}/ling_qv.png")
+    return do(move().image(f"{_DIR}/ling_qv.png"), click())(ctx.action_ctx())
 
 
 def _finish(ctx) -> Result:
