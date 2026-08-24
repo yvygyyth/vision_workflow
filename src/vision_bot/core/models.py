@@ -15,9 +15,9 @@ class MatchOptions(BaseModel):
         description="匹配分数下限（0~1），高于此值视为命中。",
     )
     timeout: float = Field(
-        default=0.0,
+        default=3.0,
         ge=0.0,
-        description="单次 find 最长等待秒数；0 表示只查找一次。",
+        description="最长等待秒数；0 表示只查找一次。",
     )
     interval: float = Field(
         default=0.5,

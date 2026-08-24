@@ -1,6 +1,6 @@
 """识图模块默认配置。
 
-任务启动时通过 :func:`vision.bind` 注入一次；之后 ``find`` / ``wait_any`` 等
+任务启动时通过 :func:`vision.bind` 注入一次；之后 :func:`vision.find` 等
 会自动读取这里的 ``base_dir``、``options``、``cancelled``。
 """
 

@@ -34,7 +34,7 @@ def click_match(hit: MatchResult, *, pause: float = 0.2) -> Result:
     Parameters
     ----------
     hit:
-        :func:`vision.find` / :func:`vision.wait_any` 返回的 ``value``。
+        :func:`vision.find` 返回的 ``value``。
         需 ``found=True`` 且 ``center`` 非空。
     pause:
         点击后等待秒数，默认 ``0.2``。

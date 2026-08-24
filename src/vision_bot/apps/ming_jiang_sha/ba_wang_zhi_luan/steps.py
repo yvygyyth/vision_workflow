@@ -9,7 +9,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import BA_WANG, QLDQ
 from vision_bot.events import click_at
 from vision_bot.runtime.result import Result
-from vision_bot.vision import find, find_all, wait_any
+from vision_bot.vision import find, find_all
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def relocate_role(ctx) -> str | None:
 
 
 def click_ready(ctx) -> Result:
-    result = wait_any(_ZHUN_BEI, timeout=1.5, interval=0.3)
+    result = find(_ZHUN_BEI, timeout=1.5, interval=0.3)
     if not result.ok or not result.value.center:
         return Result.fail("未找到准备按钮")
     cx, cy = result.value.center

@@ -21,7 +21,7 @@ def find_image(
     template: str | Path,
     *,
     threshold: float = 0.8,
-    timeout: float = 0.0,
+    timeout: float = 3.0,
     interval: float = 0.5,
     region: tuple[int, int, int, int] | None = None,
     region_fit: bool = True,

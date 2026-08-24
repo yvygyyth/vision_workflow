@@ -1,4 +1,4 @@
-"""识图等待（供 move 等动作使用）。"""
+"""识图等待（供 move 动作链使用）。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchResult
-from vision_bot.vision.find import _wait_any_with
+from vision_bot.vision.find import search
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,10 @@ def wait_image(
     if not images:
         raise ValueError("至少需要一张模板图")
     labels = "/".join(Path(p).name for p in images)
-    result = _wait_any_with(
+    result = search(
         *images,
         base_dir=ctx.base_dir,
-        options=ctx.defaults,
+        defaults=ctx.defaults,
         cancelled=ctx.cancelled,
         threshold=threshold,
         timeout=timeout,
