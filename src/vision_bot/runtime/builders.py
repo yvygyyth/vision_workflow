@@ -20,15 +20,15 @@ def mod(id: str, name: str, active: ActiveFn) -> Module:
 def flow(
     id: str,
     name: str,
-    children: list[Node],
-    *,
     params: dict[str, Any] | None = None,
     relocate: list[RelocateFn] | None = None,
+    *,
+    children: list[Node],
 ) -> Flow:
     return Flow(
         id=id,
         name=name,
-        children=children,
         params=params or {},
         relocate=relocate or [],
+        children=children,
     )

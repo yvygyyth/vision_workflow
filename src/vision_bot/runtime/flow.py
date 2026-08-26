@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 RelocateFn = Callable[[RunContext], str | None]
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Flow:
     id: str
     name: str
-    children: list[Flow | Module]
     params: dict[str, Any] = field(default_factory=dict)
     relocate: list[RelocateFn] = field(default_factory=list)
+    children: list[Flow | Module]
 
     def __post_init__(self) -> None:
         if not self.children:
