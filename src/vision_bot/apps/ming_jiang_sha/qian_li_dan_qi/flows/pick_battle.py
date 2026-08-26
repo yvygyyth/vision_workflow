@@ -1,4 +1,4 @@
-"""战斗三选一。"""
+"""战斗三选一 mod。"""
 
 from __future__ import annotations
 
@@ -6,11 +6,9 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod, relocate_pick_battle
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT, snap_center, snap_found
 from vision_bot.core.input import Mouse
-from vision_bot.runtime.builders import flow, mod
-from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,7 @@ def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
     return True
 
 
-def _choose(ctx) -> Result:
+def choose(ctx) -> Result:
     snap = ctx.snap(PICK_BATTLE_DETECT)
     if snap_found(snap, "choice.challenge_help"):
         if not _click(snap, "choice.challenge_help", label="help"):
@@ -39,7 +37,7 @@ def _choose(ctx) -> Result:
     return Result.success()
 
 
-def _choose_yi_wai(ctx) -> Result:
+def choose_yi_wai(ctx) -> Result:
     snap = ctx.snap(PICK_BATTLE_DETECT)
     if not _click(snap, "choice.yi_wai", label="yi_wai", times=2):
         return Result.fail("点击意外失败")
@@ -52,22 +50,9 @@ def _choose_yi_wai(ctx) -> Result:
     return Result.success()
 
 
-def _pre_confirm(ctx) -> Result:
+def pre_confirm(ctx) -> Result:
     r = click_confirm()
     if not r.ok:
         return Result.fail(r.message)
     ctx.goto("qldq.fight")
     return Result.success()
-
-
-def build() -> Flow:
-    return flow(
-        "qldq.battle_hub.pick_battle",
-        "战斗选择",
-        children=[
-            mod("qldq.battle_hub.pick_battle.choose", "选战斗", _choose),
-            mod("qldq.battle_hub.pick_battle.choose_yi_wai", "选意外", _choose_yi_wai),
-            mod("qldq.battle_hub.pick_battle.pre_confirm", "确认", _pre_confirm),
-        ],
-        relocate=[relocate_pick_battle],
-    )

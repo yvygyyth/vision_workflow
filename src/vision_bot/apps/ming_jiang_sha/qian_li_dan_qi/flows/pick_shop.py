@@ -1,17 +1,15 @@
-"""商店三选一。"""
+"""商店三选一 mod。"""
 
 from __future__ import annotations
 
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod, relocate_pick_shop
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_SHOP_DETECT, snap_center, snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
-from vision_bot.runtime.builders import flow, mod
-from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,7 @@ def _ocr_copper(ctx) -> int:
     return int(digits) if digits else 0
 
 
-def _choose(ctx) -> Result:
+def choose(ctx) -> Result:
     snap = ctx.snap(PICK_SHOP_DETECT)
     state = get_battle_state(ctx)
     coins = _ocr_copper(ctx)
@@ -60,22 +58,10 @@ def _choose(ctx) -> Result:
     return Result.fail("商店选项均未识别")
 
 
-def _verify_ba_qing(ctx) -> Result:
+def verify_ba_qing(ctx) -> Result:
     time.sleep(0.4)
     snap = ctx.snap({"choice.ba_qing_store"})
     if snap_found(snap, "choice.ba_qing_store"):
         return Result.fail("巴清图标仍在")
     ctx.goto("qldq.ba_qing_store")
     return Result.success()
-
-
-def build() -> Flow:
-    return flow(
-        "qldq.battle_hub.pick_shop",
-        "商店选择",
-        children=[
-            mod("qldq.battle_hub.pick_shop.choose", "选商店", _choose),
-            mod("qldq.battle_hub.pick_shop.verify_ba_qing", "验证巴清", _verify_ba_qing),
-        ],
-        relocate=[relocate_pick_shop],
-    )

@@ -10,6 +10,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import (
     PICK_BATTLE_DETECT,
     PICK_EVENT_DETECT,
     PICK_SHOP_DETECT,
+    ensure_registry,
     snap_found,
 )
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
@@ -43,12 +44,15 @@ def detect_qian_li(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str |
         return "qldq.run_ended"
     if _choice_any(snap) or snap_found(snap, "enter.battle_interface"):
         return "qldq.battle_hub"
-    if snap_found(snap, "enter.start") or snap_found(snap, "enter.select_wu_jiang"):
-        return "qldq.enter_battle"
+    if snap_found(snap, "enter.select_wu_jiang"):
+        return "qldq.battle_select.enter_pick"
+    if snap_found(snap, "enter.start"):
+        return "qldq.battle_select.enter_ready"
     return None
 
 
 def relocate_qian_li(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, GLOBAL_DETECT)
     return detect_qian_li(snap, ctx)
 
@@ -70,6 +74,7 @@ def detect_hub(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | Non
 
 
 def relocate_hub(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, HUB_DETECT)
     return detect_hub(snap, ctx)
 
@@ -85,6 +90,7 @@ def detect_pick_battle(snap: ScreenSnapshot, ctx: RunContext | None = None) -> s
 
 
 def relocate_pick_battle(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, PICK_BATTLE_DETECT)
     return detect_pick_battle(snap, ctx)
 
@@ -99,6 +105,7 @@ def detect_pick_shop(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str
 
 
 def relocate_pick_shop(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, PICK_SHOP_DETECT)
     return detect_pick_shop(snap, ctx)
 
@@ -110,23 +117,44 @@ def detect_pick_event(snap: ScreenSnapshot, ctx: RunContext | None = None) -> st
 
 
 def relocate_pick_event(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, PICK_EVENT_DETECT)
     return detect_pick_event(snap, ctx)
 
 
-def detect_enter(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+def detect_enter_ready(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if snap_found(snap, "enter.battle_interface"):
-        return qmod("enter_battle", "check_done")
+        return qmod("battle_select.enter_ready", "check_done")
     if snap_found(snap, "enter.start"):
-        return qmod("enter_battle", "try_start")
+        return qmod("battle_select.enter_ready", "try_start")
+    return qmod("battle_select.enter_ready", "try_start")
+
+
+def detect_enter_pick(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if snap_found(snap, "enter.select_wu_jiang"):
-        return qmod("enter_battle", "select_wu_jiang")
-    return qmod("enter_battle", "try_start")
+        return qmod("battle_select.enter_pick", "select_wu_jiang")
+    return None
 
 
-def relocate_enter(ctx: RunContext) -> str | None:
+def relocate_battle_select(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
-    return detect_enter(snap, ctx)
+    target = detect_enter_pick(snap, ctx)
+    if target:
+        return target
+    return detect_enter_ready(snap, ctx)
+
+
+def relocate_enter_ready(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
+    return detect_enter_ready(snap, ctx)
+
+
+def relocate_enter_pick(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
+    return detect_enter_pick(snap, ctx)
 
 
 def detect_fight(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -142,11 +170,13 @@ def detect_fight(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | N
 
 
 def relocate_fight(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, FIGHT_DETECT)
     return detect_fight(snap, ctx)
 
 
 def relocate_ba_qing_store(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, {"shop.go_back"})
     if snap_found(snap, "shop.go_back"):
         return qmod("ba_qing_store", "go_back")
@@ -154,6 +184,7 @@ def relocate_ba_qing_store(ctx: RunContext) -> str | None:
 
 
 def relocate_shi_chang_shi(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, {"shi_chang_shi.attack", "fight.cancel"})
     if snap_found(snap, "shi_chang_shi.attack"):
         return qmod("shi_chang_shi", "attack")
