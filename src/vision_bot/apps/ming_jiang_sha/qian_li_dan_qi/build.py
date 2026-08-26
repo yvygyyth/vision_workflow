@@ -40,6 +40,7 @@ def build_qian_li_dan_qi() -> Flow:
     return flow(
         id="qldq",
         name="千里单骑",
+        params={"wu_jiang": "吕布"},
         children=[
             flow(
                 id="qldq.battle_select",

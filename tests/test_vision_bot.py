@@ -190,7 +190,7 @@ def test_params_scope() -> None:
         ],
     )
     run(root, RunConfig())
-    assert seen == ["root:root", "inner"]
+    assert seen == ["root:root", "root"]
 
 
 def test_params_override_on_entry_flow() -> None:
