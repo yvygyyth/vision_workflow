@@ -1,29 +1,160 @@
-"""组装每日免费资源顶层 Flow。"""
+"""组装每日免费资源 Flow 树（结构在此一览；mod 分文件）。"""
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.activity import build as build_activity
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.ba_qing_store import build as build_ba_qing
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.dang_qing_ge import build as build_dang
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.gong_hui import build as build_gong_hui
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.mail import build as build_mail
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.zhan_yi_store import build as build_zhan_yi
-from vision_bot.apps.ming_jiang_sha.fee_day.flows.zhu_jiu_store import build as build_zhu_jiu
-from vision_bot.runtime.builders import flow
+from vision_bot.apps.ming_jiang_sha.actions import (
+    step_click_ling_xi_box,
+    step_click_ming_jiang_ce,
+    step_click_max,
+    step_confirm,
+    step_go_back,
+    step_space_close,
+)
+from vision_bot.apps.ming_jiang_sha.fee_day.flows import (
+    activity,
+    ba_qing_store,
+    dang_qing_ge,
+    gong_hui,
+    mail,
+    zhan_yi_store,
+    zhu_jiu_store,
+)
+from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
 
 
 def build_fee_day() -> Flow:
     return flow(
-        "fee_day",
-        "名将杀免费资源每日领取",
+        id="fee_day",
+        name="名将杀免费资源每日领取",
         children=[
-            build_mail(),
-            build_dang(),
-            build_zhu_jiu(),
-            build_zhan_yi(),
-            build_ba_qing(),
-            build_activity(),
-            build_gong_hui(),
+            flow(
+                id="fee_day.mail",
+                name="收邮件",
+                children=[
+                    mod(id="fee_day.mail.open", name="打开邮箱", active=mail.open),
+                    mod(id="fee_day.mail.one_click", name="一键领取", active=mail.one_click),
+                    mod(id="fee_day.mail.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.mail.back", name="返回", active=step_go_back),
+                ],
+            ),
+            flow(
+                id="fee_day.dang_qing_ge",
+                name="丹青阁",
+                children=[
+                    mod(id="fee_day.dang_qing_ge.icon", name="打开丹青阁", active=dang_qing_ge.open_icon),
+                    mod(id="fee_day.dang_qing_ge.day_libao", name="每日礼包", active=dang_qing_ge.day_libao),
+                    mod(id="fee_day.dang_qing_ge.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.dang_qing_ge.back", name="返回", active=step_go_back),
+                ],
+            ),
+            flow(
+                id="fee_day.zhu_jiu_store",
+                name="煮酒店铺",
+                children=[
+                    mod(id="fee_day.zhu_jiu_store.entry", name="打开入口", active=zhu_jiu_store.entry),
+                    mod(id="fee_day.zhu_jiu_store.qing_mei_store", name="青梅店", active=zhu_jiu_store.qing_mei_store),
+                    mod(id="fee_day.zhu_jiu_store.ming_jiang_ce", name="名将册", active=step_click_ming_jiang_ce),
+                    mod(id="fee_day.zhu_jiu_store.buy", name="购买", active=step_confirm),
+                    mod(id="fee_day.zhu_jiu_store.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.zhu_jiu_store.ling_xi_box", name="灵犀盒", active=step_click_ling_xi_box),
+                    mod(id="fee_day.zhu_jiu_store.max", name="最大", active=step_click_max),
+                    mod(id="fee_day.zhu_jiu_store.buy2", name="购买2", active=step_confirm),
+                    mod(id="fee_day.zhu_jiu_store.space_close2", name="关闭弹窗2", active=step_space_close),
+                    mod(id="fee_day.zhu_jiu_store.close", name="关闭", active=step_go_back),
+                    mod(id="fee_day.zhu_jiu_store.return_btn", name="返回", active=zhu_jiu_store.finish),
+                ],
+            ),
+            flow(
+                id="fee_day.zhan_yi_store",
+                name="战役商店",
+                children=[
+                    mod(id="fee_day.zhan_yi_store.entry", name="打开入口", active=zhan_yi_store.open_entry),
+                    mod(id="fee_day.zhan_yi_store.open_store", name="打开商店", active=zhan_yi_store.open_store),
+                    mod(id="fee_day.zhan_yi_store.ming_jiang_ce", name="名将册", active=step_click_ming_jiang_ce),
+                    mod(id="fee_day.zhan_yi_store.max", name="最大", active=step_click_max),
+                    mod(id="fee_day.zhan_yi_store.buy", name="购买", active=step_confirm),
+                    mod(id="fee_day.zhan_yi_store.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.zhan_yi_store.scroll", name="滚动", active=zhan_yi_store.scroll),
+                    mod(id="fee_day.zhan_yi_store.ling_xi_box", name="灵犀盒", active=step_click_ling_xi_box),
+                    mod(id="fee_day.zhan_yi_store.max2", name="最大2", active=step_click_max),
+                    mod(id="fee_day.zhan_yi_store.buy2", name="购买2", active=step_confirm),
+                    mod(id="fee_day.zhan_yi_store.space_close2", name="关闭弹窗2", active=step_space_close),
+                    mod(id="fee_day.zhan_yi_store.close", name="关闭", active=step_go_back),
+                    mod(id="fee_day.zhan_yi_store.return_btn", name="返回", active=zhan_yi_store.finish),
+                ],
+            ),
+            flow(
+                id="fee_day.ba_qing_store",
+                name="巴清商店",
+                children=[
+                    mod(id="fee_day.ba_qing_store.entry", name="打开入口", active=ba_qing_store.entry),
+                    mod(id="fee_day.ba_qing_store.gold_tab", name="金币页", active=ba_qing_store.gold_tab),
+                    mod(id="fee_day.ba_qing_store.free_bingli", name="免费兵力", active=ba_qing_store.free_bingli),
+                    mod(id="fee_day.ba_qing_store.buy_0", name="购买0", active=step_confirm),
+                    mod(id="fee_day.ba_qing_store.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.ba_qing_store.copper_tab", name="铜币页", active=ba_qing_store.copper_tab),
+                    mod(id="fee_day.ba_qing_store.lingxi_box", name="灵犀盒", active=ba_qing_store.lingxi_box),
+                    mod(id="fee_day.ba_qing_store.max", name="最大", active=step_click_max),
+                    mod(id="fee_day.ba_qing_store.buy_500", name="购买500", active=step_confirm),
+                    mod(id="fee_day.ba_qing_store.space_close2", name="关闭弹窗2", active=step_space_close),
+                    mod(id="fee_day.ba_qing_store.space_close3", name="关闭弹窗3", active=step_space_close),
+                    mod(id="fee_day.ba_qing_store.jinlan_tab", name="金兰页", active=ba_qing_store.jinlan_tab),
+                    mod(id="fee_day.ba_qing_store.scroll", name="滚动", active=ba_qing_store.scroll),
+                    mod(id="fee_day.ba_qing_store.ming_jiang_ce", name="名将册", active=step_click_ming_jiang_ce),
+                    mod(id="fee_day.ba_qing_store.buy_200", name="购买200", active=step_confirm),
+                    mod(id="fee_day.ba_qing_store.space_close4", name="关闭弹窗4", active=step_space_close),
+                    mod(id="fee_day.ba_qing_store.go_back", name="返回", active=ba_qing_store.finish),
+                ],
+            ),
+            flow(
+                id="fee_day.activity",
+                name="活动",
+                children=[
+                    mod(id="fee_day.activity.entry", name="打开活动", active=activity.open_entry),
+                    mod(id="fee_day.activity.bu_gua", name="卜卦等待", active=activity.bu_gua_wait),
+                    mod(id="fee_day.activity.bu_gua2", name="卜卦点击", active=activity.bu_gua_click),
+                    mod(id="fee_day.activity.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.activity.gua_xiang", name="卦象", active=activity.gua_xiang),
+                    mod(id="fee_day.activity.scroll", name="滚动", active=activity.scroll),
+                    mod(id="fee_day.activity.yue_ling", name="月灵", active=activity.yue_ling),
+                    mod(id="fee_day.activity.ling_qv", name="领取", active=activity.ling_qv),
+                    mod(id="fee_day.activity.go_back", name="返回", active=activity.finish),
+                ],
+            ),
+            flow(
+                id="fee_day.gong_hui",
+                name="公会店铺",
+                children=[
+                    mod(id="fee_day.gong_hui.entry", name="打开公会", active=gong_hui.open_entry),
+                    mod(id="fee_day.gong_hui.open_store", name="打开店铺", active=gong_hui.open_store),
+                    mod(id="fee_day.gong_hui.ming_jiang_ce", name="名将册", active=step_click_ming_jiang_ce),
+                    mod(id="fee_day.gong_hui.max", name="最大", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy", name="购买", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.gong_hui.ling_xi_box", name="灵犀盒", active=step_click_ling_xi_box),
+                    mod(id="fee_day.gong_hui.max2", name="最大2", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy2", name="购买2", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close2", name="关闭弹窗2", active=step_space_close),
+                    mod(id="fee_day.gong_hui.wen_ding_ling", name="文定令", active=gong_hui.wen_ding_ling),
+                    mod(id="fee_day.gong_hui.max3", name="最大3", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy3", name="购买3", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close3", name="关闭弹窗3", active=step_space_close),
+                    mod(id="fee_day.gong_hui.tian_ming_ling", name="天命令", active=gong_hui.tian_ming_ling),
+                    mod(id="fee_day.gong_hui.max4", name="最大4", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy4", name="购买4", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close4", name="关闭弹窗4", active=step_space_close),
+                    mod(id="fee_day.gong_hui.tian_fa_ling", name="天法令", active=gong_hui.tian_fa_ling),
+                    mod(id="fee_day.gong_hui.max5", name="最大5", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy5", name="购买5", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close5", name="关闭弹窗5", active=step_space_close),
+                    mod(id="fee_day.gong_hui.jun_ling_zhuang", name="军令状", active=gong_hui.jun_ling_zhuang),
+                    mod(id="fee_day.gong_hui.max6", name="最大6", active=step_click_max),
+                    mod(id="fee_day.gong_hui.buy6", name="购买6", active=step_confirm),
+                    mod(id="fee_day.gong_hui.space_close6", name="关闭弹窗6", active=step_space_close),
+                    mod(id="fee_day.gong_hui.close", name="关闭", active=step_go_back),
+                    mod(id="fee_day.gong_hui.return_btn", name="返回", active=gong_hui.finish),
+                ],
+            ),
         ],
     )
