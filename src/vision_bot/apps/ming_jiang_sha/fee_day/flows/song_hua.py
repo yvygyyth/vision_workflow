@@ -4,9 +4,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
-from vision_bot.apps.ming_jiang_sha.actions import (
-    step_go_back,
-)
+from vision_bot.apps.ming_jiang_sha.actions import go_back
 
 _DIR = f"{FEE_DAY}/song_hua"
 
@@ -28,10 +26,10 @@ def zeng_song(ctx) -> Result:
 
 def finish(ctx) -> Result:
     ctx.sleep(2.0)
-    step_go_back(ctx)
+    go_back()
     return Result.success()
 
 def finish_2(ctx) -> Result:
-    step_go_back(ctx)
+    go_back()
     return Result.success()
 

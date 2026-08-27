@@ -242,7 +242,7 @@ def test_fee_day_build() -> None:
 
     root = build_fee_day()
     assert root.id == "fee_day"
-    assert len(root.children) == 7
+    assert len(root.children) == 8
     reg = FlowRegistry.build(root)
     assert "fee_day.mail.open" in reg.nodes
 

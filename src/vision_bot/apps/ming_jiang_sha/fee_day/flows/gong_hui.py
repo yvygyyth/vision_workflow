@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.actions import step_go_back
+from vision_bot.apps.ming_jiang_sha.actions import go_back
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 
@@ -38,5 +38,5 @@ def jun_ling_zhuang(ctx) -> Result:
 
 
 def finish(ctx) -> Result:
-    step_go_back(ctx)
+    go_back()
     return Result.success()

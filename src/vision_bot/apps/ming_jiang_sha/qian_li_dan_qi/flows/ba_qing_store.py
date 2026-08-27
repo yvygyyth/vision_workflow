@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.actions import step_confirm
+from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_PRIORITY
@@ -62,7 +62,7 @@ def click_token_slot(ctx) -> Result:
 
 
 def slot_confirm(ctx) -> Result:
-    if step_confirm(ctx).ok:
+    if click_confirm().ok:
         ctx.goto("qldq.ba_qing_store.choose_token")
     else:
         ctx.goto("qldq.ba_qing_store.slot_no_buy")
@@ -104,7 +104,7 @@ def choose_token(ctx) -> Result:
 
 
 def token_confirm(ctx) -> Result:
-    if step_confirm(ctx).ok:
+    if click_confirm().ok:
         ctx.goto("qldq.ba_qing_store.go_back")
     else:
         ctx.goto("qldq.ba_qing_store.token_no_buy")

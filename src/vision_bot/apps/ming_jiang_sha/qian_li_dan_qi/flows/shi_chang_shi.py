@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.actions import click_confirm, step_confirm
+from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
@@ -21,7 +21,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def confirm(ctx) -> Result:
-    r = step_confirm(ctx)
+    r = click_confirm()
     if not r.ok:
         ctx.goto("qldq.shi_chang_shi.attack")
     return r

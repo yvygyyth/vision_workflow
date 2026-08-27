@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.actions import step_go_back
+from vision_bot.apps.ming_jiang_sha.actions import close_popup, go_back
 from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
-from vision_bot.apps.ming_jiang_sha.actions import (
-    step_go_back,
-    step_space_close,
-)
 
 _DIR = f"{FEE_DAY}/actaivity"
 
@@ -48,11 +44,11 @@ def ling_qv(ctx) -> Result:
 
 
 def finish(ctx) -> Result:
-    step_go_back(ctx)
+    go_back()
     return Result.success()
 
-def step_space_close_2(ctx) -> Result:
-    """Flow 步骤： 2秒后按 Esc 关闭弹窗。"""
+
+def close_popup_2(ctx) -> Result:
+    """2 秒后按 Esc 关闭弹窗。"""
     ctx.sleep(2.0)
-    step_space_close()
-    return Result.success()
+    return close_popup()

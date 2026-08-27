@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.actions import step_confirm
+from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.events import click_match
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
@@ -15,7 +15,7 @@ _OPTS = (
 
 
 def confirm(ctx) -> Result:
-    r = step_confirm(ctx)
+    r = click_confirm()
     if not r.ok:
         ctx.goto("qldq.fei_fei.choose")
     return r
