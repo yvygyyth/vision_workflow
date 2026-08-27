@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vision_bot.actions.context import bind_action_context
 from vision_bot.events import bind as bind_events
+from vision_bot.runtime.cancel import patch_time_sleep
 from vision_bot.runtime.context import RunContext
 from vision_bot.vision import bind as bind_vision
 
@@ -22,3 +23,4 @@ def bind_runtime(ctx: RunContext) -> None:
         vars=ctx.vars,
         cancelled=ctx.cancelled,
     )
+    patch_time_sleep()

@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
+_stdlib_sleep = time.sleep
+
 
 class CancelledError(Exception):
     """用户请求停止。"""
@@ -28,4 +30,15 @@ def sleep_interruptible(
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         raise_if_cancelled(cancelled)
-        time.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+        _stdlib_sleep(min(interval, max(0.0, deadline - time.monotonic())))
+
+
+def patch_time_sleep() -> None:
+    """将 ``time.sleep`` 替换为可响应任务取消的版本（``bind_runtime`` 时调用）。"""
+
+    def _sleep(seconds: float) -> None:
+        from vision_bot.events.session import cancelled
+
+        sleep_interruptible(cancelled(), seconds)
+
+    time.sleep = _sleep  # type: ignore[misc, assignment]

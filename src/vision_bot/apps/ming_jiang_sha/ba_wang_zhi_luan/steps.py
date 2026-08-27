@@ -70,7 +70,7 @@ def click_ready(ctx) -> Result:
 
 
 def confirm_ready(ctx) -> Result:
-    ctx.sleep(0.5)
+    time.sleep(0.5)
     if _probe(_UN_ZHUN_BEI, timeout=1.0):
         logger.info("confirm_ready → wait_game_start")
         ctx.goto("ba_wang.wait_game_start")
@@ -105,7 +105,7 @@ def wait_game_start(ctx) -> Result:
             logger.info("wait_game_start → move_aside")
             ctx.goto("ba_wang.move_aside")
             return Result.success()
-        ctx.sleep(_WAIT_INTERVAL_SEC)
+        time.sleep(_WAIT_INTERVAL_SEC)
     return Result.fail("等待开局超时")
 
 
@@ -122,7 +122,7 @@ def pick_all_sixes(ctx) -> Result:
         assert cx is not None and cy is not None
         logger.info("pick_all_sixes @ (%s,%s) conf=%.3f", cx, cy, hit.confidence)
         click_at(cx, cy, pause=0.2)
-        ctx.sleep(_AFTER_SIX_CLICK_SEC)
+        time.sleep(_AFTER_SIX_CLICK_SEC)
     ctx.goto("ba_wang.click_ok")
     return Result.success()
 
@@ -182,7 +182,7 @@ def click_next_step_if_any(ctx) -> Result:
         cx, cy = result.value.center
         logger.info("click_next_step_if_any @ (%s,%s)", cx, cy)
         do(move().to(cx, cy).raw(), click())()
-        ctx.sleep(0.4)
+        time.sleep(0.4)
     ctx.goto("ba_wang.battle_done")
     return Result.success()
 

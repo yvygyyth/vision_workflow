@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import close_popup, go_back
 from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
@@ -16,13 +18,13 @@ def open_entry(ctx) -> Result:
 
 
 def bu_gua_wait(ctx) -> Result:
-    ctx.sleep(1.0)
+    time.sleep(1.0)
     do(move().to(1400, 600).raw(), click())()
     return Result.success()
 
 
 def bu_gua_click(ctx) -> Result:
-    ctx.sleep(3.0)
+    time.sleep(3.0)
     do(move().to(1400, 600).raw(), click())()
     return Result.success()
 
@@ -50,5 +52,5 @@ def finish(ctx) -> Result:
 
 def close_popup_2(ctx) -> Result:
     """2 秒后按 Esc 关闭弹窗。"""
-    ctx.sleep(2.0)
+    time.sleep(2.0)
     return close_popup()

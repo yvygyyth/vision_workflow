@@ -32,10 +32,6 @@ class RunContext:
         from vision_bot.runtime.cancel import raise_if_cancelled
         raise_if_cancelled(self.cancelled)
 
-    def sleep(self, seconds: float, *, interval: float = 0.1) -> None:
-        from vision_bot.runtime.cancel import sleep_interruptible
-        sleep_interruptible(self.cancelled, seconds, interval=interval)
-
     @property
     def params(self) -> dict[str, Any]:
         """当前 Flow 作用域内的 params（栈顶）。"""

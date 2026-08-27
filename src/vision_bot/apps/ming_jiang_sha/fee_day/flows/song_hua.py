@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
@@ -25,7 +27,7 @@ def zeng_song(ctx) -> Result:
     return Result.success()
 
 def finish(ctx) -> Result:
-    ctx.sleep(2.0)
+    time.sleep(2.0)
     go_back()
     return Result.success()
 
