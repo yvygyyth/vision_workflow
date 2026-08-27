@@ -96,7 +96,6 @@ def poll_click_start(ctx) -> Result:
 def wait_game_start(ctx) -> Result:
     deadline = time.monotonic() + _WAIT_TIMEOUT_SEC
     while time.monotonic() < deadline:
-        ctx.check_cancelled()
         if find_all(_SIX, max_count=1).ok:
             logger.info("wait_game_start → pick_six")
             ctx.goto("ba_wang.pick_six")

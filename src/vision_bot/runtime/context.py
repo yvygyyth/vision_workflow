@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchOptions
 from vision_bot.perception.signal import SignalRegistry
 
@@ -58,15 +57,6 @@ class RunContext:
     def exit_flow(self) -> None:
         if self._params_stack:
             self._params_stack.pop()
-
-    def action_ctx(self) -> ActionContext:
-        from vision_bot.actions.context import action_context
-        return action_context()
-
-    def do(self, *steps) -> Result:
-        """执行动作链（使用当前任务绑定的动作上下文）。"""
-        from vision_bot.actions.compose import do as compose_do
-        return compose_do(*steps)()
 
     def snap(self, signal_ids: set[str] | None = None):
         """按需截屏识图；signal_ids 为 None 时匹配 registry 全部 signal。"""
