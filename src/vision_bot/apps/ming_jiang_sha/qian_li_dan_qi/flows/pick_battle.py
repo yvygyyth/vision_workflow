@@ -6,7 +6,6 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT, snap_center, snap_found
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
@@ -18,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if snap_found(snap, "choice.challenge_help"):
-        return qmod("battle_hub.pick_battle", "choose")
+        return "qldq.battle_hub.pick_battle.choose"
     if snap_found(snap, "choice.challenge"):
-        return qmod("battle_hub.pick_battle", "choose")
+        return "qldq.battle_hub.pick_battle.choose"
     if snap_found(snap, "choice.yi_wai"):
-        return qmod("battle_hub.pick_battle", "choose_yi_wai")
+        return "qldq.battle_hub.pick_battle.choose_yi_wai"
     return None
 
 
@@ -50,7 +49,7 @@ def choose(ctx) -> Result:
             return Result.fail("点击 challenge 失败")
     else:
         return Result.fail("无战斗选项")
-    ctx.goto(qmod("battle_hub.pick_battle", "pre_confirm"))
+    ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")
     return Result.success()
 
 
@@ -61,9 +60,9 @@ def choose_yi_wai(ctx) -> Result:
     time.sleep(0.6)
     snap2 = ctx.snap({"choice.yi_wai"})
     if snap_found(snap2, "choice.yi_wai"):
-        ctx.goto(qmod("battle_hub.pick_battle", "choose_yi_wai"))
+        ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
         return Result.success()
-    ctx.goto(qmod("battle_hub.pick_battle", "pre_confirm"))
+    ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")
     return Result.success()
 
 
