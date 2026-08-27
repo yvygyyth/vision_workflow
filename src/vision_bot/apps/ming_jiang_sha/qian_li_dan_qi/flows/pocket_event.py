@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import random
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_center, snap_found
 from vision_bot.core.input import Mouse
-from vision_bot.vision import find_all
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
+from vision_bot.vision import find_all
 
 _CHECK_SIGNALS = {"fight.cancel", "pocket.ok"}
+
+
+def relocate(ctx: RunContext) -> str | None:
+    return qmod("pocket_event", "check")
 
 
 def pick(ctx) -> Result:

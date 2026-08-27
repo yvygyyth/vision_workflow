@@ -2,24 +2,11 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import (
-    relocate_ba_qing_store,
-    relocate_battle_select,
-    relocate_enter_pick,
-    relocate_enter_ready,
-    relocate_fight,
-    relocate_hub,
-    relocate_pick_battle,
-    relocate_pick_event,
-    relocate_pick_shop,
-    relocate_pocket_event,
-    relocate_qian_li,
-    relocate_shi_chang_shi,
-)
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import (
     ba_qing_store,
     battle_hub,
-    enter_battle,
+    enter_pick,
+    enter_ready,
     fei_fei,
     fight,
     home_recovery,
@@ -28,6 +15,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import (
     pick_event,
     pick_shop,
     pocket_event,
+    qian_li,
     rest,
     run_ended,
     shi_chang_shi,
@@ -41,43 +29,273 @@ def build_qian_li_dan_qi() -> Flow:
         id="qldq",
         name="千里单骑",
         params={"wu_jiang": "吕布"},
-        relocate=[relocate_qian_li],
+        relocate=[qian_li.relocate],
         children=[
             flow(
-                id="qldq.battle_select",
-                name="战斗选择",
-                relocate=[relocate_battle_select],
+                id="qldq.home_recovery",
+                name="回首页恢复",
+                relocate=[home_recovery.relocate],
                 children=[
-                    flow(
-                        id="qldq.home_recovery",
-                        name="回首页恢复",
-                        children=[
-                            mod(
-                                id="qldq.home_recovery.esc_home",
-                                name="Esc回首页",
-                                active=home_recovery.esc_home,
-                            ),
-                        ],
+                    mod(
+                        id="qldq.home_recovery.esc_home",
+                        name="Esc回首页",
+                        active=home_recovery.esc_home,
                     ),
                     flow(
                         id="qldq.battle_select.enter_ready",
                         name="已选将",
-                        relocate=[relocate_enter_ready],
+                        relocate=[enter_ready.relocate],
                         children=[
                             mod(
                                 id="qldq.battle_select.enter_ready.try_start",
                                 name="点击开始",
-                                active=enter_battle.try_start,
+                                active=enter_ready.try_start,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_ready.recover",
                                 name="恢复",
-                                active=enter_battle.recover,
+                                active=enter_ready.recover,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_ready.check_done",
                                 name="检查进战",
-                                active=enter_battle.check_done,
+                                active=enter_ready.check_done,
+                            ),
+                            flow(
+                                id="qldq.battle_interface",
+                                name="战斗界面",
+                                children=[
+                                    flow(
+                                        id="qldq.battle_hub",
+                                        name="三选一枢纽",
+                                        relocate=[battle_hub.relocate],
+                                        children=[
+                                            mod(
+                                                id="qldq.battle_hub.dismiss_up",
+                                                name="关闭上面板",
+                                                active=battle_hub.dismiss_up,
+                                            ),
+                                            flow(
+                                                id="qldq.battle_hub.pick_battle",
+                                                name="战斗三选一",
+                                                relocate=[pick_battle.relocate],
+                                                children=[
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_battle.choose",
+                                                        name="选战斗",
+                                                        active=pick_battle.choose,
+                                                    ),
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_battle.choose_yi_wai",
+                                                        name="选意外",
+                                                        active=pick_battle.choose_yi_wai,
+                                                    ),
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_battle.pre_confirm",
+                                                        name="确认",
+                                                        active=pick_battle.pre_confirm,
+                                                    ),
+                                                ],
+                                            ),
+                                            flow(
+                                                id="qldq.battle_hub.pick_shop",
+                                                name="商店三选一",
+                                                relocate=[pick_shop.relocate],
+                                                children=[
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_shop.choose",
+                                                        name="选商店",
+                                                        active=pick_shop.choose,
+                                                    ),
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_shop.verify_ba_qing",
+                                                        name="验证巴清",
+                                                        active=pick_shop.verify_ba_qing,
+                                                    ),
+                                                ],
+                                            ),
+                                            flow(
+                                                id="qldq.battle_hub.pick_event",
+                                                name="事件三选一",
+                                                relocate=[pick_event.relocate],
+                                                children=[
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_event.choose",
+                                                        name="选事件",
+                                                        active=pick_event.choose,
+                                                    ),
+                                                    mod(
+                                                        id="qldq.battle_hub.pick_event.verify",
+                                                        name="验证",
+                                                        active=pick_event.verify,
+                                                    ),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.fight",
+                                        name="战斗",
+                                        relocate=[fight.relocate],
+                                        children=[
+                                            mod(
+                                                id="qldq.fight.move_aside",
+                                                name="移开鼠标",
+                                                active=fight.move_aside,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.click_cancel",
+                                                name="点取消",
+                                                active=fight.click_cancel,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.click_setting",
+                                                name="点设置",
+                                                active=fight.click_setting,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.click_auto",
+                                                name="点自动",
+                                                active=fight.click_auto,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.wait_end",
+                                                name="等结束",
+                                                active=fight.wait_end,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.next_step",
+                                                name="下一步",
+                                                active=fight.next_step,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.ba_qing_store",
+                                        name="巴清商店",
+                                        relocate=[ba_qing_store.relocate],
+                                        children=[
+                                            mod(
+                                                id="qldq.ba_qing_store.go_back",
+                                                name="返回",
+                                                active=ba_qing_store.go_back,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.confirm",
+                                                name="确认",
+                                                active=ba_qing_store.confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.ensure_left",
+                                                name="确认离店",
+                                                active=ba_qing_store.ensure_left,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.pocket_event",
+                                        name="锦囊",
+                                        relocate=[pocket_event.relocate],
+                                        children=[
+                                            mod(
+                                                id="qldq.pocket_event.pick",
+                                                name="选锦囊",
+                                                active=pocket_event.pick,
+                                            ),
+                                            mod(
+                                                id="qldq.pocket_event.check",
+                                                name="检查",
+                                                active=pocket_event.check,
+                                            ),
+                                            mod(
+                                                id="qldq.pocket_event.click_ok",
+                                                name="点确定",
+                                                active=pocket_event.click_ok,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.rest",
+                                        name="休息",
+                                        children=[
+                                            mod(
+                                                id="qldq.rest.click_slot",
+                                                name="点休息",
+                                                active=rest.click_slot,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.fei_fei",
+                                        name="妃妃",
+                                        children=[
+                                            mod(
+                                                id="qldq.fei_fei.confirm",
+                                                name="确认",
+                                                active=fei_fei.confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.fei_fei.choose",
+                                                name="选择",
+                                                active=fei_fei.choose,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.mo_zi",
+                                        name="墨子",
+                                        children=[
+                                            mod(
+                                                id="qldq.mo_zi.confirm",
+                                                name="确认",
+                                                active=mo_zi.confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.mo_zi.click",
+                                                name="点选项",
+                                                active=mo_zi.click_option,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.shi_chang_shi",
+                                        name="十常侍",
+                                        relocate=[shi_chang_shi.relocate],
+                                        children=[
+                                            mod(
+                                                id="qldq.shi_chang_shi.confirm",
+                                                name="确认",
+                                                active=shi_chang_shi.confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.shi_chang_shi.attack",
+                                                name="攻击",
+                                                active=shi_chang_shi.attack,
+                                            ),
+                                            mod(
+                                                id="qldq.shi_chang_shi.check_cancel",
+                                                name="检查取消",
+                                                active=shi_chang_shi.check_cancel,
+                                            ),
+                                        ],
+                                    ),
+                                    flow(
+                                        id="qldq.run_ended",
+                                        name="本轮结束",
+                                        children=[
+                                            mod(
+                                                id="qldq.run_ended.confirm",
+                                                name="确认",
+                                                active=run_ended.confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.run_ended.close",
+                                                name="关闭",
+                                                active=run_ended.close,
+                                            ),
+                                        ],
+                                    ),
+                                ],
                             ),
                         ],
                     ),
@@ -85,268 +303,32 @@ def build_qian_li_dan_qi() -> Flow:
                         id="qldq.battle_select.enter_pick",
                         name="选将",
                         params={"wu_jiang": "吕布"},
-                        relocate=[relocate_enter_pick],
+                        relocate=[enter_pick.relocate],
                         children=[
                             mod(
                                 id="qldq.battle_select.enter_pick.select_wu_jiang",
                                 name="选武将",
-                                active=enter_battle.select_wu_jiang,
+                                active=enter_pick.select_wu_jiang,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_pick.focus_search",
                                 name="聚焦搜索",
-                                active=enter_battle.focus_search,
+                                active=enter_pick.focus_search,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_pick.type_name",
                                 name="输入武将",
-                                active=enter_battle.type_name,
+                                active=enter_pick.type_name,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_pick.click_search",
                                 name="搜索",
-                                active=enter_battle.click_search,
+                                active=enter_pick.click_search,
                             ),
                             mod(
                                 id="qldq.battle_select.enter_pick.click_general",
                                 name="选吕布",
-                                active=enter_battle.click_general,
-                            ),
-                        ],
-                    ),
-                    flow(
-                        id="qldq.battle_interface",
-                        name="战斗界面",
-                        children=[
-                            flow(
-                                id="qldq.battle_hub",
-                                name="三选一枢纽",
-                                relocate=[relocate_hub],
-                                children=[
-                                    mod(
-                                        id="qldq.battle_hub.dismiss_up",
-                                        name="关闭上面板",
-                                        active=battle_hub.dismiss_up,
-                                    ),
-                                    flow(
-                                        id="qldq.battle_hub.pick_battle",
-                                        name="战斗三选一",
-                                        relocate=[relocate_pick_battle],
-                                        children=[
-                                            mod(
-                                                id="qldq.battle_hub.pick_battle.choose",
-                                                name="选战斗",
-                                                active=pick_battle.choose,
-                                            ),
-                                            mod(
-                                                id="qldq.battle_hub.pick_battle.choose_yi_wai",
-                                                name="选意外",
-                                                active=pick_battle.choose_yi_wai,
-                                            ),
-                                            mod(
-                                                id="qldq.battle_hub.pick_battle.pre_confirm",
-                                                name="确认",
-                                                active=pick_battle.pre_confirm,
-                                            ),
-                                        ],
-                                    ),
-                                    flow(
-                                        id="qldq.battle_hub.pick_shop",
-                                        name="商店三选一",
-                                        relocate=[relocate_pick_shop],
-                                        children=[
-                                            mod(
-                                                id="qldq.battle_hub.pick_shop.choose",
-                                                name="选商店",
-                                                active=pick_shop.choose,
-                                            ),
-                                            mod(
-                                                id="qldq.battle_hub.pick_shop.verify_ba_qing",
-                                                name="验证巴清",
-                                                active=pick_shop.verify_ba_qing,
-                                            ),
-                                        ],
-                                    ),
-                                    flow(
-                                        id="qldq.battle_hub.pick_event",
-                                        name="事件三选一",
-                                        relocate=[relocate_pick_event],
-                                        children=[
-                                            mod(
-                                                id="qldq.battle_hub.pick_event.choose",
-                                                name="选事件",
-                                                active=pick_event.choose,
-                                            ),
-                                            mod(
-                                                id="qldq.battle_hub.pick_event.verify",
-                                                name="验证",
-                                                active=pick_event.verify,
-                                            ),
-                                        ],
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.fight",
-                                name="战斗",
-                                relocate=[relocate_fight],
-                                children=[
-                                    mod(
-                                        id="qldq.fight.move_aside",
-                                        name="移开鼠标",
-                                        active=fight.move_aside,
-                                    ),
-                                    mod(
-                                        id="qldq.fight.click_cancel",
-                                        name="点取消",
-                                        active=fight.click_cancel,
-                                    ),
-                                    mod(
-                                        id="qldq.fight.click_setting",
-                                        name="点设置",
-                                        active=fight.click_setting,
-                                    ),
-                                    mod(
-                                        id="qldq.fight.click_auto",
-                                        name="点自动",
-                                        active=fight.click_auto,
-                                    ),
-                                    mod(
-                                        id="qldq.fight.wait_end",
-                                        name="等结束",
-                                        active=fight.wait_end,
-                                    ),
-                                    mod(
-                                        id="qldq.fight.next_step",
-                                        name="下一步",
-                                        active=fight.next_step,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.ba_qing_store",
-                                name="巴清商店",
-                                relocate=[relocate_ba_qing_store],
-                                children=[
-                                    mod(
-                                        id="qldq.ba_qing_store.go_back",
-                                        name="返回",
-                                        active=ba_qing_store.go_back,
-                                    ),
-                                    mod(
-                                        id="qldq.ba_qing_store.confirm",
-                                        name="确认",
-                                        active=ba_qing_store.confirm,
-                                    ),
-                                    mod(
-                                        id="qldq.ba_qing_store.ensure_left",
-                                        name="确认离店",
-                                        active=ba_qing_store.ensure_left,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.pocket_event",
-                                name="锦囊",
-                                relocate=[relocate_pocket_event],
-                                children=[
-                                    mod(
-                                        id="qldq.pocket_event.pick",
-                                        name="选锦囊",
-                                        active=pocket_event.pick,
-                                    ),
-                                    mod(
-                                        id="qldq.pocket_event.check",
-                                        name="检查",
-                                        active=pocket_event.check,
-                                    ),
-                                    mod(
-                                        id="qldq.pocket_event.click_ok",
-                                        name="点确定",
-                                        active=pocket_event.click_ok,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.rest",
-                                name="休息",
-                                children=[
-                                    mod(
-                                        id="qldq.rest.click_slot",
-                                        name="点休息",
-                                        active=rest.click_slot,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.fei_fei",
-                                name="妃妃",
-                                children=[
-                                    mod(
-                                        id="qldq.fei_fei.confirm",
-                                        name="确认",
-                                        active=fei_fei.confirm,
-                                    ),
-                                    mod(
-                                        id="qldq.fei_fei.choose",
-                                        name="选择",
-                                        active=fei_fei.choose,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.mo_zi",
-                                name="墨子",
-                                children=[
-                                    mod(
-                                        id="qldq.mo_zi.confirm",
-                                        name="确认",
-                                        active=mo_zi.confirm,
-                                    ),
-                                    mod(
-                                        id="qldq.mo_zi.click",
-                                        name="点选项",
-                                        active=mo_zi.click_option,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.shi_chang_shi",
-                                name="十常侍",
-                                relocate=[relocate_shi_chang_shi],
-                                children=[
-                                    mod(
-                                        id="qldq.shi_chang_shi.confirm",
-                                        name="确认",
-                                        active=shi_chang_shi.confirm,
-                                    ),
-                                    mod(
-                                        id="qldq.shi_chang_shi.attack",
-                                        name="攻击",
-                                        active=shi_chang_shi.attack,
-                                    ),
-                                    mod(
-                                        id="qldq.shi_chang_shi.check_cancel",
-                                        name="检查取消",
-                                        active=shi_chang_shi.check_cancel,
-                                    ),
-                                ],
-                            ),
-                            flow(
-                                id="qldq.run_ended",
-                                name="本轮结束",
-                                children=[
-                                    mod(
-                                        id="qldq.run_ended.confirm",
-                                        name="确认",
-                                        active=run_ended.confirm,
-                                    ),
-                                    mod(
-                                        id="qldq.run_ended.close",
-                                        name="关闭",
-                                        active=run_ended.close,
-                                    ),
-                                ],
+                                active=enter_pick.click_general,
                             ),
                         ],
                     ),

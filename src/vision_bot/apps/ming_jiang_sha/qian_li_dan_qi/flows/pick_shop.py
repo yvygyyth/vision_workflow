@@ -5,16 +5,33 @@ from __future__ import annotations
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_SHOP_DETECT, snap_center, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_SHOP_DETECT, ensure_registry, snap_center, snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
+from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
 _COPPER_REGION = (1670, 20, 200, 50)
+
+
+def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if any(
+        snap_found(snap, k)
+        for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store")
+    ):
+        return qmod("battle_hub.pick_shop", "choose")
+    return None
+
+
+def relocate(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, PICK_SHOP_DETECT)
+    return detect(snap, ctx)
 
 
 def _ocr_copper(ctx) -> int:

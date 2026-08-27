@@ -3,15 +3,36 @@
 from __future__ import annotations
 
 from vision_bot.actions import do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_center
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import FIGHT_DETECT, ensure_registry, snap_center, snap_found
 from vision_bot.core.input import Mouse
 from vision_bot.events import click_match
+from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
 _AUTO = "data/ming_jiang_sha/qian_li_dan_qi/fight/auto.png"
 _CHALLENGE_END = "data/ming_jiang_sha/qian_li_dan_qi/fight/challenge_end.png"
 _NEXT_STEP = "data/ming_jiang_sha/qian_li_dan_qi/fight/next_step.png"
+
+
+def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if snap_found(snap, "fight.cancel"):
+        return qmod("fight", "click_cancel")
+    if snap_found(snap, "fight.setting"):
+        return qmod("fight", "click_setting")
+    if snap_found(snap, "fight.challenge_end"):
+        return qmod("fight", "wait_end")
+    if snap_found(snap, "fight.next_step"):
+        return qmod("fight", "next_step")
+    return qmod("fight", "click_cancel")
+
+
+def relocate(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, FIGHT_DETECT)
+    return detect(snap, ctx)
 
 
 def move_aside(ctx) -> Result:

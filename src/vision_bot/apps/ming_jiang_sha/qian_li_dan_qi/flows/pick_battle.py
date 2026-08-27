@@ -6,12 +6,30 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.detect import qmod
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT, snap_center, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT, ensure_registry, snap_center, snap_found
 from vision_bot.core.input import Mouse
+from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
+
+
+def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if snap_found(snap, "choice.challenge_help"):
+        return qmod("battle_hub.pick_battle", "choose")
+    if snap_found(snap, "choice.challenge"):
+        return qmod("battle_hub.pick_battle", "choose")
+    if snap_found(snap, "choice.yi_wai"):
+        return qmod("battle_hub.pick_battle", "choose_yi_wai")
+    return None
+
+
+def relocate(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, PICK_BATTLE_DETECT)
+    return detect(snap, ctx)
 
 
 def _click(snap, key: str, *, label: str, times: int = 1) -> bool:

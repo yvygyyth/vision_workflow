@@ -5,11 +5,23 @@ from __future__ import annotations
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ensure_registry
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import enter_pick, enter_ready
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT, ensure_registry
 from vision_bot.events import press_esc
+from vision_bot.perception.snapshot import capture
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
+
+
+def relocate(ctx: RunContext) -> str | None:
+    ensure_registry(ctx)
+    snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
+    target = enter_pick.detect(snap, ctx)
+    if target:
+        return target
+    return enter_ready.detect(snap, ctx)
 
 
 def esc_home(ctx) -> Result:
