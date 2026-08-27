@@ -18,6 +18,7 @@ from vision_bot.apps.ming_jiang_sha.fee_day.flows import (
     mail,
     zhan_yi_store,
     zhu_jiu_store,
+    song_hua,
 )
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -114,12 +115,26 @@ def build_fee_day() -> Flow:
                     mod(id="fee_day.activity.entry", name="打开活动", active=activity.open_entry),
                     mod(id="fee_day.activity.bu_gua", name="卜卦等待", active=activity.bu_gua_wait),
                     mod(id="fee_day.activity.bu_gua2", name="卜卦点击", active=activity.bu_gua_click),
-                    mod(id="fee_day.activity.space_close", name="关闭弹窗", active=step_space_close),
+                    mod(id="fee_day.activity.space_close", name="关闭弹窗", active=activity.step_space_close_2),
                     mod(id="fee_day.activity.gua_xiang", name="卦象", active=activity.gua_xiang),
                     mod(id="fee_day.activity.scroll", name="滚动", active=activity.scroll),
                     mod(id="fee_day.activity.yue_ling", name="月灵", active=activity.yue_ling),
                     mod(id="fee_day.activity.ling_qv", name="领取", active=activity.ling_qv),
                     mod(id="fee_day.activity.go_back", name="返回", active=activity.finish),
+                ],
+            ),
+            flow(
+                id="fee_day.song_hua",
+                name="送花",
+                children=[
+                    mod(id="fee_day.song_hua.entry", name="打开送花", active=song_hua.open_entry),
+                    mod(id="fee_day.song_hua.song_li", name="点击送礼", active=song_hua.open_song_li),
+                    mod(id="fee_day.song_hua.x100", name="点击赠送x100", active=song_hua.open_x100),
+                    mod(id="fee_day.song_hua.you_cai_hua", name="点击油菜花", active=song_hua.open_you_cai_hua),
+                    mod(id="fee_day.song_hua.zeng_song", name="点击头像", active=song_hua.zeng_song),
+                    mod(id="fee_day.song_hua.go_back", name="返回", active=song_hua.finish),
+                    mod(id="fee_day.song_hua.go_back2", name="关闭送礼", active=song_hua.finish_2),
+                    mod(id="fee_day.song_hua.go_back3", name="关闭好友", active=song_hua.finish_2),
                 ],
             ),
             flow(
