@@ -6,7 +6,7 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT, ensure_registry, snap_center, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT, snap_center, snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, press_key
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
@@ -25,7 +25,6 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
     return detect(snap, ctx)
 

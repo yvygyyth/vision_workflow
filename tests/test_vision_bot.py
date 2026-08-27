@@ -30,7 +30,7 @@ def test_detect_qian_li_hub() -> None:
             "choice.challenge": MatchResult(found=True, image="x.png", center=(1, 2)),
         }
     )
-    assert detect_qian_li(snap, None) == "qldq.battle_hub"  # type: ignore[arg-type]
+    assert detect_qian_li(snap) == "qldq.battle_hub"
 
 
 def test_detect_hub_pick_battle() -> None:

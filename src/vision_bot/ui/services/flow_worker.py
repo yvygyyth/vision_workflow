@@ -8,9 +8,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from vision_bot.runtime.catalog import get_root_flow
+from vision_bot.runtime.catalog import run_root
 from vision_bot.runtime.config import RunConfig
-from vision_bot.runtime.runner import RunReport, run
+from vision_bot.runtime.runner import RunReport
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +48,13 @@ class FlowWorker:
         report: RunReport | None = None
         error: BaseException | None = None
         try:
-            flow = get_root_flow(request.root_id)
             config = RunConfig(
                 entry_id=request.entry_id,
                 loop=request.loop,
                 params=request.params,
             )
             logger.info("启动 Flow %s entry=%s loop=%s", request.root_id, request.entry_id, request.loop)
-            report = run(flow, config, cancel_event=self._cancel)
+            report = run_root(request.root_id, config, cancel_event=self._cancel)
         except BaseException as exc:
             error = exc
             logger.exception("执行失败")

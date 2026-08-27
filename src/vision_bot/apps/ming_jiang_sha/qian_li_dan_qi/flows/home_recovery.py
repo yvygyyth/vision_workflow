@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import enter_pick, enter_ready
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT, ensure_registry
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT
 from vision_bot.events import press_esc
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def relocate(ctx: RunContext) -> str | None:
-    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
     target = enter_pick.detect(snap, ctx)
     if target:
@@ -26,7 +25,6 @@ def relocate(ctx: RunContext) -> str | None:
 
 def esc_home(ctx) -> Result:
     logger.info("home_recovery: Esc×5")
-    ensure_registry(ctx)
     press_esc(times=5, pause=0.25)
     time.sleep(0.5)
     ctx.goto("qldq.battle_select.enter_ready")

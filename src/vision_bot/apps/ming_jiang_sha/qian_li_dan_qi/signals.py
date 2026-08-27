@@ -132,13 +132,6 @@ def build_registry() -> SignalRegistry:
     return reg
 
 
-def ensure_registry(ctx) -> SignalRegistry:
-    """runner 默认空 registry；首次 relocate / 步骤前填充。"""
-    if not ctx.registry.ids():
-        ctx.registry = build_registry()
-    return ctx.registry
-
-
 def snap_found(snap, key: str) -> bool:
     hit = snap.hits.get(key)
     return hit is not None and hit.found

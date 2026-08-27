@@ -233,12 +233,13 @@ def run(
     flow: Flow,
     config: RunConfig,
     *,
+    registry: SignalRegistry | None = None,
     cancel_event=None,
     base_dir: Path | None = None,
 ) -> RunReport:
     ctx = RunContext(
         base_dir=(base_dir or project_root()).resolve(),
-        registry=SignalRegistry(),
+        registry=registry or SignalRegistry(),
         cancel_event=cancel_event,
     )
     runner = _prepare(flow, ctx, config)

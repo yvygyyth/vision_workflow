@@ -9,9 +9,8 @@ from rich.console import Console
 
 from vision_bot import __version__
 from vision_bot.logging_utils import setup_logging
-from vision_bot.runtime.catalog import DEFAULT_ROOT_ID, get_root_flow
+from vision_bot.runtime.catalog import DEFAULT_ROOT_ID, run_root
 from vision_bot.runtime.config import RunConfig
-from vision_bot.runtime.runner import run
 
 app = typer.Typer(
     name="vision-bot",
@@ -39,9 +38,8 @@ def run_cmd(
     if not isinstance(overrides, dict):
         console.print("[red]params 必须是 JSON 对象[/red]")
         raise typer.Exit(code=2)
-    root = get_root_flow(flow_id)
-    config = RunConfig(entry_id=entry or root.id, loop=loop, params=overrides)
-    report = run(root, config)
+    config = RunConfig(entry_id=entry or flow_id, loop=loop, params=overrides)
+    report = run_root(flow_id, config)
     console.print(f"完成 success={report.success} message={report.message}")
     if report.path:
         console.print("路径: " + " → ".join(report.path))

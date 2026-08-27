@@ -5,7 +5,7 @@ from __future__ import annotations
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm, step_confirm
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ensure_registry, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -15,7 +15,6 @@ _ATTACK = "data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png"
 
 
 def relocate(ctx: RunContext) -> str | None:
-    ensure_registry(ctx)
     snap = capture(ctx.registry, ctx.base_dir, {"shi_chang_shi.attack", "fight.cancel"})
     if snap_found(snap, "shi_chang_shi.attack"):
         return qmod("shi_chang_shi", "attack")
