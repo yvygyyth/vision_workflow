@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT, snap_center, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap_found(snap, "choice.challenge_help"):
+    if snap.found("choice.challenge_help"):
         return "qldq.battle_hub.pick_battle.choose"
-    if snap_found(snap, "choice.challenge"):
+    if snap.found("choice.challenge"):
         return "qldq.battle_hub.pick_battle.choose"
-    if snap_found(snap, "choice.yi_wai"):
+    if snap.found("choice.yi_wai"):
         return "qldq.battle_hub.pick_battle.choose_yi_wai"
     return None
 
@@ -31,7 +31,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
-    c = snap_center(snap, key)
+    c = snap.center(key)
     if not c:
         return False
     Mouse().move(*c).click(clicks=times).sleep(0.2).perform()
@@ -41,10 +41,10 @@ def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
 
 def choose(ctx) -> Result:
     snap = ctx.snap(PICK_BATTLE_DETECT)
-    if snap_found(snap, "choice.challenge_help"):
+    if snap.found("choice.challenge_help"):
         if not _click(snap, "choice.challenge_help", label="help"):
             return Result.fail("点击 help 失败")
-    elif snap_found(snap, "choice.challenge"):
+    elif snap.found("choice.challenge"):
         if not _click(snap, "choice.challenge", label="challenge"):
             return Result.fail("点击 challenge 失败")
     else:
@@ -59,7 +59,7 @@ def choose_yi_wai(ctx) -> Result:
         return Result.fail("点击意外失败")
     time.sleep(0.6)
     snap2 = ctx.snap({"choice.yi_wai"})
-    if snap_found(snap2, "choice.yi_wai"):
+    if snap2.found("choice.yi_wai"):
         ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
         return Result.success()
     ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")

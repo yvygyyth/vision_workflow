@@ -8,7 +8,6 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_PRIORITY
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
@@ -34,7 +33,7 @@ _EXIT_CONFIRM_MAX = 3
 
 def relocate(ctx: RunContext) -> str | None:
     snap = capture(ctx.registry, ctx.base_dir, {"shop.go_back"})
-    if snap_found(snap, "shop.go_back"):
+    if snap.found("shop.go_back"):
         return "qldq.ba_qing_store.click_token_slot"
     return None
 
@@ -144,7 +143,7 @@ def confirm(ctx) -> Result:
 def ensure_left(ctx) -> Result:
     time.sleep(0.6)
     snap = ctx.snap({"shop.go_back"})
-    if snap_found(snap, "shop.go_back"):
+    if snap.found("shop.go_back"):
         tries = int(ctx.vars.get(_EXIT_CONFIRM_TRIES, 0)) + 1
         ctx.vars[_EXIT_CONFIRM_TRIES] = tries
         if tries > _EXIT_CONFIRM_MAX:

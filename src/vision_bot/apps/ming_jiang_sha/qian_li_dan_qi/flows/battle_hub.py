@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import HUB_DETECT, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import HUB_DETECT
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -17,17 +17,17 @@ HUB_PICK_EVENT = "qldq.battle_hub.pick_event"
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap_found(snap, "choice.up_panel"):
+    if snap.found("choice.up_panel"):
         return HUB_DISMISS
-    if snap_found(snap, "choice.challenge") or snap_found(snap, "choice.challenge_help"):
+    if snap.found("choice.challenge") or snap.found("choice.challenge_help"):
         return HUB_PICK_BATTLE
-    if snap_found(snap, "choice.yi_wai"):
+    if snap.found("choice.yi_wai"):
         return HUB_PICK_BATTLE
     for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store"):
-        if snap_found(snap, k):
+        if snap.found(k):
             return HUB_PICK_SHOP
     for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi"):
-        if snap_found(snap, k):
+        if snap.found(k):
             return HUB_PICK_EVENT
     return None
 
@@ -39,7 +39,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 def dismiss_up(ctx) -> Result:
     snap = ctx.snap({"choice.up_panel"})
-    if snap_found(snap, "choice.up_panel"):
+    if snap.found("choice.up_panel"):
         do(move().to(1300, 1150).raw(), click())()
         time.sleep(0.4)
     return Result.fail("dispatch")

@@ -7,7 +7,7 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import FIGHT_DETECT, snap_center, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import FIGHT_DETECT
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     GeneralPriority,
@@ -51,16 +51,16 @@ REWARD_KIND_SIGNALS: dict[RewardKind, str] = {
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap_found(snap, "fight.cancel"):
+    if snap.found("fight.cancel"):
         return "qldq.fight.click_cancel"
-    if snap_found(snap, "fight.setting"):
+    if snap.found("fight.setting"):
         return "qldq.fight.click_setting"
-    if snap_found(snap, "fight.challenge_end"):
+    if snap.found("fight.challenge_end"):
         return "qldq.fight.wait_end"
-    if snap_found(snap, "fight.next_step"):
+    if snap.found("fight.next_step"):
         return "qldq.fight.next_step"
     if ctx is not None and any(
-        snap_found(snap, signal) for signal in REWARD_KIND_SIGNALS.values()
+        snap.found(signal) for signal in REWARD_KIND_SIGNALS.values()
     ):
         return "qldq.fight.choose_reward_kind"
     return "qldq.fight.click_cancel"
@@ -78,7 +78,7 @@ def move_aside(ctx) -> Result:
 
 def click_cancel(ctx) -> Result:
     snap = ctx.snap({"fight.cancel"})
-    c = snap_center(snap, "fight.cancel")
+    c = snap.center("fight.cancel")
     if c:
         Mouse().move(*c).click().sleep(0.2).perform()
         return Result.success()
@@ -87,7 +87,7 @@ def click_cancel(ctx) -> Result:
 
 def click_setting(ctx) -> Result:
     snap = ctx.snap({"fight.setting"})
-    c = snap_center(snap, "fight.setting")
+    c = snap.center("fight.setting")
     if c:
         Mouse().move(*c).click().sleep(0.5).perform()
         return Result.success()
@@ -192,7 +192,7 @@ def _scan_reward_kinds(ctx) -> dict[RewardKind, tuple[int, int]]:
     snap = ctx.snap(set(REWARD_KIND_SIGNALS.values()))
     available: dict[RewardKind, tuple[int, int]] = {}
     for kind, signal in REWARD_KIND_SIGNALS.items():
-        c = snap_center(snap, signal)
+        c = snap.center(signal)
         if c is not None:
             available[kind] = c
             logger.info("【赠礼选项】可用 %s @ %s", kind.value, c)

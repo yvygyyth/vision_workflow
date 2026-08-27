@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_center, snap_found
 from vision_bot.core.input import Mouse
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -32,17 +31,17 @@ def pick(ctx) -> Result:
 
 def check(ctx) -> Result:
     snap = ctx.snap(_CHECK_SIGNALS)
-    if snap_found(snap, "fight.cancel"):
+    if snap.found("fight.cancel"):
         ctx.goto("qldq.fight")
         return Result.success()
-    if snap_found(snap, "pocket.ok"):
+    if snap.found("pocket.ok"):
         return Result.success()
     return Result.success()
 
 
 def click_ok(ctx) -> Result:
     snap = ctx.snap({"pocket.ok"})
-    c = snap_center(snap, "pocket.ok")
+    c = snap.center("pocket.ok")
     if c:
         Mouse().move(*c).click().sleep(0.3).perform()
     ctx.goto("qldq.pocket_event.check")

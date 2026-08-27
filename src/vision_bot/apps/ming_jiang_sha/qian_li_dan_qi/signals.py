@@ -133,15 +133,3 @@ def build_registry() -> SignalRegistry:
     for sid, (template, region) in _TEMPLATES.items():
         reg.register(sid, Signal(template=template, region=region, threshold=0.8))
     return reg
-
-
-def snap_found(snap, key: str) -> bool:
-    hit = snap.hits.get(key)
-    return hit is not None and hit.found
-
-
-def snap_center(snap, key: str) -> tuple[int, int] | None:
-    hit = snap.hits.get(key)
-    if hit is None or not hit.found or not hit.center:
-        return None
-    return hit.center

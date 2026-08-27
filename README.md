@@ -28,10 +28,10 @@ src/vision_bot/
   runtime/                        # Flow 引擎
   core/                           # 识图、设置、输入
   actions/                        # move / click / compose
-  perception/                     # signal / snapshot
+  perception/                     # signal / snapshot（snap.found / snap.center）
   apps/ming_jiang_sha/qian_li_dan_qi/
-    build.py, run.py, detect.py, signals.py
-    flows/                        # 各子流程
+    build.py, signals.py
+    flows/                        # 各子 flow（detect / relocate 分文件）
   jobs.py                         # 任务注册
   ui/                             # 桌面界面
 scripts/build_exe.py

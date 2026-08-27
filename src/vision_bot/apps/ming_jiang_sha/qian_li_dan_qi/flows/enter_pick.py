@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT, snap_found
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT
 from vision_bot.core.input import input_text as type_text
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
@@ -13,7 +13,7 @@ from vision_bot.runtime.result import Result
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap_found(snap, "enter.select_wu_jiang"):
+    if snap.found("enter.select_wu_jiang"):
         return "qldq.battle_select.enter_pick.select_wu_jiang"
     return None
 

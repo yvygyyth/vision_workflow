@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -15,7 +14,7 @@ _ATTACK = "data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png"
 
 def relocate(ctx: RunContext) -> str | None:
     snap = capture(ctx.registry, ctx.base_dir, {"shi_chang_shi.attack", "fight.cancel"})
-    if snap_found(snap, "shi_chang_shi.attack"):
+    if snap.found("shi_chang_shi.attack"):
         return "qldq.shi_chang_shi.attack"
     return "qldq.shi_chang_shi.confirm"
 
@@ -39,7 +38,7 @@ def attack(ctx) -> Result:
 
 def check_cancel(ctx) -> Result:
     snap = ctx.snap({"fight.cancel"})
-    if snap_found(snap, "fight.cancel"):
+    if snap.found("fight.cancel"):
         r = click_confirm()
         if not r.ok:
             return r
