@@ -40,6 +40,6 @@ def relocate(ctx: RunContext) -> str | None:
 def dismiss_up(ctx) -> Result:
     snap = ctx.snap({"choice.up_panel"})
     if snap_found(snap, "choice.up_panel"):
-        do(move().to(1300, 1150).raw(), click())(ctx.action_ctx())
+        do(move().to(1300, 1150).raw(), click())()
         time.sleep(0.4)
     return Result.fail("dispatch")

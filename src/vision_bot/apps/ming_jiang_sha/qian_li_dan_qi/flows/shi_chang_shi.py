@@ -31,9 +31,8 @@ def attack(ctx) -> Result:
     result = find(_ATTACK, timeout=0.8)
     if not result.ok or not result.value.center:
         return Result.fail("无 attack")
-    act = ctx.action_ctx()
     for _ in range(5):
-        do(move().to(*result.value.center).raw(), click())(act)
+        do(move().to(*result.value.center).raw(), click())()
     ctx.goto("qldq.shi_chang_shi.check_cancel")
     return Result.success()
 

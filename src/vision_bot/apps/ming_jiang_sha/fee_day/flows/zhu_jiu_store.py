@@ -11,11 +11,11 @@ _DIR = f"{FEE_DAY}/zhu_jiu_store"
 
 
 def entry(ctx) -> Result:
-    return do(move().image(f"{_DIR}/entry.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/entry.png"), click())()
 
 
 def qing_mei_store(ctx) -> Result:
-    return do(move().image(f"{_DIR}/qing_mei-store.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/qing_mei-store.png"), click())()
 
 
 def finish(ctx) -> Result:

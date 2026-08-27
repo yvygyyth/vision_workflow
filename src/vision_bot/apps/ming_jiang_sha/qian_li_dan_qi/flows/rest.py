@@ -16,5 +16,5 @@ _POINTS = ((110, 1100), (960, 1100), (1800, 1100))
 def click_slot(ctx) -> Result:
     x, y = random.choice(_POINTS)
     logger.info("rest @ (%s,%s)", x, y)
-    do(move().to(x, y).raw(), click())(ctx.action_ctx())
+    do(move().to(x, y).raw(), click())()
     return Result.success()

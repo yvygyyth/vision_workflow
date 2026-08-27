@@ -12,27 +12,27 @@ _DIR = f"{FEE_DAY}/ba_qing_store"
 
 
 def entry(ctx) -> Result:
-    return do(move().image(f"{_DIR}/entry-icon.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/entry-icon.png"), click())()
 
 
 def gold_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/gold-tab.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/gold-tab.png"), click())()
 
 
 def free_bingli(ctx) -> Result:
-    return do(move().image(f"{_DIR}/free-bingli.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/free-bingli.png"), click())()
 
 
 def copper_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/copper-tab.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/copper-tab.png"), click())()
 
 
 def lingxi_box(ctx) -> Result:
-    return do(move().image(f"{_DIR}/lingxi-box.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/lingxi-box.png"), click())()
 
 
 def jinlan_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/jinlan-tab.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/jinlan-tab.png"), click())()
 
 
 def scroll(ctx) -> Result:

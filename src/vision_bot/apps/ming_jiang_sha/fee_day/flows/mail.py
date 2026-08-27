@@ -14,8 +14,8 @@ _ONE_CLICK = f"{_DIR}/email_one_click_receive.png"
 def open(ctx) -> Result:
     if find(_ONE_CLICK, timeout=0.5).ok:
         return Result.success()
-    return do(move().image(f"{_DIR}/email.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/email.png"), click())()
 
 
 def one_click(ctx) -> Result:
-    return do(move().image(_ONE_CLICK).match(timeout=5.0), click())(ctx.action_ctx())
+    return do(move().image(_ONE_CLICK).match(timeout=5.0), click())()

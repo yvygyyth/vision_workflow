@@ -6,6 +6,7 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
+from vision_bot.actions.context import action_context
 from vision_bot.apps.ming_jiang_sha.paths import BA_WANG, QLDQ
 from vision_bot.events import click_at
 from vision_bot.runtime.result import Result
@@ -82,13 +83,12 @@ def confirm_ready(ctx) -> Result:
 
 
 def poll_click_start(ctx) -> Result:
-    act = ctx.action_ctx()
     result = do(
         move().image(_START).match(timeout=600, interval=1.5),
         click().pause(0.3),
-    )(act)
+    )()
     if not result.ok:
-        return Result.fail(result.message or act.reason or "未找到开始按钮")
+        return Result.fail(result.message or action_context().reason or "未找到开始按钮")
     ctx.goto("ba_wang.wait_game_start")
     return Result.success()
 
@@ -138,25 +138,24 @@ def click_ok_if_any(ctx) -> Result:
 
 
 def move_aside(ctx) -> Result:
-    do(move().to(80, 80).raw())(ctx.action_ctx())
+    do(move().to(80, 80).raw())()
     ctx.goto("ba_wang.wait_setting")
     return Result.success()
 
 
 def wait_click_setting(ctx) -> Result:
-    act = ctx.action_ctx()
     result = do(
         move().image(_SETTING).match(timeout=600, interval=0.5),
         click().pause(0.3),
-    )(act)
+    )()
     if not result.ok:
-        return Result.fail(result.message or act.reason or "未找到 setting")
+        return Result.fail(result.message or action_context().reason or "未找到 setting")
     ctx.goto("ba_wang.click_auto")
     return Result.success()
 
 
 def click_auto(ctx) -> Result:
-    r = do(move().image(_AUTO).match(timeout=3.0), click())(ctx.action_ctx())
+    r = do(move().image(_AUTO).match(timeout=3.0), click())()
     if not r.ok:
         ctx.goto("ba_wang.wait_setting")
     else:
@@ -165,26 +164,24 @@ def click_auto(ctx) -> Result:
 
 
 def click_challenge_end(ctx) -> Result:
-    act = ctx.action_ctx()
     result = do(
         move().image(_CHALLENGE_END).match(timeout=1200, interval=5),
         click(),
-    )(act)
+    )()
     if not result.ok:
-        return Result.fail(result.message or act.reason or "挑战未结束")
+        return Result.fail(result.message or action_context().reason or "挑战未结束")
     ctx.goto("ba_wang.next_step")
     return Result.success()
 
 
 def click_next_step_if_any(ctx) -> Result:
-    act = ctx.action_ctx()
     for _ in range(5):
         result = find(_NEXT_STEP, timeout=1.2)
         if not result.ok or not result.value.center:
             break
         cx, cy = result.value.center
         logger.info("click_next_step_if_any @ (%s,%s)", cx, cy)
-        do(move().to(cx, cy).raw(), click())(act)
+        do(move().to(cx, cy).raw(), click())()
         ctx.sleep(0.4)
     ctx.goto("ba_wang.battle_done")
     return Result.success()

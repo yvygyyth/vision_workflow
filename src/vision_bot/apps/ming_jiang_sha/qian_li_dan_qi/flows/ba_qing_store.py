@@ -53,7 +53,7 @@ def pick_token_slot(titles: list[str], priority: list[str] | None = None) -> int
 
 
 def click_token_slot(ctx) -> Result:
-    result = do(move().image(f"{_DIR}/token_slot.png"), click())(ctx.action_ctx())
+    result = do(move().image(f"{_DIR}/token_slot.png"), click())()
     if result.ok:
         ctx.goto("qldq.ba_qing_store.slot_confirm")
     else:
@@ -98,7 +98,7 @@ def choose_token(ctx) -> Result:
     cx = left + width // 2
     cy = top + height // 2
     logger.info("【巴清信物】槽位%s → %s 点击 (%s,%s)", slot + 1, name, cx, cy)
-    do(move().to(cx, cy), click())(ctx.action_ctx())
+    do(move().to(cx, cy), click())()
     ctx.goto("qldq.ba_qing_store.token_confirm")
     return Result.success()
 
@@ -129,14 +129,14 @@ def _close_no_buy(ctx, *, on_absent: str) -> Result:
 
 
 def go_back(ctx) -> Result:
-    do(move().image(f"{_DIR}/go_back.png"), click())(ctx.action_ctx())
+    do(move().image(f"{_DIR}/go_back.png"), click())()
     time.sleep(0.6)
     ctx.goto("qldq.ba_qing_store.confirm")
     return Result.success()
 
 
 def confirm(ctx) -> Result:
-    do(move().image(f"{_DIR}/confirm.png"), click())(ctx.action_ctx())
+    do(move().image(f"{_DIR}/confirm.png"), click())()
     ctx.goto("qldq.ba_qing_store.ensure_left")
     return Result.success()
 

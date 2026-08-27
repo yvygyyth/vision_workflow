@@ -12,23 +12,23 @@ _DIR = f"{FEE_DAY}/actaivity"
 
 
 def open_entry(ctx) -> Result:
-    return do(move().image(f"{_DIR}/huo_dong.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/huo_dong.png"), click())()
 
 
 def bu_gua_wait(ctx) -> Result:
     ctx.sleep(1.0)
-    do(move().to(1400, 600).raw(), click())(ctx.action_ctx())
+    do(move().to(1400, 600).raw(), click())()
     return Result.success()
 
 
 def bu_gua_click(ctx) -> Result:
     ctx.sleep(3.0)
-    do(move().to(1400, 600).raw(), click())(ctx.action_ctx())
+    do(move().to(1400, 600).raw(), click())()
     return Result.success()
 
 
 def gua_xiang(ctx) -> Result:
-    return do(move().image(f"{_DIR}/gua_xiang.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/gua_xiang.png"), click())()
 
 
 def scroll(ctx) -> Result:
@@ -36,11 +36,11 @@ def scroll(ctx) -> Result:
 
 
 def yue_ling(ctx) -> Result:
-    return do(move().image(f"{_DIR}/yue_ling.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/yue_ling.png"), click())()
 
 
 def ling_qv(ctx) -> Result:
-    return do(move().image(f"{_DIR}/ling_qv.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/ling_qv.png"), click())()
 
 
 def finish(ctx) -> Result:

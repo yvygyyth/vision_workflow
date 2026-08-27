@@ -24,20 +24,17 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def select_wu_jiang(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/select_wu_jiang.png"), click())(
-        ctx.action_ctx()
-    )
+    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/select_wu_jiang.png"), click())()
     ctx.goto("qldq.battle_select.enter_pick.focus_search")
     return Result.success()
 
 
 def focus_search(ctx) -> Result:
-    act = ctx.action_ctx()
     r = do(
         move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/search.png"),
         move().by(-160, 0),
         click().pause(0.3),
-    )(act)
+    )()
     if not r.ok:
         return Result.fail("聚焦搜索框失败")
     ctx.goto("qldq.battle_select.enter_pick.type_name")
@@ -55,16 +52,12 @@ def type_name(ctx) -> Result:
 
 
 def click_search(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/search.png"), click())(
-        ctx.action_ctx()
-    )
+    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/search.png"), click())()
     ctx.goto("qldq.battle_select.enter_pick.click_general")
     return Result.success()
 
 
 def click_general(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/lv_bu.png"), click())(
-        ctx.action_ctx()
-    )
+    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/lv_bu.png"), click())()
     ctx.goto("qldq.battle_select.enter_ready.try_start")
     return Result.success()

@@ -50,8 +50,8 @@ def recover(ctx) -> Result:
     for _ in range(3):
         press_key("esc")
         time.sleep(0.2)
-    do(move().to(1980, 700).raw(), click())(ctx.action_ctx())
+    do(move().to(1980, 700).raw(), click())()
     time.sleep(0.2)
-    do(move().to(1130, 700).raw(), click())(ctx.action_ctx())
+    do(move().to(1130, 700).raw(), click())()
     ctx.goto("qldq.battle_select.enter_ready.try_start")
     return Result.success()

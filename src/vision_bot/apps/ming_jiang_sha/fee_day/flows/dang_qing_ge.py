@@ -10,8 +10,8 @@ _DIR = f"{FEE_DAY}/dang_qing_ge"
 
 
 def open_icon(ctx) -> Result:
-    return do(move().image(f"{_DIR}/dang_qing_ge-icon.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/dang_qing_ge-icon.png"), click())()
 
 
 def day_libao(ctx) -> Result:
-    return do(move().image(f"{_DIR}/day-libao.png"), click())(ctx.action_ctx())
+    return do(move().image(f"{_DIR}/day-libao.png"), click())()

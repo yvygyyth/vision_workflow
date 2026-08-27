@@ -20,5 +20,5 @@ def confirm(ctx) -> Result:
 
 def click_option(ctx) -> Result:
     x, y = random.choice(_OPTS)
-    do(move().to(x, y).raw(), click())(ctx.action_ctx())
+    do(move().to(x, y).raw(), click())()
     return Result.success()

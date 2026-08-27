@@ -72,7 +72,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def move_aside(ctx) -> Result:
-    do(move().to(80, 80).raw())(ctx.action_ctx())
+    do(move().to(80, 80).raw())()
     return Result.success()
 
 
@@ -183,7 +183,7 @@ def choose_reward_title(ctx) -> Result:
         cx,
         cy,
     )
-    do(move().to(cx, cy), click())(ctx.action_ctx())
+    do(move().to(cx, cy), click())()
     ctx.goto("qldq.fight.choose_reward_kind")
     return Result.success()
 
@@ -227,7 +227,7 @@ def choose_reward_kind(ctx) -> Result:
     cx, cy = available[kind]
     general = entry.name if entry else "?"
     logger.info("【赠礼类别】%s → %s 点击 (%s,%s)", general, kind.value, cx, cy)
-    do(move().to(cx, cy).raw(), click())(ctx.action_ctx())
+    do(move().to(cx, cy).raw(), click())()
     if entry is not None and entry.name:
         state.mark_general_reward(entry.name, kind)
         logger.info("【背包】%s ← %s", entry.name, kind.value)

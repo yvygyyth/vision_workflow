@@ -64,12 +64,13 @@ class RunContext:
             self._params_stack.pop()
 
     def action_ctx(self) -> ActionContext:
-        return ActionContext(
-            base_dir=self.base_dir,
-            defaults=self.defaults,
-            vars=self.vars,
-            cancelled=self.cancelled,
-        )
+        from vision_bot.actions.context import action_context
+        return action_context()
+
+    def do(self, *steps) -> Result:
+        """执行动作链（使用当前任务绑定的动作上下文）。"""
+        from vision_bot.actions.compose import do as compose_do
+        return compose_do(*steps)()
 
     def snap(self, signal_ids: set[str] | None = None):
         """按需截屏识图；signal_ids 为 None 时匹配 registry 全部 signal。"""

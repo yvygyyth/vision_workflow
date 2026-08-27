@@ -38,16 +38,16 @@ def close_popup(ctx: Any = None) -> Result:
 go_back = close_popup
 
 
-def click_max(ctx) -> Result:
+def click_max(ctx: Any = None) -> Result:
     """点击 max 按钮。"""
-    return do(move().image(_MAX), click())(ctx.action_ctx())
+    return do(move().image(_MAX), click())()
 
 
-def click_ming_jiang_ce(ctx) -> Result:
+def click_ming_jiang_ce(ctx: Any = None) -> Result:
     """点击名将册。"""
-    return do(move().image(_MING_JIANG_CE), click())(ctx.action_ctx())
+    return do(move().image(_MING_JIANG_CE), click())()
 
 
-def click_ling_xi_box(ctx) -> Result:
+def click_ling_xi_box(ctx: Any = None) -> Result:
     """点击灵犀盒。"""
-    return do(move().image(_LING_XI_BOX), click())(ctx.action_ctx())
+    return do(move().image(_LING_XI_BOX), click())()
