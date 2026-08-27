@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
+from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
-_DIR = f"{DATA_ROOT}/mail"
+_DIR = f"{FEE_DAY}/mail"
 _ONE_CLICK = f"{_DIR}/email_one_click_receive.png"
 
 

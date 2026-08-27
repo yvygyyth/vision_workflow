@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
+from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 
-_DIR = f"{DATA_ROOT}/dang_qing_ge"
+_DIR = f"{FEE_DAY}/dang_qing_ge"
 
 
 def open_icon(ctx) -> Result:

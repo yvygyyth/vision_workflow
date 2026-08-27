@@ -240,7 +240,7 @@ def test_cancel_during_wait() -> None:
     with pytest.raises(CancelledError):
         wait_image(
             ctx,
-            ("data/ming_jiang_sha/mail/email.png",),
+            ("data/ming_jiang_sha/fee_day/mail/email.png",),
             threshold=0.8,
             timeout=30.0,
             interval=0.1,

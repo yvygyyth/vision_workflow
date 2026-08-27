@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import step_go_back
-from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
+from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 
-_DIR = f"{DATA_ROOT}/gong_hui"
+_DIR = f"{FEE_DAY}/gong_hui"
 
 
 def open_entry(ctx) -> Result:
