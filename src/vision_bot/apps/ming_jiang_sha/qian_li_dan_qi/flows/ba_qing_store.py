@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
@@ -15,7 +14,7 @@ from vision_bot.runtime.result import Result
 def relocate(ctx: RunContext) -> str | None:
     snap = capture(ctx.registry, ctx.base_dir, {"shop.go_back"})
     if snap_found(snap, "shop.go_back"):
-        return qmod("ba_qing_store", "go_back")
+        return "qldq.ba_qing_store.go_back"
     return None
 
 

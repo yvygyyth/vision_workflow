@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm, step_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import snap_found
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
@@ -17,14 +16,14 @@ _ATTACK = "data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png"
 def relocate(ctx: RunContext) -> str | None:
     snap = capture(ctx.registry, ctx.base_dir, {"shi_chang_shi.attack", "fight.cancel"})
     if snap_found(snap, "shi_chang_shi.attack"):
-        return qmod("shi_chang_shi", "attack")
-    return qmod("shi_chang_shi", "confirm")
+        return "qldq.shi_chang_shi.attack"
+    return "qldq.shi_chang_shi.confirm"
 
 
 def confirm(ctx) -> Result:
     r = step_confirm(ctx)
     if not r.ok:
-        ctx.goto(qmod("shi_chang_shi", "attack"))
+        ctx.goto("qldq.shi_chang_shi.attack")
     return r
 
 
@@ -35,7 +34,7 @@ def attack(ctx) -> Result:
     act = ctx.action_ctx()
     for _ in range(5):
         do(move().to(*result.value.center).raw(), click())(act)
-    ctx.goto(qmod("shi_chang_shi", "check_cancel"))
+    ctx.goto("qldq.shi_chang_shi.check_cancel")
     return Result.success()
 
 
@@ -47,5 +46,5 @@ def check_cancel(ctx) -> Result:
             return r
         ctx.goto("qldq.fight")
         return Result.success()
-    ctx.goto(qmod("shi_chang_shi", "attack"))
+    ctx.goto("qldq.shi_chang_shi.attack")
     return Result.success()

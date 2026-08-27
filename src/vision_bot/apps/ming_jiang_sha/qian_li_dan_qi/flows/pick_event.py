@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_EVENT_DETECT, snap_center, snap_found
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
@@ -23,7 +22,7 @@ _PRIORITY = (
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if any(snap_found(snap, k) for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi")):
-        return qmod("battle_hub.pick_event", "choose")
+        return "qldq.battle_hub.pick_event.choose"
     return None
 
 
@@ -40,7 +39,7 @@ def choose(ctx) -> Result:
             Mouse().move(*c).click().sleep(0.2).perform()
             ctx.vars["pending_event"] = outcome
             logger.info("pick_event 选中 %s", outcome)
-            ctx.goto(qmod("battle_hub.pick_event", "verify"))
+            ctx.goto("qldq.battle_hub.pick_event.verify")
             return Result.success()
     return Result.fail("无事件选项")
 
@@ -53,7 +52,7 @@ def verify(ctx) -> Result:
     time.sleep(0.6)
     snap = ctx.snap({key})
     if snap_found(snap, key):
-        ctx.goto(qmod("battle_hub.pick_event", "choose"))
+        ctx.goto("qldq.battle_hub.pick_event.choose")
         return Result.success()
     ctx.vars.pop("pending_event", None)
     ctx.goto(f"qldq.{outcome}")

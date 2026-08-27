@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from vision_bot.actions import do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import FIGHT_DETECT, snap_center, snap_found
 from vision_bot.core.input import Mouse
 from vision_bot.events import click_match
@@ -19,14 +18,14 @@ _NEXT_STEP = "data/ming_jiang_sha/qian_li_dan_qi/fight/next_step.png"
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if snap_found(snap, "fight.cancel"):
-        return qmod("fight", "click_cancel")
+        return "qldq.fight.click_cancel"
     if snap_found(snap, "fight.setting"):
-        return qmod("fight", "click_setting")
+        return "qldq.fight.click_setting"
     if snap_found(snap, "fight.challenge_end"):
-        return qmod("fight", "wait_end")
+        return "qldq.fight.wait_end"
     if snap_found(snap, "fight.next_step"):
-        return qmod("fight", "next_step")
-    return qmod("fight", "click_cancel")
+        return "qldq.fight.next_step"
+    return "qldq.fight.click_cancel"
 
 
 def relocate(ctx: RunContext) -> str | None:

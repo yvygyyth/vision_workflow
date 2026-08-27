@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.ids import qmod
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_SHOP_DETECT, snap_center, snap_found
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.core.input import Mouse
@@ -24,7 +23,7 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
         snap_found(snap, k)
         for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store")
     ):
-        return qmod("battle_hub.pick_shop", "choose")
+        return "qldq.battle_hub.pick_shop.choose"
     return None
 
 
@@ -65,7 +64,7 @@ def choose(ctx) -> Result:
                 time.sleep(0.6)
                 snap2 = ctx.snap({"choice.ba_qing_store"})
                 if snap_found(snap2, "choice.ba_qing_store"):
-                    ctx.goto(qmod("battle_hub.pick_shop", "verify_ba_qing"))
+                    ctx.goto("qldq.battle_hub.pick_shop.verify_ba_qing")
                     return Result.success()
                 ctx.goto("qldq.ba_qing_store")
                 return Result.success()
