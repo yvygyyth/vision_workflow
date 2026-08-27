@@ -45,6 +45,29 @@ def test_flow_registry_build() -> None:
     reg = FlowRegistry.build(root)
     assert reg.get("qldq") is root
     assert reg.get("qldq.fight").id == "qldq.fight"
+    assert reg.get("qldq.ba_qing_store.choose_token").id == "qldq.ba_qing_store.choose_token"
+    assert reg.get("qldq.fight.choose_reward_kind").id == "qldq.fight.choose_reward_kind"
+
+
+def test_pick_reward_slot_priority() -> None:
+    from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import BattleState
+    from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import RewardKind, pick_reward_slot
+
+    state = BattleState()
+    titles = ["甘宁赠礼", "刘表赠礼", "未知赠礼"]
+    assert pick_reward_slot(titles, state) == 0
+
+    state.mark_general_reward("甘宁", RewardKind.TOKEN)
+    state.mark_general_reward("甘宁", RewardKind.BUFF)
+    assert pick_reward_slot(titles, state) == 1
+
+
+def test_pick_token_slot() -> None:
+    from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.ba_qing_store import pick_token_slot
+
+    titles = ["(空)", "熏炉 x1", "铃铛"]
+    assert pick_token_slot(titles) == 1
+    assert pick_token_slot(["普通物品", "普通物品2", "普通物品3"]) is None
 
 
 def test_flow_registry_duplicate_id() -> None:

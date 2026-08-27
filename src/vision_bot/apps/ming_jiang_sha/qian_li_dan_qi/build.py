@@ -168,6 +168,26 @@ def build_qian_li_dan_qi() -> Flow:
                                                 name="下一步",
                                                 active=fight.next_step,
                                             ),
+                                            mod(
+                                                id="qldq.fight.check_run_end",
+                                                name="本轮结束判定",
+                                                active=fight.check_run_end,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.after_settle",
+                                                name="结算分支",
+                                                active=fight.after_settle,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.choose_reward_title",
+                                                name="选择赠礼武将",
+                                                active=fight.choose_reward_title,
+                                            ),
+                                            mod(
+                                                id="qldq.fight.choose_reward_kind",
+                                                name="选择赠礼类别",
+                                                active=fight.choose_reward_kind,
+                                            ),
                                         ],
                                     ),
                                     flow(
@@ -175,6 +195,36 @@ def build_qian_li_dan_qi() -> Flow:
                                         name="巴清商店",
                                         relocate=[ba_qing_store.relocate],
                                         children=[
+                                            mod(
+                                                id="qldq.ba_qing_store.click_token_slot",
+                                                name="购买信物背包格子",
+                                                active=ba_qing_store.click_token_slot,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.slot_confirm",
+                                                name="确认买格子",
+                                                active=ba_qing_store.slot_confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.slot_no_buy",
+                                                name="格子钱不够关窗",
+                                                active=ba_qing_store.slot_no_buy,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.choose_token",
+                                                name="购买信物",
+                                                active=ba_qing_store.choose_token,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.token_confirm",
+                                                name="确认买信物",
+                                                active=ba_qing_store.token_confirm,
+                                            ),
+                                            mod(
+                                                id="qldq.ba_qing_store.token_no_buy",
+                                                name="信物钱不够关窗",
+                                                active=ba_qing_store.token_no_buy,
+                                            ),
                                             mod(
                                                 id="qldq.ba_qing_store.go_back",
                                                 name="返回",

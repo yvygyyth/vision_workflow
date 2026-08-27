@@ -3,15 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
 
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import RewardKind
 
-class RewardKind(str, Enum):
-    TOKEN = "token"
-    JOINT = "joint"
-    CARD = "card"
-    HELP = "help"
-    BUFF = "buff"
+VARS_BATTLE_STATE = "battle_state"
 
 
 @dataclass
@@ -25,8 +20,11 @@ class BattleState:
     def mark_general_reward(self, name: str, kind: RewardKind) -> None:
         self.general_rewards.setdefault(name, set()).add(kind)
 
+    def has_reward(self, kind: RewardKind) -> bool:
+        return any(kind in kinds for kinds in self.general_rewards.values())
 
-VARS_BATTLE_STATE = "battle_state"
+    def mark_reward(self, kind: RewardKind) -> None:
+        self.mark_general_reward("", kind)
 
 
 def bind_battle_state(ctx) -> BattleState:
@@ -40,9 +38,6 @@ def clear_battle_state(ctx) -> None:
 
 
 def get_battle_state(ctx) -> BattleState:
-    from vision_bot.runtime.context import RunContext
-
-    assert isinstance(ctx, RunContext)
     state = ctx.vars.get(VARS_BATTLE_STATE)
     if isinstance(state, BattleState):
         return state

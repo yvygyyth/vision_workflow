@@ -115,6 +115,9 @@ FIGHT_DETECT: set[str] = {
     "common.confirm",
     "fight.token",
     "fight.joint",
+    "fight.card",
+    "fight.help",
+    "fight.buff",
 }
 
 ENTER_DETECT: set[str] = {
