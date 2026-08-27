@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 _CONFIRM = f"{COMMON_DIR}/confirm.png"
 _CONFIRM_BELOW_PX = 10
 _MAX = f"{COMMON_DIR}/max.png"
-_MING_JIANG_CE = f"{BA_WANG}/ming_jiang_ce.png"
+_MING_JIANG_CE = f"{COMMON_DIR}/ming_jiang_ce.png"
 _LING_XI_BOX = f"{COMMON_DIR}/ling_xi-box.png"
 
 
