@@ -1,4 +1,4 @@
-"""Esc 回首页后进战。"""
+"""失败/卡死复位：Esc 回首页后再进战（由 goto/call 进入，非正常主路径）。"""
 
 from __future__ import annotations
 
