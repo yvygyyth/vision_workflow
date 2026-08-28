@@ -16,9 +16,6 @@ SIGNALS: dict[str, Signal] = {
     "enter.select_wu_jiang": Signal(
         template=f"{QLDQ}/enter_battle/select_wu_jiang.png"
     ),
-    "enter.search": Signal(
-        template=f"{QLDQ}/enter_battle/search.png"
-    ),
 }
 
 DETECT: set[str] = set(SIGNALS)

@@ -23,9 +23,6 @@ _NO_BUY = f"{QLDQ}/ba_qing_store/no_buy.png"
 
 SIGNALS: dict[str, Signal] = {
     "shop.go_back": Signal(template=f"{QLDQ}/ba_qing_store/go_back.png"),
-    "shop.confirm": Signal(template=f"{QLDQ}/ba_qing_store/confirm.png"),
-    "shop.no_buy": Signal(template=f"{QLDQ}/ba_qing_store/no_buy.png"),
-    "shop.token_slot": Signal(template=f"{QLDQ}/ba_qing_store/token_slot.png"),
 }
 
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (

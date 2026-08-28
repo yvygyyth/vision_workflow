@@ -9,13 +9,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.jump import Relocate
 from vision_bot.runtime.module import Module
 
 if TYPE_CHECKING:
     from vision_bot.runtime.config import RunConfig
     from vision_bot.runtime.runner import RunReport
 
-RelocateFn = Callable[[RunContext], str | None]
+RelocateFn = Callable[[RunContext], str | Relocate | None]
 
 
 @dataclass(kw_only=True)

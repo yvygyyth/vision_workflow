@@ -13,7 +13,7 @@ from vision_bot.runtime.cancel import CancelledError
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
-from vision_bot.runtime.jump import Jump, JumpTargetError
+from vision_bot.runtime.jump import Jump, JumpTargetError, Relocate, RelocateStop
 from vision_bot.runtime.module import Module
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
@@ -61,6 +61,8 @@ class Runner:
             return self._run_flow(flow)
         except JumpTargetError as exc:
             return Result.fail(str(exc))
+        except RelocateStop as exc:
+            return Result.fail(str(exc))
 
     def run_from(self, entry_id: str) -> Result:
         node = self.registry.get(entry_id)
@@ -70,6 +72,10 @@ class Runner:
         self.ctx.enter_flow(parent.id, parent.params)
         try:
             return self._run_flow_children(parent, start_index)
+        except RelocateStop as exc:
+            return Result.fail(str(exc))
+        except JumpTargetError as exc:
+            return Result.fail(str(exc))
         finally:
             self.ctx.exit_flow()
 
@@ -77,7 +83,15 @@ class Runner:
         for rule in flow.relocate:
             self.ctx.check_cancelled()
             target = rule(self.ctx)
-            if target:
+            if target is Relocate.PARENT:
+                parent_id = self.registry.parent_flow.get(flow.id)
+                if parent_id is None:
+                    raise RelocateStop()
+                parent = self.registry.get(parent_id)
+                assert isinstance(parent, Flow)
+                logger.info("relocate PARENT → %s", parent.id)
+                return self._try_relocate(parent)
+            if isinstance(target, str) and target:
                 return target
         return None
 

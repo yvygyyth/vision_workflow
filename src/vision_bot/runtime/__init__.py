@@ -2,6 +2,7 @@ from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
+from vision_bot.runtime.jump import Relocate
 from vision_bot.runtime.module import Module
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
@@ -21,6 +22,7 @@ __all__ = [
     "Flow",
     "Module",
     "Result",
+    "Relocate",
     "flow",
     "mod",
     "FlowRegistry",

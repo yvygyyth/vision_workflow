@@ -156,6 +156,90 @@ def test_relocate_on_entry() -> None:
     assert log == ["b"]
 
 
+def test_relocate_parent_on_entry() -> None:
+    """builtins.PARENT → 走父级 relocate，无需 import。"""
+    log: list[str] = []
+
+    def leaf(ctx):
+        log.append("leaf")
+        return Result.success()
+
+    def other(ctx):
+        log.append("other")
+        return Result.success()
+
+    inner = flow(
+        "t.inner",
+        "内",
+        children=[mod("t.inner.leaf", "叶", leaf)],
+        relocate=[lambda ctx: PARENT],  # noqa: F821 — builtins，由 runtime.jump 注入
+    )
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.other", "另", other),
+            inner,
+        ],
+        relocate=[lambda ctx: "t.other"],
+    )
+    report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
+    assert report.success
+    assert log == ["other"]
+
+
+def test_relocate_none_keeps_first_child() -> None:
+    """本层返回 None 不回退父级，按顺序跑第一个 child。"""
+    log: list[str] = []
+
+    def leaf(ctx):
+        log.append("leaf")
+        return Result.success()
+
+    def other(ctx):
+        log.append("other")
+        return Result.success()
+
+    inner = flow(
+        "t.inner",
+        "内",
+        children=[mod("t.inner.leaf", "叶", leaf)],
+        relocate=[lambda ctx: None],
+    )
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.other", "另", other),
+            inner,
+        ],
+        relocate=[lambda ctx: "t.other"],
+    )
+    report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
+    assert report.success
+    assert log == ["leaf"]
+
+
+def test_relocate_parent_at_root_stops() -> None:
+    """根节点 return PARENT → 直接停止，不跑 children。"""
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "根",
+        children=[mod("t.a", "A", a)],
+        relocate=[lambda ctx: PARENT],  # noqa: F821
+    )
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert not report.success
+    assert "PARENT" in (report.message or "")
+    assert log == []
+
+
 def test_root_flow_catalog() -> None:
     assert len(ROOT_FLOWS) == 3
     assert len(root_flow_choices()) == 3

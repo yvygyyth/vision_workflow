@@ -11,8 +11,6 @@ from vision_bot.vision import find
 
 SIGNALS: dict[str, Signal] = {
     "fei_fei.i_help_you": Signal(template=f"{QLDQ}/fei_fei/i_help_you.png"),
-    "fei_fei.sleep": Signal(template=f"{QLDQ}/fei_fei/sleep.png"),
-    "fei_fei.bargaining": Signal(template=f"{QLDQ}/fei_fei/bargaining.png"),
 }
 
 _OPTS = (
