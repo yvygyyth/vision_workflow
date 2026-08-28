@@ -157,7 +157,9 @@ def test_relocate_on_entry() -> None:
 
 
 def test_relocate_parent_on_entry() -> None:
-    """builtins.PARENT → 走父级 relocate，无需 import。"""
+    """Relocate.PARENT → 走父级 relocate。"""
+    from vision_bot.runtime.jump import Relocate
+
     log: list[str] = []
 
     def leaf(ctx):
@@ -172,7 +174,7 @@ def test_relocate_parent_on_entry() -> None:
         "t.inner",
         "内",
         children=[mod("t.inner.leaf", "叶", leaf)],
-        relocate=[lambda ctx: PARENT],  # noqa: F821 — builtins，由 runtime.jump 注入
+        relocate=[lambda ctx: Relocate.PARENT],
     )
     root = flow(
         "t",
@@ -221,7 +223,9 @@ def test_relocate_none_keeps_first_child() -> None:
 
 
 def test_relocate_parent_at_root_stops() -> None:
-    """根节点 return PARENT → 直接停止，不跑 children。"""
+    """根节点 return Relocate.PARENT → 直接停止，不跑 children。"""
+    from vision_bot.runtime.jump import Relocate
+
     log: list[str] = []
 
     def a(ctx):
@@ -232,7 +236,7 @@ def test_relocate_parent_at_root_stops() -> None:
         "t",
         "根",
         children=[mod("t.a", "A", a)],
-        relocate=[lambda ctx: PARENT],  # noqa: F821
+        relocate=[lambda ctx: Relocate.PARENT],
     )
     report = run(root, RunConfig(), base_dir=Path("."))
     assert not report.success

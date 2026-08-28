@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.jump import Relocate
 
 # 只声明扫哪些 id；模板由各业务模块 SIGNALS 注册
 DETECT: set[str] = {
@@ -27,7 +28,7 @@ DETECT: set[str] = {
 }
 
 
-def detect(snap: ScreenSnapshot) -> str | None:
+def detect(snap: ScreenSnapshot) -> str | Relocate:
     if snap.found("shop.go_back"):
         return "qldq.ba_qing_store"
     if snap.found("fight.cancel") or snap.found("fight.setting"):
@@ -56,9 +57,9 @@ def detect(snap: ScreenSnapshot) -> str | None:
         return "qldq.battle_select.enter_pick"
     if snap.found("enter.start"):
         return "qldq.battle_select.enter_ready"
-    return None
+    return Relocate.PARENT
 
 
-def relocate(ctx: RunContext) -> str | None:
+def relocate(ctx: RunContext) -> str | Relocate:
     snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap)

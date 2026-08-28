@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import builtins
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Literal
@@ -30,11 +29,3 @@ class RelocateStop(Exception):
 
     def __init__(self, message: str = "根节点 relocate 返回 PARENT，已停止") -> None:
         super().__init__(message)
-
-
-def _install_parent_builtin() -> None:
-    """挂到 builtins，业务可直接 ``return PARENT``，无需 import。"""
-    builtins.PARENT = Relocate.PARENT  # type: ignore[attr-defined]
-
-
-_install_parent_builtin()
