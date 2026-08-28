@@ -6,13 +6,18 @@ import logging
 import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_BATTLE_DETECT
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
+
+DETECT: set[str] = {
+    "choice.challenge",
+    "choice.challenge_help",
+    "choice.yi_wai",
+}
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -26,7 +31,7 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, PICK_BATTLE_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 
@@ -40,7 +45,7 @@ def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
 
 
 def choose(ctx) -> Result:
-    snap = ctx.snap(PICK_BATTLE_DETECT)
+    snap = ctx.snap(DETECT)
     if snap.found("choice.challenge_help"):
         if not _click(snap, "choice.challenge_help", label="help"):
             return Result.fail("点击 help 失败")
@@ -54,7 +59,7 @@ def choose(ctx) -> Result:
 
 
 def choose_yi_wai(ctx) -> Result:
-    snap = ctx.snap(PICK_BATTLE_DETECT)
+    snap = ctx.snap(DETECT)
     if not _click(snap, "choice.yi_wai", label="yi_wai", times=2):
         return Result.fail("点击意外失败")
     time.sleep(0.6)

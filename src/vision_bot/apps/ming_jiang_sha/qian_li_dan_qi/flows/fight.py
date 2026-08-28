@@ -6,8 +6,7 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import FIGHT_DETECT
+from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     GeneralPriority,
@@ -20,6 +19,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
 from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.events import click_match
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -27,10 +27,39 @@ from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
 
-_AUTO = f"{QLDQ}/fight/auto.png"
-_CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
-_NEXT_STEP = f"{QLDQ}/fight/next_step.png"
-_CONFIRM = "data/ming_jiang_sha/common/confirm.png"
+_DIR = f"{QLDQ}/fight"
+_AUTO = f"{_DIR}/auto.png"
+_CHALLENGE_END = f"{_DIR}/challenge_end.png"
+_NEXT_STEP = f"{_DIR}/next_step.png"
+_CONFIRM = f"{COMMON_DIR}/confirm.png"
+
+SIGNALS: dict[str, Signal] = {
+    "fight.cancel": Signal(template=f"{_DIR}/cancel.png"),
+    "fight.setting": Signal(template=f"{_DIR}/setting.png"),
+    "fight.challenge_end": Signal(template=f"{_DIR}/challenge_end.png"),
+    "fight.next_step": Signal(template=f"{_DIR}/next_step.png"),
+    "fight.auto": Signal(template=f"{_DIR}/auto.png"),
+    "fight.token": Signal(template=f"{_DIR}/token.png"),
+    "fight.joint": Signal(template=f"{_DIR}/joint.png"),
+    "fight.card": Signal(template=f"{_DIR}/card.png"),
+    "fight.help": Signal(template=f"{_DIR}/help.png"),
+    "fight.buff": Signal(template=f"{_DIR}/buff.png"),
+    "common.confirm": Signal(template=_CONFIRM),
+}
+
+DETECT: set[str] = {
+    "fight.cancel",
+    "fight.setting",
+    "fight.challenge_end",
+    "fight.next_step",
+    "fight.auto",
+    "common.confirm",
+    "fight.token",
+    "fight.joint",
+    "fight.card",
+    "fight.help",
+    "fight.buff",
+}
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -67,7 +96,7 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, FIGHT_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 

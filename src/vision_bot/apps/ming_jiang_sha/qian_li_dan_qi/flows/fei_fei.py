@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.events import click_match
+from vision_bot.perception.signal import Signal
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
+_DIR = f"{QLDQ}/fei_fei"
+
+SIGNALS: dict[str, Signal] = {
+    "fei_fei.i_help_you": Signal(template=f"{_DIR}/i_help_you.png"),
+    "fei_fei.sleep": Signal(template=f"{_DIR}/sleep.png"),
+    "fei_fei.bargaining": Signal(template=f"{_DIR}/bargaining.png"),
+}
+
 _OPTS = (
-    "data/ming_jiang_sha/qian_li_dan_qi/fei_fei/i_help_you.png",
-    "data/ming_jiang_sha/qian_li_dan_qi/fei_fei/sleep.png",
-    "data/ming_jiang_sha/qian_li_dan_qi/fei_fei/bargaining.png",
+    f"{_DIR}/i_help_you.png",
+    f"{_DIR}/sleep.png",
+    f"{_DIR}/bargaining.png",
 )
 
 

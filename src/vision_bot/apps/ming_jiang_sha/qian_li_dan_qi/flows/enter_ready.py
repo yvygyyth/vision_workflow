@@ -5,12 +5,22 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, press_key
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
+
+_DIR = f"{QLDQ}/enter_battle"
+
+SIGNALS: dict[str, Signal] = {
+    "enter.battle_interface": Signal(template=f"{_DIR}/battle_interface.png"),
+    "enter.start": Signal(template=f"{_DIR}/start.png"),
+}
+
+DETECT: set[str] = set(SIGNALS)
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -22,13 +32,13 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 
 def check_done(ctx) -> Result:
     bind_battle_state(ctx)
-    snap = ctx.snap(ENTER_DETECT)
+    snap = ctx.snap(DETECT)
     if snap.found("enter.battle_interface"):
         ctx.goto("qldq.battle_hub")
         return Result.success()

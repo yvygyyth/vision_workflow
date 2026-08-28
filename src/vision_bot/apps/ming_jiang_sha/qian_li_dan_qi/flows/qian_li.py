@@ -2,9 +2,29 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import GLOBAL_DETECT
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
+
+# 只声明扫哪些 id；模板由各业务模块 SIGNALS 注册
+DETECT: set[str] = {
+    "shop.go_back",
+    "fight.cancel",
+    "fight.setting",
+    "common.confirm",
+    "pocket.event_pattern",
+    "choice.challenge",
+    "choice.ba_qing_store",
+    "choice.pocket_event",
+    "choice.rest",
+    "choice.fei_fei",
+    "choice.shi_chang_shi",
+    "choice.mo_zi",
+    "choice.yi_wai",
+    "enter.battle_interface",
+    "enter.start",
+    "enter.select_wu_jiang",
+    "fei_fei.i_help_you",
+}
 
 
 def detect(snap: ScreenSnapshot) -> str | None:
@@ -40,5 +60,5 @@ def detect(snap: ScreenSnapshot) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, GLOBAL_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap)

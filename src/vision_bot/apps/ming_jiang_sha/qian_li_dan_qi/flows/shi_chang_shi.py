@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
-_ATTACK = "data/ming_jiang_sha/qian_li_dan_qi/shi_chang_shi/attack.png"
+_ATTACK = f"{QLDQ}/shi_chang_shi/attack.png"
+
+SIGNALS: dict[str, Signal] = {
+    "shi_chang_shi.attack": Signal(template=_ATTACK),
+}
 
 
 def relocate(ctx: RunContext) -> str | None:

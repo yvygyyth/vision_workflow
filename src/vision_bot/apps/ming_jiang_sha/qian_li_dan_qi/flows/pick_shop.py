@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import time
 
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import PICK_SHOP_DETECT
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.bag import refresh_copper_coins
 from vision_bot.core.input import Mouse
@@ -14,6 +13,13 @@ from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
+
+DETECT: set[str] = {
+    "choice.ba_qing_store",
+    "choice.pocket_event",
+    "choice.rest",
+    "choice.lv_bu_wei_store",
+}
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -26,12 +32,12 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, PICK_SHOP_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 
 def choose(ctx) -> Result:
-    snap = ctx.snap(PICK_SHOP_DETECT)
+    snap = ctx.snap(DETECT)
     state = get_battle_state(ctx)
     coins = refresh_copper_coins(state)
     if coins is None:

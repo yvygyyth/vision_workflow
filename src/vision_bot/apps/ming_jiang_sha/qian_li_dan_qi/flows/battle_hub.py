@@ -5,7 +5,8 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import HUB_DETECT
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -14,6 +15,36 @@ HUB_DISMISS = "qldq.battle_hub.dismiss_up"
 HUB_PICK_BATTLE = "qldq.battle_hub.pick_battle"
 HUB_PICK_SHOP = "qldq.battle_hub.pick_shop"
 HUB_PICK_EVENT = "qldq.battle_hub.pick_event"
+
+CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
+_DIR = f"{QLDQ}/battle_select"
+
+SIGNALS: dict[str, Signal] = {
+    "choice.up_panel": Signal(template=f"{_DIR}/up.png"),
+    "choice.challenge": Signal(template=f"{_DIR}/challenge.png", region=CHOICE_REGION),
+    "choice.challenge_help": Signal(template=f"{_DIR}/challenge_help.png", region=CHOICE_REGION),
+    "choice.yi_wai": Signal(template=f"{_DIR}/yi_wai.png", region=CHOICE_REGION),
+    "choice.ba_qing_store": Signal(template=f"{_DIR}/ba_qing_store.png", region=CHOICE_REGION),
+    "choice.pocket_event": Signal(template=f"{_DIR}/pocket_event.png", region=CHOICE_REGION),
+    "choice.rest": Signal(template=f"{_DIR}/rest.png", region=CHOICE_REGION),
+    "choice.lv_bu_wei_store": Signal(template=f"{_DIR}/lv_bu_wei_store.png", region=CHOICE_REGION),
+    "choice.fei_fei": Signal(template=f"{_DIR}/fei_fei.png", region=CHOICE_REGION),
+    "choice.shi_chang_shi": Signal(template=f"{_DIR}/shi_chang_shi.png", region=CHOICE_REGION),
+    "choice.mo_zi": Signal(template=f"{_DIR}/mo_zi.png", region=CHOICE_REGION),
+}
+
+DETECT: set[str] = {
+    "choice.up_panel",
+    "choice.challenge",
+    "choice.challenge_help",
+    "choice.ba_qing_store",
+    "choice.pocket_event",
+    "choice.rest",
+    "choice.lv_bu_wei_store",
+    "choice.fei_fei",
+    "choice.shi_chang_shi",
+    "choice.mo_zi",
+}
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -33,7 +64,7 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, HUB_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 

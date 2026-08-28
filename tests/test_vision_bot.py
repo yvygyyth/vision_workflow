@@ -9,19 +9,19 @@ import pytest
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import HUB_PICK_BATTLE, detect as detect_hub
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import detect as detect_qian_li
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import build_registry
 from vision_bot.core.models import MatchResult
 from vision_bot.perception.snapshot import ScreenSnapshot
 from vision_bot.runtime import flow, mod, run
-from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, root_flow_choices
+from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, registry_for, root_flow_choices
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
 
 
-def test_registry_unique() -> None:
-    reg = build_registry()
-    assert len(reg.ids()) == len(set(reg.ids()))
+def test_qldq_registry() -> None:
+    reg = registry_for("qldq")
+    assert "enter.start" in reg.ids()
+    assert "choice.challenge" in reg.ids()
 
 
 def test_detect_qian_li_hub() -> None:

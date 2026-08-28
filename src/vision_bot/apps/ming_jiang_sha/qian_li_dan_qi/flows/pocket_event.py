@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import random
 
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import Mouse
+from vision_bot.perception.signal import Signal
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find_all
+
+_DIR = f"{QLDQ}/pocket_event"
+
+SIGNALS: dict[str, Signal] = {
+    "pocket.event_pattern": Signal(template=f"{_DIR}/event_patterm.png"),
+    "pocket.ok": Signal(template=f"{_DIR}/ok.png"),
+}
 
 _CHECK_SIGNALS = {"fight.cancel", "pocket.ok"}
 
@@ -17,7 +26,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def pick(ctx) -> Result:
-    base = ctx.base_dir / "data/ming_jiang_sha/qian_li_dan_qi/pocket_event/event_patterm.png"
+    base = ctx.base_dir / f"{_DIR}/event_patterm.png"
     hits = find_all(base, threshold=0.8, max_count=16)
     if not hits.ok:
         ctx.goto("qldq.pocket_event.check")

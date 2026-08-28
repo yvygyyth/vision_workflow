@@ -11,6 +11,7 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_PRIORITY
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -20,6 +21,13 @@ logger = logging.getLogger(__name__)
 
 _DIR = f"{QLDQ}/ba_qing_store"
 _NO_BUY = f"{_DIR}/no_buy.png"
+
+SIGNALS: dict[str, Signal] = {
+    "shop.go_back": Signal(template=f"{_DIR}/go_back.png"),
+    "shop.confirm": Signal(template=f"{_DIR}/confirm.png"),
+    "shop.no_buy": Signal(template=f"{_DIR}/no_buy.png"),
+    "shop.token_slot": Signal(template=f"{_DIR}/token_slot.png"),
+}
 
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
     (1276, 300, 280, 50),

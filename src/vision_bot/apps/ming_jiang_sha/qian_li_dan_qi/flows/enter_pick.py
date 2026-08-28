@@ -5,11 +5,23 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.signals import ENTER_DETECT
+from vision_bot.apps.ming_jiang_sha.paths import DATA_ROOT
 from vision_bot.core.input import input_text as type_text
+from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
+
+SIGNALS: dict[str, Signal] = {
+    "enter.select_wu_jiang": Signal(
+        template=f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/select_wu_jiang.png"
+    ),
+    "enter.search": Signal(
+        template=f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/search.png"
+    ),
+}
+
+DETECT: set[str] = set(SIGNALS)
 
 
 def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
@@ -19,19 +31,22 @@ def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, ENTER_DETECT)
+    snap = capture(ctx.registry, ctx.base_dir, DETECT)
     return detect(snap, ctx)
 
 
 def select_wu_jiang(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/select_wu_jiang.png"), click())()
+    do(
+        move().image(f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/select_wu_jiang.png"),
+        click(),
+    )()
     ctx.goto("qldq.battle_select.enter_pick.focus_search")
     return Result.success()
 
 
 def focus_search(ctx) -> Result:
     r = do(
-        move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/search.png"),
+        move().image(f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/search.png"),
         move().by(-160, 0),
         click().pause(0.3),
     )()
@@ -52,12 +67,18 @@ def type_name(ctx) -> Result:
 
 
 def click_search(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/search.png"), click())()
+    do(
+        move().image(f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/search.png"),
+        click(),
+    )()
     ctx.goto("qldq.battle_select.enter_pick.click_general")
     return Result.success()
 
 
 def click_general(ctx) -> Result:
-    do(move().image("data/ming_jiang_sha/qian_li_dan_qi/enter_battle/lv_bu.png"), click())()
+    do(
+        move().image(f"{DATA_ROOT}/qian_li_dan_qi/enter_battle/lv_bu.png"),
+        click(),
+    )()
     ctx.goto("qldq.battle_select.enter_ready.try_start")
     return Result.success()
