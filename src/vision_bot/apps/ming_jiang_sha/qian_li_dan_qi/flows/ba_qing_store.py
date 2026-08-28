@@ -19,14 +19,13 @@ from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
 
-_DIR = f"{QLDQ}/ba_qing_store"
-_NO_BUY = f"{_DIR}/no_buy.png"
+_NO_BUY = f"{QLDQ}/ba_qing_store/no_buy.png"
 
 SIGNALS: dict[str, Signal] = {
-    "shop.go_back": Signal(template=f"{_DIR}/go_back.png"),
-    "shop.confirm": Signal(template=f"{_DIR}/confirm.png"),
-    "shop.no_buy": Signal(template=f"{_DIR}/no_buy.png"),
-    "shop.token_slot": Signal(template=f"{_DIR}/token_slot.png"),
+    "shop.go_back": Signal(template=f"{QLDQ}/ba_qing_store/go_back.png"),
+    "shop.confirm": Signal(template=f"{QLDQ}/ba_qing_store/confirm.png"),
+    "shop.no_buy": Signal(template=f"{QLDQ}/ba_qing_store/no_buy.png"),
+    "shop.token_slot": Signal(template=f"{QLDQ}/ba_qing_store/token_slot.png"),
 }
 
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
@@ -60,7 +59,7 @@ def pick_token_slot(titles: list[str], priority: list[str] | None = None) -> int
 
 
 def click_token_slot(ctx) -> Result:
-    result = do(move().image(f"{_DIR}/token_slot.png"), click())()
+    result = do(move().image(f"{QLDQ}/ba_qing_store/token_slot.png"), click())()
     if result.ok:
         ctx.goto("qldq.ba_qing_store.slot_confirm")
     else:
@@ -136,14 +135,14 @@ def _close_no_buy(ctx, *, on_absent: str) -> Result:
 
 
 def go_back(ctx) -> Result:
-    do(move().image(f"{_DIR}/go_back.png"), click())()
+    do(move().image(f"{QLDQ}/ba_qing_store/go_back.png"), click())()
     time.sleep(0.6)
     ctx.goto("qldq.ba_qing_store.confirm")
     return Result.success()
 
 
 def confirm(ctx) -> Result:
-    do(move().image(f"{_DIR}/confirm.png"), click())()
+    do(move().image(f"{QLDQ}/ba_qing_store/confirm.png"), click())()
     ctx.goto("qldq.ba_qing_store.ensure_left")
     return Result.success()
 

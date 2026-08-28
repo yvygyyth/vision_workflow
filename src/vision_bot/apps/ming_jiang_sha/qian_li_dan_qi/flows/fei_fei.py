@@ -9,18 +9,16 @@ from vision_bot.perception.signal import Signal
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
-_DIR = f"{QLDQ}/fei_fei"
-
 SIGNALS: dict[str, Signal] = {
-    "fei_fei.i_help_you": Signal(template=f"{_DIR}/i_help_you.png"),
-    "fei_fei.sleep": Signal(template=f"{_DIR}/sleep.png"),
-    "fei_fei.bargaining": Signal(template=f"{_DIR}/bargaining.png"),
+    "fei_fei.i_help_you": Signal(template=f"{QLDQ}/fei_fei/i_help_you.png"),
+    "fei_fei.sleep": Signal(template=f"{QLDQ}/fei_fei/sleep.png"),
+    "fei_fei.bargaining": Signal(template=f"{QLDQ}/fei_fei/bargaining.png"),
 }
 
 _OPTS = (
-    f"{_DIR}/i_help_you.png",
-    f"{_DIR}/sleep.png",
-    f"{_DIR}/bargaining.png",
+    f"{QLDQ}/fei_fei/i_help_you.png",
+    f"{QLDQ}/fei_fei/sleep.png",
+    f"{QLDQ}/fei_fei/bargaining.png",
 )
 
 

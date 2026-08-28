@@ -8,31 +8,29 @@ from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 
-_DIR = f"{FEE_DAY}/ba_qing_store"
-
 
 def entry(ctx) -> Result:
-    return do(move().image(f"{_DIR}/entry-icon.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/entry-icon.png"), click())()
 
 
 def gold_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/gold-tab.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/gold-tab.png"), click())()
 
 
 def free_bingli(ctx) -> Result:
-    return do(move().image(f"{_DIR}/free-bingli.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/free-bingli.png"), click())()
 
 
 def copper_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/copper-tab.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/copper-tab.png"), click())()
 
 
 def lingxi_box(ctx) -> Result:
-    return do(move().image(f"{_DIR}/lingxi-box.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/lingxi-box.png"), click())()
 
 
 def jinlan_tab(ctx) -> Result:
-    return do(move().image(f"{_DIR}/jinlan-tab.png"), click())()
+    return do(move().image(f"{FEE_DAY}/ba_qing_store/jinlan-tab.png"), click())()
 
 
 def scroll(ctx) -> Result:

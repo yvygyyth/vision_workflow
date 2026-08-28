@@ -8,18 +8,16 @@ from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 
-_DIR = f"{FEE_DAY}/zhan_yi_store"
-
 
 def open_entry(ctx) -> Result:
     return do(
-        move().image(f"{_DIR}/entry.png", f"{_DIR}/entry2.png").match(timeout=5.0),
+        move().image(f"{FEE_DAY}/zhan_yi_store/entry.png", f"{FEE_DAY}/zhan_yi_store/entry2.png").match(timeout=5.0),
         click(),
     )()
 
 
 def open_store(ctx) -> Result:
-    return do(move().image(f"{_DIR}/zhan_yi-store.png"), click())()
+    return do(move().image(f"{FEE_DAY}/zhan_yi_store/zhan_yi-store.png"), click())()
 
 
 def scroll(ctx) -> Result:

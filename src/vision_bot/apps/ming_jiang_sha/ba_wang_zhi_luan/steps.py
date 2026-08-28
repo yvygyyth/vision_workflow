@@ -14,19 +14,17 @@ from vision_bot.vision import find, find_all
 
 logger = logging.getLogger(__name__)
 
-_DIR = BA_WANG
-_FIGHT_DIR = f"{QLDQ}/fight"
 
-_ZHUN_BEI = f"{_DIR}/zhun_bei.png"
-_UN_ZHUN_BEI = f"{_DIR}/un_zhun+bei.png"
-_START = f"{_DIR}/start.png"
-_SIX = f"{_DIR}/6.png"
-_OK = f"{_DIR}/ok.png"
+_ZHUN_BEI = f"{BA_WANG}/zhun_bei.png"
+_UN_ZHUN_BEI = f"{BA_WANG}/un_zhun+bei.png"
+_START = f"{BA_WANG}/start.png"
+_SIX = f"{BA_WANG}/6.png"
+_OK = f"{BA_WANG}/ok.png"
 
-_SETTING = f"{_FIGHT_DIR}/setting.png"
-_AUTO = f"{_FIGHT_DIR}/auto.png"
-_CHALLENGE_END = f"{_FIGHT_DIR}/challenge_end.png"
-_NEXT_STEP = f"{_FIGHT_DIR}/next_step.png"
+_SETTING = f"{QLDQ}/fight/setting.png"
+_AUTO = f"{QLDQ}/fight/auto.png"
+_CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
+_NEXT_STEP = f"{QLDQ}/fight/next_step.png"
 
 _MAX_SIX = 13
 _AFTER_SIX_CLICK_SEC = 0.35

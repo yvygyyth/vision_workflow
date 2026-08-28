@@ -8,19 +8,17 @@ from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
 from vision_bot.apps.ming_jiang_sha.actions import go_back
 
-_DIR = f"{FEE_DAY}/song_hua"
-
 def open_entry(ctx) -> Result:
-    return do(move().image(f"{_DIR}/hao_you.png"), click())()
+    return do(move().image(f"{FEE_DAY}/song_hua/hao_you.png"), click())()
 
 def open_song_li(ctx) -> Result:
-    return do(move().image(f"{_DIR}/song_li.png"), click())()
+    return do(move().image(f"{FEE_DAY}/song_hua/song_li.png"), click())()
 
 def open_x100(ctx) -> Result:
-    return do(move().image(f"{_DIR}/100.png"), click())()
+    return do(move().image(f"{FEE_DAY}/song_hua/100.png"), click())()
 
 def open_you_cai_hua(ctx) -> Result:
-    return do(move().image(f"{_DIR}/you_cai_hua.png"), click())()
+    return do(move().image(f"{FEE_DAY}/song_hua/you_cai_hua.png"), click())()
 
 def zeng_song(ctx) -> Result:
     do(move().to(470, 420).raw(), click())()

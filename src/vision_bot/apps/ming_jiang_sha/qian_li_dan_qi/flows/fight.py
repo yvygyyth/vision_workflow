@@ -27,23 +27,22 @@ from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
 
-_DIR = f"{QLDQ}/fight"
-_AUTO = f"{_DIR}/auto.png"
-_CHALLENGE_END = f"{_DIR}/challenge_end.png"
-_NEXT_STEP = f"{_DIR}/next_step.png"
+_AUTO = f"{QLDQ}/fight/auto.png"
+_CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
+_NEXT_STEP = f"{QLDQ}/fight/next_step.png"
 _CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 SIGNALS: dict[str, Signal] = {
-    "fight.cancel": Signal(template=f"{_DIR}/cancel.png"),
-    "fight.setting": Signal(template=f"{_DIR}/setting.png"),
-    "fight.challenge_end": Signal(template=f"{_DIR}/challenge_end.png"),
-    "fight.next_step": Signal(template=f"{_DIR}/next_step.png"),
-    "fight.auto": Signal(template=f"{_DIR}/auto.png"),
-    "fight.token": Signal(template=f"{_DIR}/token.png"),
-    "fight.joint": Signal(template=f"{_DIR}/joint.png"),
-    "fight.card": Signal(template=f"{_DIR}/card.png"),
-    "fight.help": Signal(template=f"{_DIR}/help.png"),
-    "fight.buff": Signal(template=f"{_DIR}/buff.png"),
+    "fight.cancel": Signal(template=f"{QLDQ}/fight/cancel.png"),
+    "fight.setting": Signal(template=f"{QLDQ}/fight/setting.png"),
+    "fight.challenge_end": Signal(template=f"{QLDQ}/fight/challenge_end.png"),
+    "fight.next_step": Signal(template=f"{QLDQ}/fight/next_step.png"),
+    "fight.auto": Signal(template=f"{QLDQ}/fight/auto.png"),
+    "fight.token": Signal(template=f"{QLDQ}/fight/token.png"),
+    "fight.joint": Signal(template=f"{QLDQ}/fight/joint.png"),
+    "fight.card": Signal(template=f"{QLDQ}/fight/card.png"),
+    "fight.help": Signal(template=f"{QLDQ}/fight/help.png"),
+    "fight.buff": Signal(template=f"{QLDQ}/fight/buff.png"),
     "common.confirm": Signal(template=_CONFIRM),
 }
 

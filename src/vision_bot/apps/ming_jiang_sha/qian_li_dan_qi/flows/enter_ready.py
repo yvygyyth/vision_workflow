@@ -13,11 +13,9 @@ from vision_bot.perception.snapshot import ScreenSnapshot, capture
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
-_DIR = f"{QLDQ}/enter_battle"
-
 SIGNALS: dict[str, Signal] = {
-    "enter.battle_interface": Signal(template=f"{_DIR}/battle_interface.png"),
-    "enter.start": Signal(template=f"{_DIR}/start.png"),
+    "enter.battle_interface": Signal(template=f"{QLDQ}/enter_battle/battle_interface.png"),
+    "enter.start": Signal(template=f"{QLDQ}/enter_battle/start.png"),
 }
 
 DETECT: set[str] = set(SIGNALS)

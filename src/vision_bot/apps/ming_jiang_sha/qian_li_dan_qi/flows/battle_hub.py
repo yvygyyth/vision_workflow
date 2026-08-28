@@ -17,20 +17,18 @@ HUB_PICK_SHOP = "qldq.battle_hub.pick_shop"
 HUB_PICK_EVENT = "qldq.battle_hub.pick_event"
 
 CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
-_DIR = f"{QLDQ}/battle_select"
-
 SIGNALS: dict[str, Signal] = {
-    "choice.up_panel": Signal(template=f"{_DIR}/up.png"),
-    "choice.challenge": Signal(template=f"{_DIR}/challenge.png", region=CHOICE_REGION),
-    "choice.challenge_help": Signal(template=f"{_DIR}/challenge_help.png", region=CHOICE_REGION),
-    "choice.yi_wai": Signal(template=f"{_DIR}/yi_wai.png", region=CHOICE_REGION),
-    "choice.ba_qing_store": Signal(template=f"{_DIR}/ba_qing_store.png", region=CHOICE_REGION),
-    "choice.pocket_event": Signal(template=f"{_DIR}/pocket_event.png", region=CHOICE_REGION),
-    "choice.rest": Signal(template=f"{_DIR}/rest.png", region=CHOICE_REGION),
-    "choice.lv_bu_wei_store": Signal(template=f"{_DIR}/lv_bu_wei_store.png", region=CHOICE_REGION),
-    "choice.fei_fei": Signal(template=f"{_DIR}/fei_fei.png", region=CHOICE_REGION),
-    "choice.shi_chang_shi": Signal(template=f"{_DIR}/shi_chang_shi.png", region=CHOICE_REGION),
-    "choice.mo_zi": Signal(template=f"{_DIR}/mo_zi.png", region=CHOICE_REGION),
+    "choice.up_panel": Signal(template=f"{QLDQ}/battle_select/up.png"),
+    "choice.challenge": Signal(template=f"{QLDQ}/battle_select/challenge.png", region=CHOICE_REGION),
+    "choice.challenge_help": Signal(template=f"{QLDQ}/battle_select/challenge_help.png", region=CHOICE_REGION),
+    "choice.yi_wai": Signal(template=f"{QLDQ}/battle_select/yi_wai.png", region=CHOICE_REGION),
+    "choice.ba_qing_store": Signal(template=f"{QLDQ}/battle_select/ba_qing_store.png", region=CHOICE_REGION),
+    "choice.pocket_event": Signal(template=f"{QLDQ}/battle_select/pocket_event.png", region=CHOICE_REGION),
+    "choice.rest": Signal(template=f"{QLDQ}/battle_select/rest.png", region=CHOICE_REGION),
+    "choice.lv_bu_wei_store": Signal(template=f"{QLDQ}/battle_select/lv_bu_wei_store.png", region=CHOICE_REGION),
+    "choice.fei_fei": Signal(template=f"{QLDQ}/battle_select/fei_fei.png", region=CHOICE_REGION),
+    "choice.shi_chang_shi": Signal(template=f"{QLDQ}/battle_select/shi_chang_shi.png", region=CHOICE_REGION),
+    "choice.mo_zi": Signal(template=f"{QLDQ}/battle_select/mo_zi.png", region=CHOICE_REGION),
 }
 
 DETECT: set[str] = {
