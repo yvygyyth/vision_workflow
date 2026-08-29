@@ -28,11 +28,12 @@ def bu_gua_click(ctx) -> Result:
 
 
 def gua_xiang(ctx) -> Result:
-    return do(move().image(f"{FEE_DAY}/actaivity/gua_xiang.png"), click())()
+    do(move().to(300, 300).raw(), click())()
+    return Result.success()
 
 
 def scroll(ctx) -> Result:
-    return scroll_center(-120, times=5)
+    return scroll_center(-120, times=12)
 
 
 def yue_ling(ctx) -> Result:
