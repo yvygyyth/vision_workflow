@@ -56,6 +56,6 @@ relocate: list[RelocateRule] = [
 
 def dismiss_up(ctx) -> Result:
     if snap(UP_PANEL).ok:
-        do(move().to(1300, 1150).raw(), click())()
+        do(move().to(1300, 1150), click())()
         time.sleep(0.4)
-    return Result.fail("dispatch")
+    return Result.success()
