@@ -10,6 +10,7 @@ from vision_bot.core.input import input_text as type_text
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
+from vision_bot.vision import find_once
 
 SWITCH = f"{QLDQ}/enter_battle/switch.png"
 SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
@@ -53,7 +54,7 @@ def focus_search(ctx) -> Result:
 
 
 def type_name(ctx) -> Result:
-    name = str(ctx.params.get("wu_jiang", "吕布")).strip()
+    name = str(ctx.params.get("wu_jiang", "吕布"))
     if not name:
         return Result.fail("武将名为空")
     type_text(name, method="paste")
@@ -71,7 +72,6 @@ def click_search(ctx) -> Result:
 
 def click_general(ctx) -> Result:
     do(move().to(190, 1100).raw(), click())()
-    shot = snap({SELECT_WU_JIANG})
-    if shot.found(SELECT_WU_JIANG):
+    if find_once(SELECT_WU_JIANG).ok:
         return Result.fail("仍在选将界面")
     return Result.success()

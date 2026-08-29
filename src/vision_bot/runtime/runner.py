@@ -103,6 +103,10 @@ class Runner:
         try:
             entry = self._try_relocate(flow)
             if entry:
+                # 本 Flow 内的子节点：从该 index 起顺序执行后续兄弟
+                parent, idx = self.registry.entry_point(entry)
+                if parent.id == flow.id:
+                    return self._run_flow_children(flow, idx)
                 return self._run_subtree(entry)
             return self._run_flow_children(flow, 0)
         finally:
@@ -124,11 +128,10 @@ class Runner:
         if not result.ok:
             recovery = self._try_relocate(flow)
             if recovery:
-                rec = self._run_subtree(recovery)
-                if not rec.ok:
-                    return rec
-                retry = self._run_node(flow.children[child_index], parent_flow=flow, child_index=child_index)
-                return self._consume_node_result(flow, child_index, retry)
+                parent, idx = self.registry.entry_point(recovery)
+                if parent.id == flow.id:
+                    return self._run_flow_children(flow, idx)
+                return self._run_subtree(recovery)
             return result
         return None
 

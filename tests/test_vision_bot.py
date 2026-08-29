@@ -148,18 +148,24 @@ def test_relocate_on_entry() -> None:
         log.append("b")
         return Result.success()
 
+    def c(ctx):
+        log.append("c")
+        return Result.success()
+
     root = flow(
         "t",
         "测试",
         children=[
             mod("t.a", "A", a),
             mod("t.b", "B", b),
+            mod("t.c", "C", c),
         ],
         relocate=[lambda ctx: "t.b"],
     )
     report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
-    assert log == ["b"]
+    # relocate 到 b 后继续跑后续兄弟 c
+    assert log == ["b", "c"]
 
 
 def test_relocate_parent_on_entry() -> None:
