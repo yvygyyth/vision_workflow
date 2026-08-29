@@ -100,7 +100,7 @@ relocate: list[RelocateRule] = [
 
 
 def move_aside(ctx) -> Result:
-    do(move().to(80, 80).raw())()
+    do(move().to(80, 80))()
     return Result.success()
 
 
