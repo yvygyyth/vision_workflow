@@ -64,6 +64,6 @@ relocate: list[RelocateRule] = [
     ),
     RelocateRule(
         when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/start.png"),
-        then="qldq.battle_select.enter_ready",
+        then="qldq.battle_select.enter_pick.click_start",
     ),
 ]

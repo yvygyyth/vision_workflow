@@ -7,7 +7,6 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import (
     ba_qing_store,
     battle_hub,
     enter_pick,
-    enter_ready,
     fei_fei,
     fight,
     home_recovery,
@@ -68,27 +67,10 @@ def build_qian_li_dan_qi() -> Flow:
                         name="返回",
                         active=go_back,
                     ),
-                ],
-            ),
-            flow(
-                id="qldq.battle_select.enter_ready",
-                name="已选将",
-                relocate=enter_ready.relocate,
-                children=[
                     mod(
-                        id="qldq.battle_select.enter_ready.try_start",
+                        id="qldq.battle_select.enter_pick.click_start",
                         name="点击开始",
-                        active=enter_ready.try_start,
-                    ),
-                    mod(
-                        id="qldq.battle_select.enter_ready.recover",
-                        name="恢复",
-                        active=enter_ready.recover,
-                    ),
-                    mod(
-                        id="qldq.battle_select.enter_ready.check_done",
-                        name="检查进战",
-                        active=enter_ready.check_done,
+                        active=enter_pick.click_start,
                     ),
                 ],
             ),

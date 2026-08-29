@@ -6,7 +6,8 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.core.input import input_text as type_text
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
+from vision_bot.core.input import Mouse, input_text as type_text
 from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
@@ -19,6 +20,8 @@ SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
 
 DETECT: set[str] = {START, SWITCH, SELECT_WU_JIANG}
 
+CLICK_START = "qldq.battle_select.enter_pick.click_start"
+
 
 def _has_start(ctx: RunContext) -> bool:
     return snap(DETECT).found(START)
@@ -26,7 +29,7 @@ def _has_start(ctx: RunContext) -> bool:
 
 def _switch_without_select(ctx: RunContext) -> bool:
     s = snap(DETECT)
-    return s.found(SWITCH) and s.found(SELECT_WU_JIANG)
+    return s.found(SWITCH) and not s.found(SELECT_WU_JIANG)
 
 
 def _has_select_wu_jiang(ctx: RunContext) -> bool:
@@ -35,12 +38,12 @@ def _has_select_wu_jiang(ctx: RunContext) -> bool:
 
 relocate: list[RelocateRule] = [
     # 选将相关优先，避免 start.png 在选将界面误匹配
-    RelocateRule(when=_has_start, then="qldq.battle_select.enter_ready"),
     RelocateRule(when=_switch_without_select, then=None),
     RelocateRule(
         when=_has_select_wu_jiang,
         then="qldq.battle_select.enter_pick.focus_search",
-    )
+    ),
+    RelocateRule(when=_has_start, then=CLICK_START),
 ]
 
 
@@ -89,4 +92,14 @@ def click_general(ctx) -> Result:
     do(move().to(190, 1100).raw(), click())()
     if find_once(SELECT_WU_JIANG).ok:
         return Result.fail("仍在选将界面")
+    return Result.success()
+
+
+def click_start(ctx) -> Result:
+    shot = snap({START})
+    c = shot.center(START)
+    if c is None:
+        return Result.fail("无 start")
+    Mouse().move(*c).click().sleep(0.5).perform()
+    bind_battle_state(ctx)
     return Result.success()
