@@ -32,11 +32,16 @@ def resolve(
     rules: Sequence[RelocateRule] | None,
     ctx: RunContext,
 ) -> ThenValue:
-    """按数组顺序求值：第一个 ``when`` 为真则返回其 ``then``；皆未命中返回 ``None``。"""
-    if not rules:
+    """求值 relocate 规则。
+
+    - ``rules is None``（未配置）：返回 ``None``，由 runner 从 ``children[0]`` 开跑。
+    - 某条 ``when`` 命中：返回其 ``then``（可为 ``None`` / id / ``Relocate.PARENT``）。
+    - 已配置但全部未命中：返回 ``Relocate.PARENT``（交给父级）。
+    """
+    if rules is None:
         return None
     for rule in rules:
         ctx.check_cancelled()
         if rule.when(ctx):
             return rule.then
-    return None
+    return Relocate.PARENT

@@ -5,7 +5,6 @@ from __future__ import annotations
 from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
 from vision_bot.perception.snapshot import capture_screen, match
 from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.jump import Relocate
 from vision_bot.runtime.relocate import RelocateRule
 
 _CHOICE_REGION = (800, 350, 1630, 780)
@@ -76,5 +75,4 @@ relocate: list[RelocateRule] = [
         when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/start.png"),
         then="qldq.battle_select.enter_ready",
     ),
-    RelocateRule(when=lambda ctx: True, then=Relocate.PARENT),
 ]

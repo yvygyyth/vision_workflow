@@ -12,8 +12,6 @@ from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
-DETECT: set[str] = enter_pick.DETECT | enter_ready.DETECT
-
 relocate: list[RelocateRule] = [
     *enter_pick.relocate,
     *enter_ready.relocate,

@@ -82,6 +82,9 @@ class Runner:
     def _try_relocate(self, flow: Flow) -> str | None:
         from vision_bot.runtime.relocate import resolve
 
+        # 未配置 relocate → 不跳转，由调用方从 children[0] 开跑
+        if flow.relocate is None:
+            return None
         target = resolve(flow.relocate, self.ctx)
         if target is Relocate.PARENT:
             parent_id = self.registry.parent_flow.get(flow.id)

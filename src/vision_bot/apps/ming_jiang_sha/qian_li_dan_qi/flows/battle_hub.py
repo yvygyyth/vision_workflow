@@ -47,20 +47,6 @@ _CHOICE_DETECT = (
 _HUB_SHOT = "_battle_hub_relocate_shot"
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(UP_PANEL):
-        return HUB_DISMISS
-    if shot.found(CHALLENGE) or shot.found(CHALLENGE_HELP) or shot.found(YI_WAI):
-        return HUB_PICK_BATTLE
-    for path in (BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE):
-        if shot.found(path):
-            return HUB_PICK_SHOP
-    for path in (FEI_FEI, SHI_CHANG_SHI, MO_ZI):
-        if shot.found(path):
-            return HUB_PICK_EVENT
-    return None
-
-
 def _hub_shot(ctx: RunContext) -> ScreenSnapshot:
     shot = ctx.vars.get(_HUB_SHOT)
     if shot is None:

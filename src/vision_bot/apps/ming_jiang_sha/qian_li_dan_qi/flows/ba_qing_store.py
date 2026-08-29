@@ -12,7 +12,6 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_P
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.perception.snapshot import snap
-from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find

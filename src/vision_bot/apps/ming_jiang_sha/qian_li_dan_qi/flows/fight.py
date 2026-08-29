@@ -69,22 +69,6 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
 }
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(CANCEL):
-        return "qldq.fight.click_cancel"
-    if shot.found(SETTING):
-        return "qldq.fight.click_setting"
-    if shot.found(CHALLENGE_END):
-        return "qldq.fight.wait_end"
-    if shot.found(NEXT_STEP):
-        return "qldq.fight.next_step"
-    if ctx is not None and any(
-        shot.found(path) for path in REWARD_KIND_IMGS.values()
-    ):
-        return "qldq.fight.choose_reward_kind"
-    return "qldq.fight.click_cancel"
-
-
 def _fight_shot(ctx: RunContext) -> ScreenSnapshot:
     key = "_fight_relocate_shot"
     shot = ctx.vars.get(key)

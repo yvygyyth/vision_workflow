@@ -11,7 +11,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_da
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
     CHALLENGE,
     HUB_PICK_BATTLE,
-    detect as detect_hub,
+    relocate as relocate_hub,
 )
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import relocate as relocate_qian_li
 from vision_bot.core.models import MatchResult
@@ -40,11 +40,12 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resolve(relocate_qian_li, RunContext()) == "qldq.battle_hub"
 
 
-def test_detect_hub_pick_battle() -> None:
-    snap = ScreenSnapshot(
+def test_relocate_hub_pick_battle() -> None:
+    ctx = RunContext()
+    ctx.vars["_battle_hub_relocate_shot"] = ScreenSnapshot(
         hits={CHALLENGE: MatchResult(found=True, image=CHALLENGE)}
     )
-    assert detect_hub(snap, None) == HUB_PICK_BATTLE  # type: ignore[arg-type]
+    assert resolve(relocate_hub, ctx) == HUB_PICK_BATTLE
 
 
 def test_flow_registry_build() -> None:
@@ -204,7 +205,7 @@ def test_relocate_parent_on_entry() -> None:
 
 
 def test_relocate_none_keeps_first_child() -> None:
-    """本层返回 None 不回退父级，按顺序跑第一个 child。"""
+    """命中 then=None：不跳转，按顺序跑第一个 child（不因未配置而 PARENT）。"""
     log: list[str] = []
 
     def leaf(ctx):
@@ -233,6 +234,52 @@ def test_relocate_none_keeps_first_child() -> None:
     report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
     assert report.success
     assert log == ["leaf"]
+
+
+def test_relocate_unmatched_goes_parent() -> None:
+    """配置了 relocate 但全部未命中 → 默认 PARENT。"""
+    log: list[str] = []
+
+    def leaf(ctx):
+        log.append("leaf")
+        return Result.success()
+
+    def other(ctx):
+        log.append("other")
+        return Result.success()
+
+    inner = flow(
+        "t.inner",
+        "内",
+        children=[mod("t.inner.leaf", "叶", leaf)],
+        relocate=[RelocateRule(when=lambda ctx: False, then="t.inner.leaf")],
+    )
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.other", "另", other),
+            inner,
+        ],
+        relocate=[RelocateRule(when=lambda ctx: True, then="t.other")],
+    )
+    report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
+    assert report.success
+    assert log == ["other"]
+
+
+def test_relocate_omitted_runs_first_child() -> None:
+    """未传 relocate → 直接 children[0]。"""
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        return Result.success()
+
+    root = flow("t", "根", children=[mod("t.a", "A", a)])
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert report.success
+    assert log == ["a"]
 
 
 def test_relocate_parent_at_root_stops() -> None:
