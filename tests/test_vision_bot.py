@@ -15,7 +15,6 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
 )
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import relocate as relocate_qian_li
 from vision_bot.core.models import MatchResult
-from vision_bot.perception.snapshot import ScreenSnapshot
 from vision_bot.runtime import flow, mod, run
 from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, root_flow_choices
 from vision_bot.runtime.config import RunConfig
@@ -23,30 +22,55 @@ from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.relocate import RelocateRule, resolve
 from vision_bot.runtime.result import Result
+from vision_bot.vision import ScreenSnapshot
 
 
 def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
     challenge = f"{QLDQ}/battle_select/challenge.png"
+
+    def fake_snap(*images, region=None, **kwargs):
+        flat: list[str] = []
+        for item in images:
+            if isinstance(item, str):
+                flat.append(item)
+            else:
+                flat.extend(item)
+        if len(flat) == 1:
+            if flat[0] == challenge:
+                return Result.success(
+                    value=MatchResult(found=True, image=challenge)
+                )
+            return Result.fail("no")
+        hits = {
+            p: (
+                Result.success(value=MatchResult(found=True, image=p))
+                if p == challenge
+                else Result.fail("no")
+            )
+            for p in flat
+        }
+        return ScreenSnapshot(hits=hits)
+
     monkeypatch.setattr(
-        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.capture_screen",
-        lambda: object(),
-    )
-    monkeypatch.setattr(
-        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.match",
-        lambda template, screenshot=None, region=None: MatchResult(
-            found=template == challenge, image=template
-        ),
+        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.snap",
+        fake_snap,
     )
     assert resolve(relocate_qian_li, RunContext()) == "qldq.battle_hub"
 
 
 def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
     shot = ScreenSnapshot(
-        hits={CHALLENGE: MatchResult(found=True, image=CHALLENGE)}
+        hits={CHALLENGE: Result.success(value=MatchResult(found=True, image=CHALLENGE))}
     )
+
+    def fake_snap(templates, region=None):
+        if isinstance(templates, str):
+            return Result.fail("no")
+        return shot
+
     monkeypatch.setattr(
-        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub._hub_shot",
-        lambda ctx: shot,
+        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub.snap",
+        fake_snap,
     )
     assert resolve(relocate_hub, RunContext()) == HUB_PICK_BATTLE
 

@@ -8,11 +8,10 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, input_text as type_text
-from vision_bot.perception.snapshot import snap
+from vision_bot.vision import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import find_once
 
 START = f"{QLDQ}/enter_battle/start.png"
 SWITCH = f"{QLDQ}/enter_battle/switch.png"
@@ -90,16 +89,15 @@ def click_search(ctx) -> Result:
 
 def click_general(ctx) -> Result:
     do(move().to(190, 1100).raw(), click())()
-    if find_once(SELECT_WU_JIANG).ok:
+    if snap(SELECT_WU_JIANG).ok:
         return Result.fail("仍在选将界面")
     return Result.success()
 
 
 def click_start(ctx) -> Result:
-    shot = snap({START})
-    c = shot.center(START)
-    if c is None:
+    r = snap(START)
+    if not r.ok or not r.value or not r.value.center:
         return Result.fail("无 start")
-    Mouse().move(*c).click().sleep(0.5).perform()
+    Mouse().move(*r.value.center).click().sleep(0.5).perform()
     bind_battle_state(ctx)
     return Result.success()

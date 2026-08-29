@@ -19,11 +19,10 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
 from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.events import click_match
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import find
+from vision_bot.vision import ScreenSnapshot, find, snap
 
 logger = logging.getLogger(__name__)
 
@@ -106,19 +105,17 @@ def move_aside(ctx) -> Result:
 
 
 def click_cancel(ctx) -> Result:
-    shot = snap({CANCEL})
-    c = shot.center(CANCEL)
-    if c:
-        Mouse().move(*c).click().sleep(0.2).perform()
+    r = snap(CANCEL)
+    if r.ok and r.value and r.value.center:
+        Mouse().move(*r.value.center).click().sleep(0.2).perform()
         return Result.success()
     return Result.fail("无 cancel")
 
 
 def click_setting(ctx) -> Result:
-    shot = snap({SETTING})
-    c = shot.center(SETTING)
-    if c:
-        Mouse().move(*c).click().sleep(0.5).perform()
+    r = snap(SETTING)
+    if r.ok and r.value and r.value.center:
+        Mouse().move(*r.value.center).click().sleep(0.5).perform()
         return Result.success()
     return Result.fail("无 setting")
 

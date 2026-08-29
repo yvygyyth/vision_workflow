@@ -1,19 +1,35 @@
-"""识图 API（与运行时上下文无关，统一返回 Result）。"""
+"""识图业务 API：单图 / 多图共用底层原语，快慢只靠 ``timeout``。
+
+底层原语（``core.vision``）
+----------------------------
+- :func:`~vision_bot.core.vision.match.find_image`：单模板（可带 timeout）
+- :func:`~vision_bot.core.vision.match.find_images`：多模板同帧批量（可带 timeout）
+
+本模块
+------
+- :func:`find`：默认用会话 timeout（慢查）
+- :func:`snap`：``timeout=0`` 的快查别名
+"""
 
 from __future__ import annotations
 
-import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING, cast, overload
 
-from vision_bot.core.models import MatchOptions, MatchResult
-from vision_bot.core.vision.match import find_all_images, find_image_with_options
-from vision_bot.runtime.cancel import raise_if_cancelled
+from vision_bot.core.models import MatchResult
+from vision_bot.core.vision.match import find_all_images, find_image, find_images
 from vision_bot.runtime.result import Result
 from vision_bot.vision.session import session
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from PIL.Image import Image
+
+ImageArg = str | Path
+ImagesArg = ImageArg | Iterable[ImageArg]
+Region = tuple[int, int, int, int]
 
 
 def resolve_path(image: str | Path, base_dir: Path | None = None) -> Path:
@@ -27,128 +43,201 @@ def resolve_path(image: str | Path, base_dir: Path | None = None) -> Path:
     return (root / path).resolve()
 
 
-def _merge_options(
-    defaults: MatchOptions | None,
-    *,
-    threshold: float | None = None,
-    timeout: float | None = None,
-    interval: float | None = None,
-    region: tuple[int, int, int, int] | None = None,
-    region_fit: bool | None = None,
-    grayscale: bool | None = None,
-) -> MatchOptions:
-    opts = (defaults or MatchOptions()).model_copy(deep=True)
-    if threshold is not None:
-        opts.threshold = threshold
-    if timeout is not None:
-        opts.timeout = timeout
-    if interval is not None:
-        opts.interval = interval
-    if region is not None:
-        opts.region = region
-    if region_fit is not None:
-        opts.region_fit = region_fit
-    if grayscale is not None:
-        opts.grayscale = grayscale
-    return opts
+def _flatten_images(*images: ImagesArg) -> list[ImageArg]:
+    out: list[ImageArg] = []
+    for item in images:
+        if isinstance(item, (str, Path)):
+            out.append(item)
+        else:
+            out.extend(item)
+    return out
 
 
-def search(
-    *images: str | Path,
-    base_dir: Path | None = None,
-    defaults: MatchOptions | None = None,
-    cancelled: Callable[[], bool] | None = None,
-    timeout: float | None = None,
-    threshold: float | None = None,
-    interval: float | None = None,
-    region: tuple[int, int, int, int] | None = None,
-    grayscale: bool | None = None,
-) -> Result:
-    """识图核心：在超时内轮询一张或多张模板，任一命中即返回。
+def _match_to_result(hit: MatchResult) -> Result:
+    name = Path(hit.image).name
+    if hit.found:
+        return Result.success(value=hit)
+    return Result.fail(f"识图未找到 [{name}]", value=hit)
 
-    每次轮询内部固定 ``timeout=0``（只匹配一次）；外层用 ``timeout`` /
-    ``defaults.timeout`` 控制最长等待。``timeout=0`` 表示整次调用只查一轮。
-    """
-    if not images:
+
+@dataclass
+class ScreenSnapshot:
+    """多模板同帧匹配结果：``path → Result``。"""
+
+    hits: dict[str, Result] = field(default_factory=dict)
+    ts: float = field(default_factory=time.monotonic)
+    image: Image | None = None
+
+    def __getitem__(self, template: str) -> Result:
+        hit = self.hits.get(template)
+        if hit is None:
+            return Result.fail(f"未匹配过模板 [{template}]")
+        return hit
+
+    def found(self, template: str) -> bool:
+        hit = self.hits.get(template)
+        return hit is not None and hit.ok
+
+    def hit(self, template: str) -> Result | None:
+        return self.hits.get(template)
+
+    def center(self, template: str) -> tuple[int, int] | None:
+        hit = self.hit(template)
+        if hit is None or not hit.ok:
+            return None
+        mr = cast(MatchResult | None, hit.value)
+        return None if mr is None else mr.center
+
+
+def _run_lookup(
+    *images: ImagesArg,
+    timeout: float | None,
+    threshold: float | None,
+    interval: float | None,
+    region: Region | None,
+    grayscale: bool | None,
+    screenshot: Image | None,
+    cancelled: Callable[[], bool] | None,
+) -> Result | ScreenSnapshot:
+    flat = _flatten_images(*images)
+    if not flat:
         return Result.fail("未指定模板图")
 
-    base = defaults or MatchOptions()
-    # 单次匹配不在底层空等；等待由外层 while + wait 负责
-    opts = _merge_options(
-        defaults,
-        threshold=threshold,
-        timeout=0.0,
-        interval=interval,
-        region=region,
-        grayscale=grayscale,
-    )
-    wait = base.timeout if timeout is None else timeout
-    poll = opts.interval
-    labels = "/".join(Path(p).name for p in images)
-    deadline = time.monotonic() + max(wait, 0.0)
-    last: MatchResult | None = None
+    cfg = session()
+    opts = cfg.options
+    wait = opts.timeout if timeout is None else timeout
+    th = opts.threshold if threshold is None else threshold
+    poll = opts.interval if interval is None else interval
+    gray = opts.grayscale if grayscale is None else grayscale
+    stop = cfg.cancelled if cancelled is None else cancelled
+    keys = [str(p) for p in flat]
+    abs_paths = [resolve_path(p) for p in flat]
 
-    while True:
-        raise_if_cancelled(cancelled)
-        for image in images:
-            path = resolve_path(image, base_dir)
-            hit = find_image_with_options(path, opts, cancelled=cancelled)
-            last = hit
-            if hit.found:
-                if len(images) > 1:
-                    logger.info("命中 [%s]", path.name)
-                return Result.success(value=hit)
-        if wait <= 0 or time.monotonic() >= deadline:
-            logger.info("未找到 [%s]", labels)
-            return Result.fail(f"识图未找到 [{labels}]", value=last)
-        raise_if_cancelled(cancelled)
-        time.sleep(poll)
+    if len(abs_paths) == 1:
+        hit = find_image(
+            abs_paths[0],
+            threshold=th,
+            timeout=wait,
+            interval=poll,
+            region=region,
+            region_fit=opts.region_fit,
+            grayscale=gray,
+            screenshot=screenshot,
+            cancelled=stop,
+        )
+        return _match_to_result(hit)
+
+    raw_hits, frame = find_images(
+        abs_paths,
+        keys=keys,
+        threshold=th,
+        timeout=wait,
+        interval=poll,
+        region=region,
+        region_fit=opts.region_fit,
+        grayscale=gray,
+        screenshot=screenshot,
+        cancelled=stop,
+    )
+    return ScreenSnapshot(
+        hits={k: _match_to_result(v) for k, v in raw_hits.items()},
+        image=frame,
+    )
+
+
+@overload
+def find(
+    image: str | Path,
+    /,
+    *,
+    timeout: float | None = None,
+    threshold: float | None = None,
+    interval: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+) -> Result: ...
+
+
+@overload
+def find(
+    *images: ImagesArg,
+    timeout: float | None = None,
+    threshold: float | None = None,
+    interval: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+) -> Result | ScreenSnapshot: ...
 
 
 def find(
-    *images: str | Path,
+    *images: ImagesArg,
     timeout: float | None = None,
     threshold: float | None = None,
     interval: float | None = None,
-    region: tuple[int, int, int, int] | None = None,
+    region: Region | None = None,
     grayscale: bool | None = None,
-) -> Result:
-    """在屏幕上查找模板图（默认等会话 ``timeout``，通常 3 秒、每 0.5 秒查一次）。
+    screenshot: Image | None = None,
+    cancelled: Callable[[], bool] | None = None,
+) -> Result | ScreenSnapshot:
+    """识图（默认慢查：使用会话 ``timeout`` / ``interval``）。
 
-    可传一张或多张模板；多图时每一轮按顺序尝试，任一命中即返回。
-    只需查一次时用 :func:`find_once`。
+    - 单图 → :class:`~vision_bot.runtime.result.Result`
+    - 多图 → :class:`ScreenSnapshot`（同帧整表；慢查时轮询至任一命中或超时）
     """
-    cfg = session()
-    return search(
+    return _run_lookup(
         *images,
-        base_dir=cfg.base_dir,
-        defaults=cfg.options,
-        cancelled=cfg.cancelled,
         timeout=timeout,
         threshold=threshold,
         interval=interval,
         region=region,
         grayscale=grayscale,
+        screenshot=screenshot,
+        cancelled=cancelled,
     )
 
 
-def find_once(
-    *images: str | Path,
+@overload
+def snap(
+    image: str | Path,
+    /,
+    *,
     threshold: float | None = None,
-    region: tuple[int, int, int, int] | None = None,
+    region: Region | None = None,
     grayscale: bool | None = None,
-) -> Result:
-    """快速匹配：只查一轮，覆盖默认等待（``timeout=0``）。
+    screenshot: Image | None = None,
+) -> Result: ...
 
-    适用于「确认某图已消失才能下一步」等场景：``not result.ok`` 表示未找到。
-    可传多张模板，任一命中即 ``ok=True``。
-    """
-    return find(
+
+@overload
+def snap(
+    *images: ImagesArg,
+    threshold: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+) -> Result | ScreenSnapshot: ...
+
+
+def snap(
+    *images: ImagesArg,
+    threshold: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+    cancelled: Callable[[], bool] | None = None,
+) -> Result | ScreenSnapshot:
+    """快查：等价于 ``find(..., timeout=0)``。"""
+    return _run_lookup(
         *images,
         timeout=0.0,
         threshold=threshold,
+        interval=None,
         region=region,
         grayscale=grayscale,
+        screenshot=screenshot,
+        cancelled=cancelled,
     )
 
 
@@ -158,7 +247,7 @@ def find_all(
     threshold: float | None = None,
     max_count: int = 32,
 ) -> Result:
-    """查找屏幕上所有高于阈值的匹配（多目标）。"""
+    """查找屏幕上所有高于阈值的匹配（多目标，同一模板）。"""
     cfg = session()
     path = resolve_path(image)
     th = cfg.options.threshold if threshold is None else threshold

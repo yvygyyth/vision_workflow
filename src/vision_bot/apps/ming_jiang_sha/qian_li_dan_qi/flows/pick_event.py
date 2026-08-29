@@ -12,7 +12,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
     SHI_CHANG_SHI,
 )
 from vision_bot.core.input import Mouse
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.vision import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -57,8 +57,8 @@ def verify(ctx) -> Result:
         return Result.fail("无 pending 事件")
     path = next(p for p, o in _PRIORITY if o == outcome)
     time.sleep(0.6)
-    shot = snap({path}, region=CHOICE_REGION)
-    if shot.found(path):
+    shot = snap(path, region=CHOICE_REGION)
+    if shot.ok:
         ctx.goto("qldq.battle_hub.pick_event.choose")
         return Result.success()
     ctx.vars.pop("pending_event", None)

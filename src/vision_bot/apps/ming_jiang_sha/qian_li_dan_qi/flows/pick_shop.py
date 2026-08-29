@@ -15,7 +15,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.bag import refresh_copper_coins
 from vision_bot.core.input import Mouse
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.vision import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -62,8 +62,8 @@ def choose(ctx) -> Result:
             logger.info("pick_shop 选中 %s", outcome)
             if outcome == "ba_qing_store":
                 time.sleep(0.6)
-                shot2 = snap({BA_QING_STORE}, region=CHOICE_REGION)
-                if shot2.found(BA_QING_STORE):
+                shot2 = snap(BA_QING_STORE, region=CHOICE_REGION)
+                if shot2.ok:
                     ctx.goto("qldq.battle_hub.pick_shop.verify_ba_qing")
                     return Result.success()
                 ctx.goto("qldq.ba_qing_store.click_token_slot")
@@ -75,8 +75,7 @@ def choose(ctx) -> Result:
 
 def verify_ba_qing(ctx) -> Result:
     time.sleep(0.4)
-    shot = snap({BA_QING_STORE}, region=CHOICE_REGION)
-    if shot.found(BA_QING_STORE):
+    if snap(BA_QING_STORE, region=CHOICE_REGION).ok:
         return Result.fail("巴清图标仍在")
     ctx.goto("qldq.ba_qing_store.click_token_slot")
     return Result.success()

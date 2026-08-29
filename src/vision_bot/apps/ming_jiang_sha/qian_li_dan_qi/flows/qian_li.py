@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
-from vision_bot.perception.snapshot import capture_screen, match
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
+from vision_bot.vision import snap
 
 _CHOICE_REGION = (800, 350, 1630, 780)
 _CHOICE_TEMPLATES = (
@@ -19,11 +19,12 @@ _CHOICE_TEMPLATES = (
 
 
 def _hit(ctx: RunContext, template: str, *, region=None) -> bool:
-    return match(template, screenshot=capture_screen(), region=region).found
+    return snap(template, region=region).ok
 
 
 def _has_choice(ctx: RunContext) -> bool:
-    return any(_hit(ctx, p, region=_CHOICE_REGION) for p in _CHOICE_TEMPLATES)
+    shot = snap(_CHOICE_TEMPLATES, region=_CHOICE_REGION)
+    return any(shot.found(p) for p in _CHOICE_TEMPLATES)
 
 
 relocate: list[RelocateRule] = [

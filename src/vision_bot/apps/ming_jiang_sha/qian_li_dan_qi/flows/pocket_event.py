@@ -7,10 +7,9 @@ import random
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import Mouse
 from vision_bot.perception.session import perception
-from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import find_all
+from vision_bot.vision import find_all, snap
 
 _PATTERN = f"{QLDQ}/pocket_event/event_patterm.png"
 _OK = f"{QLDQ}/pocket_event/ok.png"
@@ -43,9 +42,8 @@ def check(ctx) -> Result:
 
 
 def click_ok(ctx) -> Result:
-    shot = snap({_OK})
-    c = shot.center(_OK)
-    if c:
-        Mouse().move(*c).click().sleep(0.3).perform()
+    r = snap(_OK)
+    if r.ok and r.value and r.value.center:
+        Mouse().move(*r.value.center).click().sleep(0.3).perform()
     ctx.goto("qldq.pocket_event.check")
     return Result.success()

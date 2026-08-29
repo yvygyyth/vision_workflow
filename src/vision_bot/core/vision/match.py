@@ -77,24 +77,77 @@ def find_image(
         time.sleep(options.interval)
 
 
-def find_image_with_options(
-    template: str | Path,
-    options: MatchOptions,
+def find_images(
+    templates: list[str | Path] | tuple[str | Path, ...],
     *,
+    keys: list[str] | None = None,
+    threshold: float = 0.8,
+    timeout: float = 0.0,
+    interval: float = 0.5,
+    region: tuple[int, int, int, int] | None = None,
+    region_fit: bool = True,
+    grayscale: bool = True,
     screenshot: "Image.Image | None" = None,
     cancelled: Callable[[], bool] | None = None,
-) -> MatchResult:
-    return find_image(
-        template,
-        threshold=options.threshold,
-        timeout=options.timeout,
-        interval=options.interval,
-        region=options.region,
-        region_fit=options.region_fit,
-        grayscale=options.grayscale,
-        screenshot=screenshot,
-        cancelled=cancelled,
+) -> tuple[dict[str, MatchResult], "Image.Image | None"]:
+    """多模板同帧批量匹配（原语）。
+
+    每一轮只截（或复用）一帧，再对全部模板匹配。``timeout=0`` 只查一轮；
+    ``timeout>0`` 时按 ``interval`` 轮询，**任一命中**或到期后返回该轮整表结果。
+
+    Returns
+    -------
+    hits, frame
+        ``hits`` 的 key 为 ``keys``（缺省为 ``str(template)``）；``frame`` 为最后一轮截图。
+    """
+    if not templates:
+        return {}, screenshot
+
+    label_keys = keys if keys is not None else [str(t) for t in templates]
+    if len(label_keys) != len(templates):
+        raise ValueError("keys 长度必须与 templates 一致")
+
+    paths = [Path(t).expanduser() for t in templates]
+    options = MatchOptions(
+        threshold=threshold,
+        timeout=timeout,
+        interval=interval,
+        region=region,
+        region_fit=region_fit,
+        grayscale=grayscale,
     )
+    deadline = time.monotonic() + max(options.timeout, 0.0)
+    last_hits: dict[str, MatchResult] = {}
+    last_frame: Image.Image | None = screenshot
+
+    while True:
+        raise_if_cancelled(cancelled)
+        if screenshot is not None:
+            frame = screenshot
+        else:
+            from PIL import ImageGrab
+
+            frame = ImageGrab.grab().convert("RGB")
+        last_frame = frame
+
+        hits: dict[str, MatchResult] = {}
+        any_found = False
+        for key, path in zip(label_keys, paths, strict=True):
+            if not path.exists():
+                hit = MatchResult(
+                    found=False, image=str(path), message=f"模板不存在: {path}"
+                )
+            else:
+                hit = _match_once(path, options, screenshot=frame)
+            hits[key] = hit
+            if hit.found:
+                any_found = True
+        last_hits = hits
+
+        if any_found or options.timeout <= 0 or time.monotonic() >= deadline:
+            return last_hits, last_frame
+        raise_if_cancelled(cancelled)
+        time.sleep(options.interval)
 
 
 def _resolve_region(
@@ -379,7 +432,7 @@ from vision_bot.core.vision.ocr import image_to_text
 
 __all__ = [
     "find_image",
-    "find_image_with_options",
+    "find_images",
     "find_all_images",
     "grab_region",
     "image_to_text",

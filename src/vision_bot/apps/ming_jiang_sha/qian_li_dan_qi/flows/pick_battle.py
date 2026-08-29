@@ -13,7 +13,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
     YI_WAI,
 )
 from vision_bot.core.input import Mouse
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.vision import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -66,8 +66,8 @@ def choose_yi_wai(ctx) -> Result:
     if not _click(shot, YI_WAI, label="yi_wai", times=2):
         return Result.fail("点击意外失败")
     time.sleep(0.6)
-    shot2 = snap({YI_WAI}, region=CHOICE_REGION)
-    if shot2.found(YI_WAI):
+    shot2 = snap(YI_WAI, region=CHOICE_REGION)
+    if shot2.ok:
         ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
         return Result.success()
     ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")

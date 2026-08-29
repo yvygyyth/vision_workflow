@@ -7,7 +7,8 @@ from pathlib import Path
 
 from vision_bot.actions.context import ActionContext
 from vision_bot.core.models import MatchResult
-from vision_bot.vision.find import search
+from vision_bot.runtime.result import Result
+from vision_bot.vision.find import ScreenSnapshot, find
 
 logger = logging.getLogger(__name__)
 
@@ -26,20 +27,32 @@ def wait_image(
     if not images:
         raise ValueError("至少需要一张模板图")
     labels = "/".join(Path(p).name for p in images)
-    result = search(
+
+    result = find(
         *images,
-        base_dir=ctx.base_dir,
-        defaults=ctx.defaults,
-        cancelled=ctx.cancelled,
         threshold=threshold,
         timeout=timeout,
         interval=interval,
         region=region,
         grayscale=grayscale,
+        cancelled=ctx.cancelled,
     )
-    ctx.value = result.value
-    if result.ok:
-        return result.value
-    ctx.reason = result.message or f"识图未找到 [{labels}]"
-    logger.info("未找到 [%s]", labels)
-    return None
+
+    hit: MatchResult | None = None
+    if isinstance(result, Result):
+        if result.ok and isinstance(result.value, MatchResult):
+            hit = result.value
+        else:
+            ctx.reason = result.message or f"识图未找到 [{labels}]"
+    elif isinstance(result, ScreenSnapshot):
+        for r in result.hits.values():
+            if r.ok and isinstance(r.value, MatchResult):
+                hit = r.value
+                break
+        if hit is None:
+            ctx.reason = f"识图未找到 [{labels}]"
+
+    ctx.value = hit
+    if hit is None:
+        logger.info("未找到 [%s]", labels)
+    return hit

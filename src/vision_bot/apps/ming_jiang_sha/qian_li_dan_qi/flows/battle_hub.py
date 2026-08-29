@@ -6,7 +6,7 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.perception.snapshot import ScreenSnapshot, capture_screen, match, snap
+from vision_bot.vision import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -30,55 +30,40 @@ FEI_FEI = f"{QLDQ}/battle_select/fei_fei.png"
 SHI_CHANG_SHI = f"{QLDQ}/battle_select/shi_chang_shi.png"
 MO_ZI = f"{QLDQ}/battle_select/mo_zi.png"
 
-_CHOICE_DETECT = (
-    CHALLENGE,
-    CHALLENGE_HELP,
-    YI_WAI,
-    BA_QING_STORE,
-    POCKET_EVENT,
-    REST,
-    LV_BU_WEI_STORE,
-    FEI_FEI,
-    SHI_CHANG_SHI,
-    MO_ZI,
-)
+BATTLE_DETECT: set[str] = {CHALLENGE, CHALLENGE_HELP, YI_WAI}
+SHOP_DETECT: set[str] = {BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE}
+EVENT_DETECT: set[str] = {FEI_FEI, SHI_CHANG_SHI, MO_ZI}
 
 
-def _hub_shot(ctx: RunContext) -> ScreenSnapshot:
-    frame = capture_screen()
-    hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
-    for path in _CHOICE_DETECT:
-        hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
-    return ScreenSnapshot(hits=hits, image=frame)
+def _has_up_panel(ctx: RunContext) -> bool:
+    return snap(UP_PANEL).ok
+
+
+def _has_battle(ctx: RunContext) -> bool:
+    shot = snap(BATTLE_DETECT, region=CHOICE_REGION)
+    return any(shot.found(p) for p in BATTLE_DETECT)
+
+
+def _has_shop(ctx: RunContext) -> bool:
+    shot = snap(SHOP_DETECT, region=CHOICE_REGION)
+    return any(shot.found(p) for p in SHOP_DETECT)
+
+
+def _has_event(ctx: RunContext) -> bool:
+    shot = snap(EVENT_DETECT, region=CHOICE_REGION)
+    return any(shot.found(p) for p in EVENT_DETECT)
 
 
 relocate: list[RelocateRule] = [
-    RelocateRule(when=lambda ctx: _hub_shot(ctx).found(UP_PANEL), then=HUB_DISMISS),
-    RelocateRule(
-        when=lambda ctx: _hub_shot(ctx).found(CHALLENGE)
-        or _hub_shot(ctx).found(CHALLENGE_HELP)
-        or _hub_shot(ctx).found(YI_WAI),
-        then=HUB_PICK_BATTLE,
-    ),
-    RelocateRule(
-        when=lambda ctx: any(
-            _hub_shot(ctx).found(p)
-            for p in (BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE)
-        ),
-        then=HUB_PICK_SHOP,
-    ),
-    RelocateRule(
-        when=lambda ctx: any(
-            _hub_shot(ctx).found(p) for p in (FEI_FEI, SHI_CHANG_SHI, MO_ZI)
-        ),
-        then=HUB_PICK_EVENT,
-    ),
+    RelocateRule(when=_has_up_panel, then=HUB_DISMISS),
+    RelocateRule(when=_has_battle, then=HUB_PICK_BATTLE),
+    RelocateRule(when=_has_shop, then=HUB_PICK_SHOP),
+    RelocateRule(when=_has_event, then=HUB_PICK_EVENT),
 ]
 
 
 def dismiss_up(ctx) -> Result:
-    shot = snap({UP_PANEL})
-    if shot.found(UP_PANEL):
+    if snap(UP_PANEL).ok:
         do(move().to(1300, 1150).raw(), click())()
         time.sleep(0.4)
     return Result.fail("dispatch")

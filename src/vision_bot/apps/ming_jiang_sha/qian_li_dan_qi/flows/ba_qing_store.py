@@ -11,10 +11,9 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_PRIORITY
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
-from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import find
+from vision_bot.vision import find, snap
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ _EXIT_CONFIRM_MAX = 3
 
 relocate: list[RelocateRule] = [
     RelocateRule(
-        when=lambda ctx: snap({GO_BACK}).found(GO_BACK),
+        when=lambda ctx: snap(GO_BACK).ok,
         then="qldq.ba_qing_store.click_token_slot",
     ),
 ]
@@ -143,8 +142,7 @@ def confirm(ctx) -> Result:
 
 def ensure_left(ctx) -> Result:
     time.sleep(0.6)
-    shot = snap({GO_BACK})
-    if shot.found(GO_BACK):
+    if snap(GO_BACK).ok:
         tries = int(ctx.vars.get(_EXIT_CONFIRM_TRIES, 0)) + 1
         ctx.vars[_EXIT_CONFIRM_TRIES] = tries
         if tries > _EXIT_CONFIRM_MAX:
