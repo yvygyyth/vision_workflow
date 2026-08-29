@@ -8,7 +8,7 @@ import pytest
 
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import HUB_PICK_BATTLE, detect as detect_hub
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import detect as detect_qian_li
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import route as route_qian_li
 from vision_bot.core.models import MatchResult
 from vision_bot.perception.snapshot import ScreenSnapshot
 from vision_bot.runtime import flow, mod, run
@@ -25,12 +25,7 @@ def test_qldq_registry() -> None:
 
 
 def test_detect_qian_li_hub() -> None:
-    snap = ScreenSnapshot(
-        hits={
-            "choice.challenge": MatchResult(found=True, image="x.png", center=(1, 2)),
-        }
-    )
-    assert detect_qian_li(snap) == "qldq.battle_hub"
+    assert route_qian_li(lambda k: k == "choice.challenge") == "qldq.battle_hub"
 
 
 def test_detect_hub_pick_battle() -> None:

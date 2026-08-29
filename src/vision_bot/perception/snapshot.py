@@ -46,6 +46,23 @@ def capture_screen() -> Image.Image:
     return ImageGrab.grab().convert("RGB")
 
 
+def match_signal(
+    registry: SignalRegistry,
+    base_dir: Path,
+    signal_id: str,
+    *,
+    screenshot: Image.Image,
+) -> MatchResult:
+    """在已有截图上匹配单个 signal（不重新截屏）。"""
+    sig = registry.get(signal_id)
+    template = registry.resolve_path(signal_id, base_dir)
+    return find_image_with_options(
+        template,
+        sig.match_options(),
+        screenshot=screenshot,
+    )
+
+
 def capture(
     registry: SignalRegistry,
     base_dir: Path,
@@ -59,13 +76,7 @@ def capture(
     hits: dict[str, MatchResult] = {}
 
     for sid in ids:
-        sig = registry.get(sid)
-        template = registry.resolve_path(sid, base_dir)
-        result = find_image_with_options(
-            template,
-            sig.match_options(),
-            screenshot=img,
-        )
+        result = match_signal(registry, base_dir, sid, screenshot=img)
         hits[sid] = result
         if result.found:
             logger.debug("snapshot hit %s conf=%.3f", sid, result.confidence)
@@ -83,13 +94,9 @@ def refresh(
 ) -> ScreenSnapshot:
     """点击后局部重扫：默认重新截屏，只更新指定 signals。"""
     img = capture_screen() if new_screenshot else snap.image
+    if img is None:
+        img = capture_screen()
     updated = dict(snap.hits)
     for sid in signal_ids:
-        sig = registry.get(sid)
-        template = registry.resolve_path(sid, base_dir)
-        updated[sid] = find_image_with_options(
-            template,
-            sig.match_options(),
-            screenshot=img,
-        )
+        updated[sid] = match_signal(registry, base_dir, sid, screenshot=img)
     return ScreenSnapshot(hits=updated, image=img)
