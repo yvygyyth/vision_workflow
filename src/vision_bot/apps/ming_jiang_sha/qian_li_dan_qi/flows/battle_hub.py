@@ -6,8 +6,7 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.perception.snapshot import ScreenSnapshot, capture_screen, match, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -17,58 +16,60 @@ HUB_PICK_SHOP = "qldq.battle_hub.pick_shop"
 HUB_PICK_EVENT = "qldq.battle_hub.pick_event"
 
 CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
-SIGNALS: dict[str, Signal] = {
-    "choice.up_panel": Signal(template=f"{QLDQ}/battle_select/up.png"),
-    "choice.challenge": Signal(template=f"{QLDQ}/battle_select/challenge.png", region=CHOICE_REGION),
-    "choice.challenge_help": Signal(template=f"{QLDQ}/battle_select/challenge_help.png", region=CHOICE_REGION),
-    "choice.yi_wai": Signal(template=f"{QLDQ}/battle_select/yi_wai.png", region=CHOICE_REGION),
-    "choice.ba_qing_store": Signal(template=f"{QLDQ}/battle_select/ba_qing_store.png", region=CHOICE_REGION),
-    "choice.pocket_event": Signal(template=f"{QLDQ}/battle_select/pocket_event.png", region=CHOICE_REGION),
-    "choice.rest": Signal(template=f"{QLDQ}/battle_select/rest.png", region=CHOICE_REGION),
-    "choice.lv_bu_wei_store": Signal(template=f"{QLDQ}/battle_select/lv_bu_wei_store.png", region=CHOICE_REGION),
-    "choice.fei_fei": Signal(template=f"{QLDQ}/battle_select/fei_fei.png", region=CHOICE_REGION),
-    "choice.shi_chang_shi": Signal(template=f"{QLDQ}/battle_select/shi_chang_shi.png", region=CHOICE_REGION),
-    "choice.mo_zi": Signal(template=f"{QLDQ}/battle_select/mo_zi.png", region=CHOICE_REGION),
-}
 
-DETECT: set[str] = {
-    "choice.up_panel",
-    "choice.challenge",
-    "choice.challenge_help",
-    "choice.ba_qing_store",
-    "choice.pocket_event",
-    "choice.rest",
-    "choice.lv_bu_wei_store",
-    "choice.fei_fei",
-    "choice.shi_chang_shi",
-    "choice.mo_zi",
-}
+UP_PANEL = f"{QLDQ}/battle_select/up.png"
+CHALLENGE = f"{QLDQ}/battle_select/challenge.png"
+CHALLENGE_HELP = f"{QLDQ}/battle_select/challenge_help.png"
+YI_WAI = f"{QLDQ}/battle_select/yi_wai.png"
+BA_QING_STORE = f"{QLDQ}/battle_select/ba_qing_store.png"
+POCKET_EVENT = f"{QLDQ}/battle_select/pocket_event.png"
+REST = f"{QLDQ}/battle_select/rest.png"
+LV_BU_WEI_STORE = f"{QLDQ}/battle_select/lv_bu_wei_store.png"
+FEI_FEI = f"{QLDQ}/battle_select/fei_fei.png"
+SHI_CHANG_SHI = f"{QLDQ}/battle_select/shi_chang_shi.png"
+MO_ZI = f"{QLDQ}/battle_select/mo_zi.png"
+
+_CHOICE_DETECT = (
+    CHALLENGE,
+    CHALLENGE_HELP,
+    YI_WAI,
+    BA_QING_STORE,
+    POCKET_EVENT,
+    REST,
+    LV_BU_WEI_STORE,
+    FEI_FEI,
+    SHI_CHANG_SHI,
+    MO_ZI,
+)
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found("choice.up_panel"):
+    if shot.found(UP_PANEL):
         return HUB_DISMISS
-    if shot.found("choice.challenge") or shot.found("choice.challenge_help"):
+    if shot.found(CHALLENGE) or shot.found(CHALLENGE_HELP):
         return HUB_PICK_BATTLE
-    if shot.found("choice.yi_wai"):
+    if shot.found(YI_WAI):
         return HUB_PICK_BATTLE
-    for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store"):
-        if shot.found(k):
+    for path in (BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE):
+        if shot.found(path):
             return HUB_PICK_SHOP
-    for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi"):
-        if shot.found(k):
+    for path in (FEI_FEI, SHI_CHANG_SHI, MO_ZI):
+        if shot.found(path):
             return HUB_PICK_EVENT
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    shot = snap(DETECT)
-    return detect(shot, ctx)
+    frame = capture_screen()
+    hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
+    for path in _CHOICE_DETECT:
+        hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
+    return detect(ScreenSnapshot(hits=hits, image=frame), ctx)
 
 
 def dismiss_up(ctx) -> Result:
-    shot = snap({"choice.up_panel"})
-    if shot.found("choice.up_panel"):
+    shot = snap({UP_PANEL})
+    if shot.found(UP_PANEL):
         do(move().to(1300, 1150).raw(), click())()
         time.sleep(0.4)
     return Result.fail("dispatch")

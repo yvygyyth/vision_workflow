@@ -4,27 +4,24 @@ from vision_bot.perception.session import (
     perception,
     unbind_perception,
 )
-from vision_bot.perception.signal import Signal, SignalRegistry
 from vision_bot.perception.snapshot import (
     ScreenSnapshot,
-    capture,
     capture_screen,
     match,
     refresh,
+    resolve_template,
     snap,
 )
 
 __all__ = [
     "PerceptionCatalog",
-    "Signal",
-    "SignalRegistry",
     "ScreenSnapshot",
     "bind_perception",
-    "capture",
     "capture_screen",
     "match",
     "perception",
     "refresh",
+    "resolve_template",
     "snap",
     "unbind_perception",
 ]

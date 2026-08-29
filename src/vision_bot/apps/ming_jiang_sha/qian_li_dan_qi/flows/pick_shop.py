@@ -5,6 +5,13 @@ from __future__ import annotations
 import logging
 import time
 
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
+    BA_QING_STORE,
+    CHOICE_REGION,
+    LV_BU_WEI_STORE,
+    POCKET_EVENT,
+    REST,
+)
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.bag import refresh_copper_coins
 from vision_bot.core.input import Mouse
@@ -14,30 +21,22 @@ from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
-DETECT: set[str] = {
-    "choice.ba_qing_store",
-    "choice.pocket_event",
-    "choice.rest",
-    "choice.lv_bu_wei_store",
-}
+DETECT: set[str] = {BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE}
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if any(
-        shot.found(k)
-        for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store")
-    ):
+    if any(shot.found(p) for p in DETECT):
         return "qldq.battle_hub.pick_shop.choose"
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    shot = snap(DETECT)
+    shot = snap(DETECT, region=CHOICE_REGION)
     return detect(shot, ctx)
 
 
 def choose(ctx) -> Result:
-    shot = snap(DETECT)
+    shot = snap(DETECT, region=CHOICE_REGION)
     state = get_battle_state(ctx)
     coins = refresh_copper_coins(state)
     if coins is None:
@@ -48,23 +47,23 @@ def choose(ctx) -> Result:
 
     candidates: list[tuple[str, str]] = []
     if coins >= 30:
-        candidates.append(("choice.ba_qing_store", "ba_qing_store"))
+        candidates.append((BA_QING_STORE, "ba_qing_store"))
     candidates.extend(
         [
-            ("choice.pocket_event", "pocket_event"),
-            ("choice.rest", "rest"),
+            (POCKET_EVENT, "pocket_event"),
+            (REST, "rest"),
         ]
     )
 
-    for key, outcome in candidates:
-        c = shot.center(key)
+    for path, outcome in candidates:
+        c = shot.center(path)
         if c:
             Mouse().move(*c).click(clicks=2).sleep(0.2).perform()
             logger.info("pick_shop 选中 %s", outcome)
             if outcome == "ba_qing_store":
                 time.sleep(0.6)
-                shot2 = snap({"choice.ba_qing_store"})
-                if shot2.found("choice.ba_qing_store"):
+                shot2 = snap({BA_QING_STORE}, region=CHOICE_REGION)
+                if shot2.found(BA_QING_STORE):
                     ctx.goto("qldq.battle_hub.pick_shop.verify_ba_qing")
                     return Result.success()
                 ctx.goto("qldq.ba_qing_store.click_token_slot")
@@ -76,8 +75,8 @@ def choose(ctx) -> Result:
 
 def verify_ba_qing(ctx) -> Result:
     time.sleep(0.4)
-    shot = snap({"choice.ba_qing_store"})
-    if shot.found("choice.ba_qing_store"):
+    shot = snap({BA_QING_STORE}, region=CHOICE_REGION)
+    if shot.found(BA_QING_STORE):
         return Result.fail("巴清图标仍在")
     ctx.goto("qldq.ba_qing_store.click_token_slot")
     return Result.success()

@@ -7,22 +7,17 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import input_text as type_text
-from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
-SIGNALS: dict[str, Signal] = {
-    "enter.select_wu_jiang": Signal(
-        template=f"{QLDQ}/enter_battle/select_wu_jiang.png"
-    ),
-}
+SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
 
-DETECT: set[str] = set(SIGNALS)
+DETECT: set[str] = {SELECT_WU_JIANG}
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found("enter.select_wu_jiang"):
+    if shot.found(SELECT_WU_JIANG):
         return "qldq.battle_select.enter_pick.select_wu_jiang"
     return None
 
@@ -34,7 +29,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 def select_wu_jiang(ctx) -> Result:
     do(
-        move().image(f"{QLDQ}/enter_battle/select_wu_jiang.png"),
+        move().image(SELECT_WU_JIANG),
         click(),
     )()
     ctx.goto("qldq.battle_select.enter_pick.focus_search")

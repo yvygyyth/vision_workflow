@@ -19,7 +19,6 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
 from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.events import click_match
-from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
@@ -27,37 +26,30 @@ from vision_bot.vision import find
 
 logger = logging.getLogger(__name__)
 
-_AUTO = f"{QLDQ}/fight/auto.png"
-_CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
-_NEXT_STEP = f"{QLDQ}/fight/next_step.png"
-_CONFIRM = f"{COMMON_DIR}/confirm.png"
-
-SIGNALS: dict[str, Signal] = {
-    "fight.cancel": Signal(template=f"{QLDQ}/fight/cancel.png"),
-    "fight.setting": Signal(template=f"{QLDQ}/fight/setting.png"),
-    "fight.challenge_end": Signal(template=f"{QLDQ}/fight/challenge_end.png"),
-    "fight.next_step": Signal(template=f"{QLDQ}/fight/next_step.png"),
-    "fight.auto": Signal(template=f"{QLDQ}/fight/auto.png"),
-    "fight.token": Signal(template=f"{QLDQ}/fight/token.png"),
-    "fight.joint": Signal(template=f"{QLDQ}/fight/joint.png"),
-    "fight.card": Signal(template=f"{QLDQ}/fight/card.png"),
-    "fight.help": Signal(template=f"{QLDQ}/fight/help.png"),
-    "fight.buff": Signal(template=f"{QLDQ}/fight/buff.png"),
-    "common.confirm": Signal(template=_CONFIRM),
-}
+CANCEL = f"{QLDQ}/fight/cancel.png"
+SETTING = f"{QLDQ}/fight/setting.png"
+CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
+NEXT_STEP = f"{QLDQ}/fight/next_step.png"
+AUTO = f"{QLDQ}/fight/auto.png"
+TOKEN = f"{QLDQ}/fight/token.png"
+JOINT = f"{QLDQ}/fight/joint.png"
+CARD = f"{QLDQ}/fight/card.png"
+HELP = f"{QLDQ}/fight/help.png"
+BUFF = f"{QLDQ}/fight/buff.png"
+CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 DETECT: set[str] = {
-    "fight.cancel",
-    "fight.setting",
-    "fight.challenge_end",
-    "fight.next_step",
-    "fight.auto",
-    "common.confirm",
-    "fight.token",
-    "fight.joint",
-    "fight.card",
-    "fight.help",
-    "fight.buff",
+    CANCEL,
+    SETTING,
+    CHALLENGE_END,
+    NEXT_STEP,
+    AUTO,
+    CONFIRM,
+    TOKEN,
+    JOINT,
+    CARD,
+    HELP,
+    BUFF,
 }
 
 PENDING_GENERAL_KEY = "pending_reward_general"
@@ -69,26 +61,26 @@ REWARD_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
     (1910, 1050, 290, 50),
 )
 
-REWARD_KIND_SIGNALS: dict[RewardKind, str] = {
-    RewardKind.TOKEN: "fight.token",
-    RewardKind.JOINT: "fight.joint",
-    RewardKind.CARD: "fight.card",
-    RewardKind.HELP: "fight.help",
-    RewardKind.BUFF: "fight.buff",
+REWARD_KIND_IMGS: dict[RewardKind, str] = {
+    RewardKind.TOKEN: TOKEN,
+    RewardKind.JOINT: JOINT,
+    RewardKind.CARD: CARD,
+    RewardKind.HELP: HELP,
+    RewardKind.BUFF: BUFF,
 }
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found("fight.cancel"):
+    if shot.found(CANCEL):
         return "qldq.fight.click_cancel"
-    if shot.found("fight.setting"):
+    if shot.found(SETTING):
         return "qldq.fight.click_setting"
-    if shot.found("fight.challenge_end"):
+    if shot.found(CHALLENGE_END):
         return "qldq.fight.wait_end"
-    if shot.found("fight.next_step"):
+    if shot.found(NEXT_STEP):
         return "qldq.fight.next_step"
     if ctx is not None and any(
-        shot.found(signal) for signal in REWARD_KIND_SIGNALS.values()
+        shot.found(path) for path in REWARD_KIND_IMGS.values()
     ):
         return "qldq.fight.choose_reward_kind"
     return "qldq.fight.click_cancel"
@@ -105,8 +97,8 @@ def move_aside(ctx) -> Result:
 
 
 def click_cancel(ctx) -> Result:
-    shot = snap({"fight.cancel"})
-    c = shot.center("fight.cancel")
+    shot = snap({CANCEL})
+    c = shot.center(CANCEL)
     if c:
         Mouse().move(*c).click().sleep(0.2).perform()
         return Result.success()
@@ -114,8 +106,8 @@ def click_cancel(ctx) -> Result:
 
 
 def click_setting(ctx) -> Result:
-    shot = snap({"fight.setting"})
-    c = shot.center("fight.setting")
+    shot = snap({SETTING})
+    c = shot.center(SETTING)
     if c:
         Mouse().move(*c).click().sleep(0.5).perform()
         return Result.success()
@@ -123,14 +115,14 @@ def click_setting(ctx) -> Result:
 
 
 def click_auto(ctx) -> Result:
-    result = find(_AUTO, timeout=1.0)
+    result = find(AUTO, timeout=1.0)
     if not result.ok:
         return Result.fail("无 auto")
     return click_match(result.value, pause=0.2)
 
 
 def wait_end(ctx) -> Result:
-    result = find(_CHALLENGE_END, timeout=1200, interval=5)
+    result = find(CHALLENGE_END, timeout=1200, interval=5)
     if not result.ok:
         return Result.fail("挑战未结束")
     return click_match(result.value, pause=0.2)
@@ -138,7 +130,7 @@ def wait_end(ctx) -> Result:
 
 def next_step(ctx) -> Result:
     for _ in range(5):
-        result = find(_NEXT_STEP, timeout=1.2)
+        result = find(NEXT_STEP, timeout=1.2)
         if not result.ok or not result.value.center:
             break
         click_match(result.value, pause=0.4)
@@ -147,7 +139,7 @@ def next_step(ctx) -> Result:
 
 
 def check_run_end(ctx) -> Result:
-    if find(_CONFIRM, timeout=1.0, threshold=0.8).ok:
+    if find(CONFIRM, timeout=1.0, threshold=0.8).ok:
         logger.info("check_run_end → run_ended")
         ctx.goto("qldq.run_ended.confirm")
         return Result.success()
@@ -217,10 +209,10 @@ def choose_reward_title(ctx) -> Result:
 
 
 def _scan_reward_kinds(ctx) -> dict[RewardKind, tuple[int, int]]:
-    shot = snap(set(REWARD_KIND_SIGNALS.values()))
+    shot = snap(set(REWARD_KIND_IMGS.values()))
     available: dict[RewardKind, tuple[int, int]] = {}
-    for kind, signal in REWARD_KIND_SIGNALS.items():
-        c = shot.center(signal)
+    for kind, path in REWARD_KIND_IMGS.items():
+        c = shot.center(path)
         if c is not None:
             available[kind] = c
             logger.info("【赠礼选项】可用 %s @ %s", kind.value, c)

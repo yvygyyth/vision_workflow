@@ -5,22 +5,18 @@ from __future__ import annotations
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
-from vision_bot.perception.signal import Signal
 from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
 _ATTACK = f"{QLDQ}/shi_chang_shi/attack.png"
-
-SIGNALS: dict[str, Signal] = {
-    "shi_chang_shi.attack": Signal(template=_ATTACK),
-}
+_CANCEL = f"{QLDQ}/fight/cancel.png"
 
 
 def relocate(ctx: RunContext) -> str | None:
-    shot = snap({"shi_chang_shi.attack", "fight.cancel"})
-    if shot.found("shi_chang_shi.attack"):
+    shot = snap({_ATTACK, _CANCEL})
+    if shot.found(_ATTACK):
         return "qldq.shi_chang_shi.attack"
     return "qldq.shi_chang_shi.confirm"
 
@@ -43,8 +39,8 @@ def attack(ctx) -> Result:
 
 
 def check_cancel(ctx) -> Result:
-    shot = snap({"fight.cancel"})
-    if shot.found("fight.cancel"):
+    shot = snap({_CANCEL})
+    if shot.found(_CANCEL):
         r = click_confirm()
         if not r.ok:
             return r

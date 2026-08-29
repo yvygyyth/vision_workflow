@@ -8,7 +8,6 @@ from pathlib import Path
 
 from vision_bot.core.paths import project_root
 from vision_bot.perception.session import bind_perception
-from vision_bot.perception.signal import SignalRegistry
 from vision_bot.runtime.bind import bind_runtime
 from vision_bot.runtime.cancel import CancelledError
 from vision_bot.runtime.config import RunConfig
@@ -248,14 +247,10 @@ def run(
     flow: Flow,
     config: RunConfig,
     *,
-    registry: SignalRegistry | None = None,
     cancel_event=None,
     base_dir: Path | None = None,
 ) -> RunReport:
-    bind_perception(
-        registry or SignalRegistry(),
-        (base_dir or project_root()).resolve(),
-    )
+    bind_perception((base_dir or project_root()).resolve())
     ctx = RunContext(cancel_event=cancel_event)
     runner = _prepare(flow, ctx, config)
     return _run_loop(runner, ctx, flow, config)

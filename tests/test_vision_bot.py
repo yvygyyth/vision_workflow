@@ -6,31 +6,42 @@ from pathlib import Path
 
 import pytest
 
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import HUB_PICK_BATTLE, detect as detect_hub
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import route as route_qian_li
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
+    CHALLENGE,
+    HUB_PICK_BATTLE,
+    detect as detect_hub,
+)
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import relocate as relocate_qian_li
 from vision_bot.core.models import MatchResult
 from vision_bot.perception.snapshot import ScreenSnapshot
 from vision_bot.runtime import flow, mod, run
-from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, registry_for, root_flow_choices
+from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, root_flow_choices
 from vision_bot.runtime.config import RunConfig
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.result import Result
 
 
-def test_qldq_registry() -> None:
-    reg = registry_for("qldq")
-    assert "enter.start" in reg.ids()
-    assert "choice.challenge" in reg.ids()
-
-
-def test_detect_qian_li_hub() -> None:
-    assert route_qian_li(lambda k: k == "choice.challenge") == "qldq.battle_hub"
+def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
+    challenge = f"{QLDQ}/battle_select/challenge.png"
+    monkeypatch.setattr(
+        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.capture_screen",
+        lambda: object(),
+    )
+    monkeypatch.setattr(
+        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.match",
+        lambda template, screenshot=None, region=None: MatchResult(
+            found=template == challenge, image=template
+        ),
+    )
+    assert relocate_qian_li(RunContext()) == "qldq.battle_hub"
 
 
 def test_detect_hub_pick_battle() -> None:
     snap = ScreenSnapshot(
-        hits={"choice.challenge": MatchResult(found=True, image="x.png")}
+        hits={CHALLENGE: MatchResult(found=True, image=CHALLENGE)}
     )
     assert detect_hub(snap, None) == HUB_PICK_BATTLE  # type: ignore[arg-type]
 
