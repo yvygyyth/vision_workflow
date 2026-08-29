@@ -3,10 +3,9 @@ from __future__ import annotations
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.flow_helpers import scroll_center
+from vision_bot.apps.ming_jiang_sha.actions import go_back
 from vision_bot.apps.ming_jiang_sha.paths import FEE_DAY
 from vision_bot.runtime.result import Result
-from vision_bot.apps.ming_jiang_sha.actions import go_back
 
 def open_entry(ctx) -> Result:
     return do(move().image(f"{FEE_DAY}/song_hua/hao_you.png"), click())()
@@ -21,7 +20,7 @@ def open_you_cai_hua(ctx) -> Result:
     return do(move().image(f"{FEE_DAY}/song_hua/you_cai_hua.png"), click())()
 
 def zeng_song(ctx) -> Result:
-    do(move().to(470, 420).raw(), click())()
+    do(move().to(470, 420), click())()
     return Result.success()
 
 def finish(ctx) -> Result:
