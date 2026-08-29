@@ -12,7 +12,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_P
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import capture
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
@@ -36,8 +36,8 @@ _EXIT_CONFIRM_MAX = 3
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, {"shop.go_back"})
-    if snap.found("shop.go_back"):
+    shot = snap({"shop.go_back"})
+    if shot.found("shop.go_back"):
         return "qldq.ba_qing_store.click_token_slot"
     return None
 
@@ -146,8 +146,8 @@ def confirm(ctx) -> Result:
 
 def ensure_left(ctx) -> Result:
     time.sleep(0.6)
-    snap = ctx.snap({"shop.go_back"})
-    if snap.found("shop.go_back"):
+    shot = snap({"shop.go_back"})
+    if shot.found("shop.go_back"):
         tries = int(ctx.vars.get(_EXIT_CONFIRM_TRIES, 0)) + 1
         ctx.vars[_EXIT_CONFIRM_TRIES] = tries
         if tries > _EXIT_CONFIRM_MAX:

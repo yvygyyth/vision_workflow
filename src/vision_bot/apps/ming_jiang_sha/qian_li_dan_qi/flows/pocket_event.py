@@ -6,7 +6,9 @@ import random
 
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import Mouse
+from vision_bot.perception.session import perception
 from vision_bot.perception.signal import Signal
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find_all
@@ -24,7 +26,7 @@ def relocate(ctx: RunContext) -> str | None:
 
 
 def pick(ctx) -> Result:
-    base = ctx.base_dir / f"{QLDQ}/pocket_event/event_patterm.png"
+    base = perception().base_dir / f"{QLDQ}/pocket_event/event_patterm.png"
     hits = find_all(base, threshold=0.8, max_count=16)
     if not hits.ok:
         ctx.goto("qldq.pocket_event.check")
@@ -37,18 +39,18 @@ def pick(ctx) -> Result:
 
 
 def check(ctx) -> Result:
-    snap = ctx.snap(_CHECK_SIGNALS)
-    if snap.found("fight.cancel"):
+    shot = snap(_CHECK_SIGNALS)
+    if shot.found("fight.cancel"):
         ctx.goto("qldq.fight")
         return Result.success()
-    if snap.found("pocket.ok"):
+    if shot.found("pocket.ok"):
         return Result.success()
     return Result.success()
 
 
 def click_ok(ctx) -> Result:
-    snap = ctx.snap({"pocket.ok"})
-    c = snap.center("pocket.ok")
+    shot = snap({"pocket.ok"})
+    c = shot.center("pocket.ok")
     if c:
         Mouse().move(*c).click().sleep(0.3).perform()
     ctx.goto("qldq.pocket_event.check")

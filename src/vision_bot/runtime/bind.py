@@ -1,25 +1,27 @@
-"""任务启动时绑定 vision / events 默认值。"""
+"""任务启动时绑定 vision / events / 感知层默认值。"""
 
 from __future__ import annotations
 
 from vision_bot.actions.context import bind_action_context
 from vision_bot.events import bind as bind_events
+from vision_bot.perception.session import perception
 from vision_bot.runtime.cancel import patch_time_sleep
 from vision_bot.runtime.context import RunContext
 from vision_bot.vision import bind as bind_vision
 
 
 def bind_runtime(ctx: RunContext) -> None:
-    """从运行上下文注入 vision / events / 动作链默认值。
+    """从感知目录 + 运行上下文注入 vision / events / 动作链默认值。
 
     由 :func:`~vision_bot.runtime.runner.run` 在任务开始时自动调用，
-    一般无需手动调用。
+    一般无需手动调用。调用前须已 :func:`~vision_bot.perception.session.bind_perception`。
     """
-    bind_vision(base_dir=ctx.base_dir, options=ctx.defaults, cancelled=ctx.cancelled)
+    cat = perception()
+    bind_vision(base_dir=cat.base_dir, options=cat.defaults, cancelled=ctx.cancelled)
     bind_events(cancelled=ctx.cancelled)
     bind_action_context(
-        base_dir=ctx.base_dir,
-        defaults=ctx.defaults,
+        base_dir=cat.base_dir,
+        defaults=cat.defaults,
         vars=ctx.vars,
         cancelled=ctx.cancelled,
     )

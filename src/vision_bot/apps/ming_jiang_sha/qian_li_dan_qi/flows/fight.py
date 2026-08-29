@@ -20,7 +20,7 @@ from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.events import click_match
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
@@ -78,25 +78,25 @@ REWARD_KIND_SIGNALS: dict[RewardKind, str] = {
 }
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap.found("fight.cancel"):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if shot.found("fight.cancel"):
         return "qldq.fight.click_cancel"
-    if snap.found("fight.setting"):
+    if shot.found("fight.setting"):
         return "qldq.fight.click_setting"
-    if snap.found("fight.challenge_end"):
+    if shot.found("fight.challenge_end"):
         return "qldq.fight.wait_end"
-    if snap.found("fight.next_step"):
+    if shot.found("fight.next_step"):
         return "qldq.fight.next_step"
     if ctx is not None and any(
-        snap.found(signal) for signal in REWARD_KIND_SIGNALS.values()
+        shot.found(signal) for signal in REWARD_KIND_SIGNALS.values()
     ):
         return "qldq.fight.choose_reward_kind"
     return "qldq.fight.click_cancel"
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
 def move_aside(ctx) -> Result:
@@ -105,8 +105,8 @@ def move_aside(ctx) -> Result:
 
 
 def click_cancel(ctx) -> Result:
-    snap = ctx.snap({"fight.cancel"})
-    c = snap.center("fight.cancel")
+    shot = snap({"fight.cancel"})
+    c = shot.center("fight.cancel")
     if c:
         Mouse().move(*c).click().sleep(0.2).perform()
         return Result.success()
@@ -114,8 +114,8 @@ def click_cancel(ctx) -> Result:
 
 
 def click_setting(ctx) -> Result:
-    snap = ctx.snap({"fight.setting"})
-    c = snap.center("fight.setting")
+    shot = snap({"fight.setting"})
+    c = shot.center("fight.setting")
     if c:
         Mouse().move(*c).click().sleep(0.5).perform()
         return Result.success()
@@ -217,10 +217,10 @@ def choose_reward_title(ctx) -> Result:
 
 
 def _scan_reward_kinds(ctx) -> dict[RewardKind, tuple[int, int]]:
-    snap = ctx.snap(set(REWARD_KIND_SIGNALS.values()))
+    shot = snap(set(REWARD_KIND_SIGNALS.values()))
     available: dict[RewardKind, tuple[int, int]] = {}
     for kind, signal in REWARD_KIND_SIGNALS.items():
-        c = snap.center(signal)
+        c = shot.center(signal)
         if c is not None:
             available[kind] = c
             logger.info("【赠礼选项】可用 %s @ %s", kind.value, c)

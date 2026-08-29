@@ -1,21 +1,14 @@
-"""运行时上下文。"""
+"""运行时上下文（单次 run 的会话状态）。"""
 
 from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
-
-from vision_bot.core.models import MatchOptions
-from vision_bot.perception.signal import SignalRegistry
 
 
 @dataclass
 class RunContext:
-    base_dir: Path
-    registry: SignalRegistry
-    defaults: MatchOptions = field(default_factory=MatchOptions)
     vars: dict[str, Any] = field(default_factory=dict)
     cancel_event: threading.Event | None = None
     _runner: Any = field(default=None, repr=False)
@@ -57,11 +50,6 @@ class RunContext:
     def exit_flow(self) -> None:
         if self._params_stack:
             self._params_stack.pop()
-
-    def snap(self, signal_ids: set[str] | None = None):
-        """按需截屏识图；signal_ids 为 None 时匹配 registry 全部 signal。"""
-        from vision_bot.perception.snapshot import capture
-        return capture(self.registry, self.base_dir, signal_ids)
 
     def goto(self, target_id: str) -> None:
         if self._runner is None:

@@ -7,7 +7,7 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -45,30 +45,30 @@ DETECT: set[str] = {
 }
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap.found("choice.up_panel"):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if shot.found("choice.up_panel"):
         return HUB_DISMISS
-    if snap.found("choice.challenge") or snap.found("choice.challenge_help"):
+    if shot.found("choice.challenge") or shot.found("choice.challenge_help"):
         return HUB_PICK_BATTLE
-    if snap.found("choice.yi_wai"):
+    if shot.found("choice.yi_wai"):
         return HUB_PICK_BATTLE
     for k in ("choice.ba_qing_store", "choice.pocket_event", "choice.rest", "choice.lv_bu_wei_store"):
-        if snap.found(k):
+        if shot.found(k):
             return HUB_PICK_SHOP
     for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi"):
-        if snap.found(k):
+        if shot.found(k):
             return HUB_PICK_EVENT
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
 def dismiss_up(ctx) -> Result:
-    snap = ctx.snap({"choice.up_panel"})
-    if snap.found("choice.up_panel"):
+    shot = snap({"choice.up_panel"})
+    if shot.found("choice.up_panel"):
         do(move().to(1300, 1150).raw(), click())()
         time.sleep(0.4)
     return Result.fail("dispatch")

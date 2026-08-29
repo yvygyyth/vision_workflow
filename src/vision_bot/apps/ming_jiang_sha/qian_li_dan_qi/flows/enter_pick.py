@@ -8,7 +8,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import input_text as type_text
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -21,15 +21,15 @@ SIGNALS: dict[str, Signal] = {
 DETECT: set[str] = set(SIGNALS)
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap.found("enter.select_wu_jiang"):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if shot.found("enter.select_wu_jiang"):
         return "qldq.battle_select.enter_pick.select_wu_jiang"
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
 def select_wu_jiang(ctx) -> Result:

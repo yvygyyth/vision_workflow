@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from vision_bot.core.paths import project_root
+from vision_bot.perception.session import bind_perception
 from vision_bot.perception.signal import SignalRegistry
 from vision_bot.runtime.bind import bind_runtime
 from vision_bot.runtime.cancel import CancelledError
@@ -251,10 +252,10 @@ def run(
     cancel_event=None,
     base_dir: Path | None = None,
 ) -> RunReport:
-    ctx = RunContext(
-        base_dir=(base_dir or project_root()).resolve(),
-        registry=registry or SignalRegistry(),
-        cancel_event=cancel_event,
+    bind_perception(
+        registry or SignalRegistry(),
+        (base_dir or project_root()).resolve(),
     )
+    ctx = RunContext(cancel_event=cancel_event)
     runner = _prepare(flow, ctx, config)
     return _run_loop(runner, ctx, flow, config)

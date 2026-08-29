@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from vision_bot.perception.snapshot import capture_screen, match_signal
+from vision_bot.perception.snapshot import capture_screen, match
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.jump import Relocate
 
@@ -50,9 +50,7 @@ def relocate(ctx: RunContext) -> str | Relocate | None:
 
     def found(signal_id: str) -> bool:
         if signal_id not in cache:
-            cache[signal_id] = match_signal(
-                ctx.registry, ctx.base_dir, signal_id, screenshot=img
-            ).found
+            cache[signal_id] = match(signal_id, screenshot=img).found
         return cache[signal_id]
 
     return route(found)

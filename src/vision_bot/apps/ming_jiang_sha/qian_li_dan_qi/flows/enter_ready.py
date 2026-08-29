@@ -9,7 +9,7 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, press_key
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -21,31 +21,31 @@ SIGNALS: dict[str, Signal] = {
 DETECT: set[str] = set(SIGNALS)
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap.found("enter.battle_interface"):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if shot.found("enter.battle_interface"):
         return "qldq.battle_select.enter_ready.check_done"
-    if snap.found("enter.start"):
+    if shot.found("enter.start"):
         return "qldq.battle_select.enter_ready.try_start"
     return "qldq.battle_select.enter_ready.try_start"
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
 def check_done(ctx) -> Result:
     bind_battle_state(ctx)
-    snap = ctx.snap(DETECT)
-    if snap.found("enter.battle_interface"):
+    shot = snap(DETECT)
+    if shot.found("enter.battle_interface"):
         ctx.goto("qldq.battle_hub")
         return Result.success()
     return Result.fail("未进战")
 
 
 def try_start(ctx) -> Result:
-    snap = ctx.snap({"enter.start"})
-    c = snap.center("enter.start")
+    shot = snap({"enter.start"})
+    c = shot.center("enter.start")
     if c is None:
         ctx.goto("qldq.battle_select.enter_ready.recover")
         return Result.success()

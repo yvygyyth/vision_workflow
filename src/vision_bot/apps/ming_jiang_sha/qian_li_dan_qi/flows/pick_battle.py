@@ -7,7 +7,7 @@ import time
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.core.input import Mouse
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -20,23 +20,23 @@ DETECT: set[str] = {
 }
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if snap.found("choice.challenge_help"):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if shot.found("choice.challenge_help"):
         return "qldq.battle_hub.pick_battle.choose"
-    if snap.found("choice.challenge"):
+    if shot.found("choice.challenge"):
         return "qldq.battle_hub.pick_battle.choose"
-    if snap.found("choice.yi_wai"):
+    if shot.found("choice.yi_wai"):
         return "qldq.battle_hub.pick_battle.choose_yi_wai"
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
-def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
-    c = snap.center(key)
+def _click(shot, key: str, *, label: str, times: int = 1) -> bool:
+    c = shot.center(key)
     if not c:
         return False
     Mouse().move(*c).click(clicks=times).sleep(0.2).perform()
@@ -45,12 +45,12 @@ def _click(snap, key: str, *, label: str, times: int = 1) -> bool:
 
 
 def choose(ctx) -> Result:
-    snap = ctx.snap(DETECT)
-    if snap.found("choice.challenge_help"):
-        if not _click(snap, "choice.challenge_help", label="help"):
+    shot = snap(DETECT)
+    if shot.found("choice.challenge_help"):
+        if not _click(shot, "choice.challenge_help", label="help"):
             return Result.fail("点击 help 失败")
-    elif snap.found("choice.challenge"):
-        if not _click(snap, "choice.challenge", label="challenge"):
+    elif shot.found("choice.challenge"):
+        if not _click(shot, "choice.challenge", label="challenge"):
             return Result.fail("点击 challenge 失败")
     else:
         return Result.fail("无战斗选项")
@@ -59,12 +59,12 @@ def choose(ctx) -> Result:
 
 
 def choose_yi_wai(ctx) -> Result:
-    snap = ctx.snap(DETECT)
-    if not _click(snap, "choice.yi_wai", label="yi_wai", times=2):
+    shot = snap(DETECT)
+    if not _click(shot, "choice.yi_wai", label="yi_wai", times=2):
         return Result.fail("点击意外失败")
     time.sleep(0.6)
-    snap2 = ctx.snap({"choice.yi_wai"})
-    if snap2.found("choice.yi_wai"):
+    shot2 = snap({"choice.yi_wai"})
+    if shot2.found("choice.yi_wai"):
         ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
         return Result.success()
     ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")

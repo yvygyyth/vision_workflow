@@ -6,7 +6,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.perception.signal import Signal
-from vision_bot.perception.snapshot import capture
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
@@ -19,8 +19,8 @@ SIGNALS: dict[str, Signal] = {
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, {"shi_chang_shi.attack", "fight.cancel"})
-    if snap.found("shi_chang_shi.attack"):
+    shot = snap({"shi_chang_shi.attack", "fight.cancel"})
+    if shot.found("shi_chang_shi.attack"):
         return "qldq.shi_chang_shi.attack"
     return "qldq.shi_chang_shi.confirm"
 
@@ -43,8 +43,8 @@ def attack(ctx) -> Result:
 
 
 def check_cancel(ctx) -> Result:
-    snap = ctx.snap({"fight.cancel"})
-    if snap.found("fight.cancel"):
+    shot = snap({"fight.cancel"})
+    if shot.found("fight.cancel"):
         r = click_confirm()
         if not r.ok:
             return r

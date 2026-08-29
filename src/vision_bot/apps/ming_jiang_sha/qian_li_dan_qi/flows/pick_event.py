@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.core.input import Mouse
-from vision_bot.perception.snapshot import ScreenSnapshot, capture
+from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
@@ -25,21 +25,21 @@ _PRIORITY = (
 )
 
 
-def detect(snap: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if any(snap.found(k) for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi")):
+def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
+    if any(shot.found(k) for k in ("choice.fei_fei", "choice.shi_chang_shi", "choice.mo_zi")):
         return "qldq.battle_hub.pick_event.choose"
     return None
 
 
 def relocate(ctx: RunContext) -> str | None:
-    snap = capture(ctx.registry, ctx.base_dir, DETECT)
-    return detect(snap, ctx)
+    shot = snap(DETECT)
+    return detect(shot, ctx)
 
 
 def choose(ctx) -> Result:
-    snap = ctx.snap(DETECT)
+    shot = snap(DETECT)
     for key, outcome in _PRIORITY:
-        c = snap.center(key)
+        c = shot.center(key)
         if c:
             Mouse().move(*c).click().sleep(0.2).perform()
             ctx.vars["pending_event"] = outcome
@@ -55,8 +55,8 @@ def verify(ctx) -> Result:
         return Result.fail("无 pending 事件")
     key = next(k for k, o in _PRIORITY if o == outcome)
     time.sleep(0.6)
-    snap = ctx.snap({key})
-    if snap.found(key):
+    shot = snap({key})
+    if shot.found(key):
         ctx.goto("qldq.battle_hub.pick_event.choose")
         return Result.success()
     ctx.vars.pop("pending_event", None)
