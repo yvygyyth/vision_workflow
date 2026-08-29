@@ -35,18 +35,15 @@ def _has_up_panel(ctx: RunContext) -> bool:
 
 
 def _has_battle(ctx: RunContext) -> bool:
-    shot = snap(BATTLE_DETECT, region=CHOICE_REGION)
-    return any(shot.found(p) for p in BATTLE_DETECT)
+    return snap(BATTLE_DETECT, region=CHOICE_REGION).race
 
 
 def _has_shop(ctx: RunContext) -> bool:
-    shot = snap(SHOP_DETECT, region=CHOICE_REGION)
-    return any(shot.found(p) for p in SHOP_DETECT)
+    return snap(SHOP_DETECT, region=CHOICE_REGION).race
 
 
 def _has_event(ctx: RunContext) -> bool:
-    shot = snap(EVENT_DETECT, region=CHOICE_REGION)
-    return any(shot.found(p) for p in EVENT_DETECT)
+    return snap(EVENT_DETECT, region=CHOICE_REGION).race
 
 
 relocate: list[RelocateRule] = [

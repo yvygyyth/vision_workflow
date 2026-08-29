@@ -10,7 +10,6 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
     CHALLENGE,
-    HUB_PICK_BATTLE,
     relocate as relocate_hub,
 )
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li import relocate as relocate_qian_li
@@ -26,7 +25,7 @@ from vision_bot.vision import ScreenSnapshot
 
 
 def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
-    challenge = f"{QLDQ}/battle_select/challenge.png"
+    battle_interface = f"{QLDQ}/enter_battle/battle_interface.png"
 
     def fake_snap(*images, region=None, **kwargs):
         flat: list[str] = []
@@ -35,21 +34,11 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
                 flat.append(item)
             else:
                 flat.extend(item)
-        if len(flat) == 1:
-            if flat[0] == challenge:
-                return Result.success(
-                    value=MatchResult(found=True, image=challenge)
-                )
-            return Result.fail("no")
-        hits = {
-            p: (
-                Result.success(value=MatchResult(found=True, image=p))
-                if p == challenge
-                else Result.fail("no")
+        if len(flat) == 1 and flat[0] == battle_interface:
+            return Result.success(
+                value=MatchResult(found=True, image=battle_interface)
             )
-            for p in flat
-        }
-        return ScreenSnapshot(hits=hits)
+        return ScreenSnapshot(hits={})
 
     monkeypatch.setattr(
         "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.snap",
@@ -72,7 +61,7 @@ def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
         "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub.snap",
         fake_snap,
     )
-    assert resolve(relocate_hub, RunContext()) == HUB_PICK_BATTLE
+    assert resolve(relocate_hub, RunContext()) == "qldq.battle_hub.pick_battle"
 
 
 def test_flow_registry_build() -> None:

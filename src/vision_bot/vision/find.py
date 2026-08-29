@@ -68,6 +68,16 @@ class ScreenSnapshot:
     ts: float = field(default_factory=time.monotonic)
     image: Image | None = None
 
+    @property
+    def race(self) -> bool:
+        """任一模板命中（类比 ``Promise.race`` / ``any``）。"""
+        return any(r.ok for r in self.hits.values())
+
+    @property
+    def all(self) -> bool:
+        """全部模板命中（类比 ``Promise.all``）。"""
+        return bool(self.hits) and all(r.ok for r in self.hits.values())
+
     def __getitem__(self, template: str) -> Result:
         hit = self.hits.get(template)
         if hit is None:

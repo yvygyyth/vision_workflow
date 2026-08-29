@@ -26,8 +26,7 @@ DETECT: set[str] = {BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE}
 
 
 def _has_shop_choice(ctx: RunContext) -> bool:
-    shot = snap(DETECT, region=CHOICE_REGION)
-    return any(shot.found(p) for p in DETECT)
+    return snap(DETECT, region=CHOICE_REGION).race
 
 
 relocate: list[RelocateRule] = [

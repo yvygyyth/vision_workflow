@@ -8,16 +8,16 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, input_text as type_text
-from vision_bot.vision import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
+from vision_bot.vision import snap
 
 START = f"{QLDQ}/enter_battle/start.png"
-SWITCH = f"{QLDQ}/enter_battle/switch.png"
+UN_START = f"{QLDQ}/enter_battle/un_start.png"
 SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
 
-DETECT: set[str] = {START, SWITCH, SELECT_WU_JIANG}
+DETECT: set[str] = {START, UN_START, SELECT_WU_JIANG}
 
 CLICK_START = "qldq.battle_select.enter_pick.click_start"
 
@@ -26,9 +26,9 @@ def _has_start(ctx: RunContext) -> bool:
     return snap(DETECT).found(START)
 
 
-def _switch_without_select(ctx: RunContext) -> bool:
+def _un_start_without_select(ctx: RunContext) -> bool:
     s = snap(DETECT)
-    return s.found(SWITCH) and not s.found(SELECT_WU_JIANG)
+    return s.found(UN_START) and not s.found(SELECT_WU_JIANG)
 
 
 def _has_select_wu_jiang(ctx: RunContext) -> bool:
@@ -37,19 +37,19 @@ def _has_select_wu_jiang(ctx: RunContext) -> bool:
 
 relocate: list[RelocateRule] = [
     RelocateRule(when=_has_start, then=CLICK_START),
-    RelocateRule(when=_switch_without_select, then=None),
+    RelocateRule(when=_un_start_without_select, then=None),
     RelocateRule(
         when=_has_select_wu_jiang,
         then="qldq.battle_select.enter_pick.focus_search",
-    )
+    ),
 ]
 
 
 def select_wu_jiang(ctx) -> Result:
-    shot = snap({SWITCH, SELECT_WU_JIANG})
-    if not shot.found(SWITCH):
-        return Result.fail("无 switch")
-    if not shot.found(SELECT_WU_JIANG):
+    shot = snap(UN_START, SELECT_WU_JIANG)
+    if not shot.all:
+        if not shot.found(UN_START):
+            return Result.fail("无 un_start")
         return Result.fail("无 select_wu_jiang")
     do(
         move().image(SELECT_WU_JIANG),

@@ -29,8 +29,7 @@ _PRIORITY = (
 
 
 def _has_event_choice(ctx: RunContext) -> bool:
-    shot = snap(DETECT, region=CHOICE_REGION)
-    return any(shot.found(p) for p in DETECT)
+    return snap(DETECT, region=CHOICE_REGION).race
 
 
 relocate: list[RelocateRule] = [

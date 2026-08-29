@@ -2,69 +2,37 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
+import logging
+
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.vision import snap
 
-_CHOICE_REGION = (800, 350, 1630, 780)
-_CHOICE_TEMPLATES = (
-    f"{QLDQ}/battle_select/challenge.png",
-    f"{QLDQ}/battle_select/ba_qing_store.png",
-    f"{QLDQ}/battle_select/pocket_event.png",
-    f"{QLDQ}/battle_select/rest.png",
-    f"{QLDQ}/battle_select/fei_fei.png",
-    f"{QLDQ}/battle_select/yi_wai.png",
-)
+logger = logging.getLogger(__name__)
+
+_UN_START = f"{QLDQ}/enter_battle/un_start.png"
+_START = f"{QLDQ}/enter_battle/start.png"
+_BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
 
 
-def _hit(ctx: RunContext, template: str, *, region=None) -> bool:
-    return snap(template, region=region).ok
+def _when_pick(ctx: RunContext) -> bool:
+    shot = snap(_UN_START, _START)
+    logger.info(
+        "qldq relocate pick un_start=%s start=%s",
+        shot.found(_UN_START),
+        shot.found(_START),
+    )
+    return shot.race
 
 
-def _has_choice(ctx: RunContext) -> bool:
-    shot = snap(_CHOICE_TEMPLATES, region=_CHOICE_REGION)
-    return any(shot.found(p) for p in _CHOICE_TEMPLATES)
+def _when_battle_interface(ctx: RunContext) -> bool:
+    ok = snap(_BATTLE_INTERFACE).ok
+    logger.info("qldq relocate battle_interface=%s", ok)
+    return ok
 
 
 relocate: list[RelocateRule] = [
-    RelocateRule(when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/switch.png"), then=None),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/battle_interface.png"),
-        then="qldq.battle_hub",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/ba_qing_store/go_back.png"),
-        then="qldq.ba_qing_store",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/fight/cancel.png")
-        or _hit(ctx, f"{QLDQ}/fight/setting.png"),
-        then="qldq.fight",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/pocket_event/event_patterm.png"),
-        then="qldq.pocket_event",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/fei_fei/i_help_you.png"),
-        then="qldq.fei_fei",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{COMMON_DIR}/confirm.png") and _has_choice(ctx),
-        then="qldq.battle_hub",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{COMMON_DIR}/confirm.png"),
-        then="qldq.run_ended",
-    ),
-    RelocateRule(when=_has_choice, then="qldq.battle_hub"),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/select_wu_jiang.png"),
-        then="qldq.battle_select.enter_pick",
-    ),
-    RelocateRule(
-        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/start.png"),
-        then="qldq.battle_select.enter_pick.click_start",
-    ),
+    RelocateRule(when=_when_pick, then=None),
+    RelocateRule(when=_when_battle_interface, then="qldq.battle_hub"),
 ]
