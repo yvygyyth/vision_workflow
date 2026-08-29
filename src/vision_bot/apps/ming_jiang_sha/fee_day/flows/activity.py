@@ -33,7 +33,7 @@ def gua_xiang(ctx) -> Result:
 
 
 def scroll(ctx) -> Result:
-    return do(move().at("center"), scroll_wheel(-120).times(12))()
+    return do(move().to(300,300), scroll_wheel(-120).times(10))()
 
 
 def yue_ling(ctx) -> Result:
