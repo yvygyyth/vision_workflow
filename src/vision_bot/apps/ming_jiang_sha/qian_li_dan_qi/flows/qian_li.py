@@ -31,7 +31,7 @@ relocate: list[RelocateRule] = [
     RelocateRule(when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/switch.png"), then=None),
     RelocateRule(
         when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/battle_interface.png"),
-        then=None,
+        then="qldq.battle_hub",
     ),
     RelocateRule(
         when=lambda ctx: _hit(ctx, f"{QLDQ}/ba_qing_store/go_back.png"),
