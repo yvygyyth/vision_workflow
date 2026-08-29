@@ -120,6 +120,7 @@ def build_fee_day() -> Flow:
                     mod(id="fee_day.activity.scroll", name="滚动", active=activity.scroll),
                     mod(id="fee_day.activity.yue_ling", name="月灵", active=activity.yue_ling),
                     mod(id="fee_day.activity.ling_qv", name="领取", active=activity.ling_qv),
+                    mod(id="fee_day.activity.space_close", name="关闭弹窗", active=close_popup),
                     mod(id="fee_day.activity.go_back", name="返回", active=activity.finish),
                 ],
             ),
