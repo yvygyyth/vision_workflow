@@ -15,33 +15,26 @@ from vision_bot.vision import snap
 
 START = f"{QLDQ}/enter_battle/start.png"
 UN_START = f"{QLDQ}/enter_battle/un_start.png"
+SEARCH = f"{QLDQ}/enter_battle/search.png"
 SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
-
-DETECT: set[str] = {START, UN_START, SELECT_WU_JIANG}
-
-CLICK_START = "qldq.battle_select.enter_pick.click_start"
 
 
 def _has_start(ctx: RunContext) -> bool:
-    return snap(DETECT).found(START)
+    return snap(START).ok
 
 
-def _un_start_without_select(ctx: RunContext) -> bool:
-    s = snap(DETECT)
-    return s.found(UN_START) and not s.found(SELECT_WU_JIANG)
+def _has_un_start(ctx: RunContext) -> bool:
+    return snap(UN_START).ok
 
 
-def _has_select_wu_jiang(ctx: RunContext) -> bool:
-    return snap(DETECT).found(SELECT_WU_JIANG)
+def _has_search(ctx: RunContext) -> bool:
+    return snap(SEARCH).ok
 
 
 relocate: list[RelocateRule] = [
-    RelocateRule(when=_has_start, then=CLICK_START),
-    RelocateRule(when=_un_start_without_select, then=None),
-    RelocateRule(
-        when=_has_select_wu_jiang,
-        then="qldq.battle_select.enter_pick.focus_search",
-    ),
+    RelocateRule(when=_has_start, then="qldq.battle_select.enter_pick.click_start"),
+    RelocateRule(when=_has_un_start, then=None),
+    RelocateRule(when=_has_search, then="qldq.battle_select.enter_pick.focus_search"),
 ]
 
 
@@ -60,7 +53,7 @@ def select_wu_jiang(ctx) -> Result:
 
 def focus_search(ctx) -> Result:
     r = do(
-        move().image(f"{QLDQ}/enter_battle/search.png"),
+        move().image(SEARCH),
         move().by(-160, 0),
         click().pause(0.3),
     )()
@@ -80,7 +73,7 @@ def type_name(ctx) -> Result:
 
 def click_search(ctx) -> Result:
     do(
-        move().image(f"{QLDQ}/enter_battle/search.png"),
+        move().image(SEARCH),
         click(),
     )()
     return Result.success()
