@@ -48,24 +48,25 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
 
 
 def run_battle(ctx) -> Result:
-    """同步执行名将杀共用纯战斗；本轮结束则 goto run_ended，否则进入结算。"""
-    r = ctx.call("mjs.battle")
-    if not r.ok:
-        return r
-    if ctx.vars.pop(RUN_ENDED_FLAG, None):
-        return Result.success(then="qldq.run_ended.confirm")
-    return Result.success()
+    """同步执行名将杀共用纯战斗；本轮结束则跳 run_ended，否则进入结算。"""
+    return _after_mjs_battle(ctx, then=None)
 
 
 def run_battle_no_gift(ctx) -> Result:
     """无赠礼战斗（锦囊/十常侍等）：call 纯战斗后回三选一。"""
+    return _after_mjs_battle(ctx, then="qldq.battle_hub")
+
+
+def _after_mjs_battle(ctx, *, then: str | None) -> Result:
     r = ctx.call("mjs.battle")
     if not r.ok:
         return r
     if ctx.vars.pop(RUN_ENDED_FLAG, None):
         return Result.success(then="qldq.run_ended.confirm")
-    logger.info("run_battle_no_gift → 回三选一")
-    return Result.success(then="qldq.battle_hub")
+    if then:
+        logger.info("run_battle_no_gift → 回三选一")
+        return Result.success(then=then)
+    return Result.success()
 
 
 def _ocr_reward_titles() -> list[str]:
