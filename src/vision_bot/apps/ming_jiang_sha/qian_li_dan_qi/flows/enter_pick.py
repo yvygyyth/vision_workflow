@@ -26,7 +26,7 @@ def _has_start(ctx: RunContext) -> bool:
 
 def _switch_without_select(ctx: RunContext) -> bool:
     s = snap(DETECT)
-    return s.found(SWITCH) and not s.found(SELECT_WU_JIANG)
+    return s.found(SWITCH) and s.found(SELECT_WU_JIANG)
 
 
 def _has_select_wu_jiang(ctx: RunContext) -> bool:
