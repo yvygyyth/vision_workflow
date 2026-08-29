@@ -19,5 +19,4 @@ def esc_home(ctx) -> Result:
     logger.info("home_recovery: Esc×5")
     press_esc(times=5, pause=0.25)
     time.sleep(0.5)
-    ctx.goto("qldq.battle_select.enter_pick")
-    return Result.success()
+    return Result.success(then="qldq.battle_select.enter_pick")

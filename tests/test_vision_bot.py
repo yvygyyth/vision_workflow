@@ -44,7 +44,9 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
         "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.qian_li.snap",
         fake_snap,
     )
-    assert resolve(relocate_qian_li, RunContext()) == "qldq.battle_hub"
+    outcome = resolve(relocate_qian_li, RunContext())
+    assert outcome is not None and outcome.ok
+    assert outcome.then == "qldq.battle_hub"
 
 
 def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -61,7 +63,9 @@ def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
         "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub.snap",
         fake_snap,
     )
-    assert resolve(relocate_hub, RunContext()) == "qldq.battle_hub.pick_battle"
+    outcome = resolve(relocate_hub, RunContext())
+    assert outcome is not None and outcome.ok
+    assert outcome.then == "qldq.battle_hub.pick_battle"
 
 
 def test_flow_registry_build() -> None:
@@ -130,8 +134,7 @@ def test_goto_jumps_to_target() -> None:
 
     def a(ctx):
         log.append("a")
-        ctx.goto("t.c")
-        return Result.success()
+        return Result.success(then="t.c")
 
     def b(ctx):
         log.append("b")
@@ -153,6 +156,64 @@ def test_goto_jumps_to_target() -> None:
     report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
     assert log == ["a", "c"]
+
+
+def test_call_tool_relocate_parent_uses_caller() -> None:
+    """call 的工具 Flow relocate 未命中 → fail 时，走调用方 Flow 的 relocate。"""
+    from vision_bot.perception.session import bind_perception
+    from vision_bot.runtime.bind import bind_runtime
+    from vision_bot.runtime.runner import Runner
+
+    log: list[str] = []
+
+    def tool_step(ctx):
+        log.append("tool")
+        ctx.vars["need_recover"] = True
+        return Result.fail("工具失败")
+
+    def recover(ctx):
+        log.append("recover")
+        return Result.success()
+
+    def caller(ctx):
+        log.append("caller")
+        return ctx.call("tool")
+
+    tool = flow(
+        "tool",
+        "工具",
+        children=[mod("tool.m", "T", tool_step)],
+        # 配置了但永不命中 → resolve 返回 fail → 上交 call 方
+        relocate=[RelocateRule(when=lambda ctx: False, then="tool.m")],
+    )
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.caller", "C", caller),
+            mod("t.recover", "R", recover),
+        ],
+        # 仅失败后标记才恢复，避免入口就跳到 recover
+        relocate=[
+            RelocateRule(
+                when=lambda ctx: bool(ctx.vars.get("need_recover")),
+                then="t.recover",
+            ),
+            # 入口未标记时不跳转（否则全部未命中 → fail → 根耗尽）
+            RelocateRule(when=lambda ctx: True, then=None),
+        ],
+    )
+    reg = FlowRegistry.build(root)
+    reg.register_tool(tool)
+
+    bind_perception(Path(".").resolve())
+    ctx = RunContext()
+    runner = Runner(ctx, reg, root=root)
+    ctx._runner = runner
+    bind_runtime(ctx)
+    result = runner.run_flow(root)
+    assert result.ok
+    assert log == ["caller", "tool", "recover"]
 
 
 def test_call_runs_sync_and_resumes() -> None:
@@ -221,9 +282,7 @@ def test_relocate_on_entry() -> None:
 
 
 def test_relocate_parent_on_entry() -> None:
-    """Relocate.PARENT → 走父级 relocate。"""
-    from vision_bot.runtime.jump import Relocate
-
+    """子 Flow relocate fail → 走父级 relocate。"""
     log: list[str] = []
 
     def leaf(ctx):
@@ -238,7 +297,7 @@ def test_relocate_parent_on_entry() -> None:
         "t.inner",
         "内",
         children=[mod("t.inner.leaf", "叶", leaf)],
-        relocate=[RelocateRule(when=lambda ctx: True, then=Relocate.PARENT)],
+        relocate=[RelocateRule(when=lambda ctx: True, then=Result.fail("上交"))],
     )
     root = flow(
         "t",
@@ -287,7 +346,7 @@ def test_relocate_none_keeps_first_child() -> None:
 
 
 def test_relocate_unmatched_goes_parent() -> None:
-    """配置了 relocate 但全部未命中 → 默认 PARENT。"""
+    """配置了 relocate 但全部未命中 → fail 上交父级。"""
     log: list[str] = []
 
     def leaf(ctx):
@@ -333,9 +392,7 @@ def test_relocate_omitted_runs_first_child() -> None:
 
 
 def test_relocate_parent_at_root_stops() -> None:
-    """根节点 return Relocate.PARENT → 直接停止，不跑 children。"""
-    from vision_bot.runtime.jump import Relocate
-
+    """根节点 relocate fail → 直接停止，不跑 children。"""
     log: list[str] = []
 
     def a(ctx):
@@ -346,11 +403,10 @@ def test_relocate_parent_at_root_stops() -> None:
         "t",
         "根",
         children=[mod("t.a", "A", a)],
-        relocate=[RelocateRule(when=lambda ctx: True, then=Relocate.PARENT)],
+        relocate=[RelocateRule(when=lambda ctx: True, then=Result.fail("无父级"))],
     )
     report = run(root, RunConfig(), base_dir=Path("."))
     assert not report.success
-    assert "PARENT" in (report.message or "")
     assert log == []
 
 

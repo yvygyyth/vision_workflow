@@ -30,8 +30,7 @@ def attack(ctx) -> Result:
         return Result.fail("无 attack")
     for _ in range(5):
         do(move().to(*result.value.center).raw(), click())()
-    ctx.goto("qldq.shi_chang_shi.check_cancel")
-    return Result.success()
+    return Result.success(then="qldq.shi_chang_shi.check_cancel")
 
 
 def check_cancel(ctx) -> Result:
@@ -40,5 +39,4 @@ def check_cancel(ctx) -> Result:
         if not r.ok:
             return r
         return fight.run_battle_no_gift(ctx)
-    ctx.goto("qldq.shi_chang_shi.attack")
-    return Result.success()
+    return Result.success(then="qldq.shi_chang_shi.attack")

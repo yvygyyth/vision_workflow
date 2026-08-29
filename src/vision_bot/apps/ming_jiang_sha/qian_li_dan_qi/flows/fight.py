@@ -53,8 +53,7 @@ def run_battle(ctx) -> Result:
     if not r.ok:
         return r
     if ctx.vars.pop(RUN_ENDED_FLAG, None):
-        ctx.goto("qldq.run_ended.confirm")
-        return Result.success()
+        return Result.success(then="qldq.run_ended.confirm")
     return Result.success()
 
 
@@ -64,11 +63,9 @@ def run_battle_no_gift(ctx) -> Result:
     if not r.ok:
         return r
     if ctx.vars.pop(RUN_ENDED_FLAG, None):
-        ctx.goto("qldq.run_ended.confirm")
-        return Result.success()
+        return Result.success(then="qldq.run_ended.confirm")
     logger.info("run_battle_no_gift → 回三选一")
-    ctx.goto("qldq.battle_hub")
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")
 
 
 def _ocr_reward_titles() -> list[str]:
@@ -95,11 +92,9 @@ def after_settle(ctx) -> Result:
     if titles_look_like_gift(titles):
         ctx.vars[PENDING_TITLES_KEY] = titles
         logger.info("after_settle → has_gift")
-        ctx.goto("qldq.fight.choose_reward_title")
-        return Result.success()
+        return Result.success(then="qldq.fight.choose_reward_title")
     logger.info("after_settle → 无赠礼 UI，回三选一")
-    ctx.goto("qldq.battle_hub")
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")
 
 
 def choose_reward_title(ctx) -> Result:
@@ -107,8 +102,7 @@ def choose_reward_title(ctx) -> Result:
     titles = cached if isinstance(cached, list) else _ocr_reward_titles()
     if not titles_look_like_gift(titles):
         logger.info("choose_reward_title → no_gift")
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     state = get_battle_state(ctx)
     slot = pick_reward_slot(titles, state)
@@ -128,8 +122,7 @@ def choose_reward_title(ctx) -> Result:
         cy,
     )
     do(move().to(cx, cy), click())()
-    ctx.goto("qldq.fight.choose_reward_kind")
-    return Result.success()
+    return Result.success(then="qldq.fight.choose_reward_kind")
 
 
 def _scan_reward_kinds(ctx) -> dict[RewardKind, tuple[int, int]]:
@@ -158,15 +151,13 @@ def choose_reward_kind(ctx) -> Result:
     if not available:
         logger.warning("choose_reward_kind → no_kind")
         ctx.vars.pop(PENDING_GENERAL_KEY, None)
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     kind = pick_reward_kind(available.keys(), entry, state)
     if kind is None:
         logger.warning("choose_reward_kind → 无可选项")
         ctx.vars.pop(PENDING_GENERAL_KEY, None)
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     cx, cy = available[kind]
     general = entry.name if entry else "?"
@@ -176,5 +167,4 @@ def choose_reward_kind(ctx) -> Result:
         state.mark_general_reward(entry.name, kind)
         logger.info("【背包】%s ← %s", entry.name, kind.value)
     ctx.vars.pop(PENDING_GENERAL_KEY, None)
-    ctx.goto("qldq.battle_hub")
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")

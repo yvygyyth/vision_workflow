@@ -82,20 +82,17 @@ def click_ready(ctx) -> Result:
     cx, cy = result.value.center
     logger.info("click_ready @ (%s,%s)", cx, cy)
     click_at(cx, cy, pause=0.2)
-    ctx.goto("ba_wang.confirm_ready")
-    return Result.success()
+    return Result.success(then="ba_wang.confirm_ready")
 
 
 def confirm_ready(ctx) -> Result:
     time.sleep(0.5)
     if _probe(_UN_ZHUN_BEI, timeout=1.0):
         logger.info("confirm_ready → wait_game_start")
-        ctx.goto("ba_wang.wait_game_start")
-        return Result.success()
+        return Result.success(then="ba_wang.wait_game_start")
     if _probe(_ZHUN_BEI, timeout=0.5):
         logger.info("confirm_ready → click_ready")
-        ctx.goto("ba_wang.click_ready")
-        return Result.success()
+        return Result.success(then="ba_wang.click_ready")
     return Result.fail("点击准备后未识别到取消准备")
 
 
@@ -106,8 +103,7 @@ def poll_click_start(ctx) -> Result:
     )()
     if not result.ok:
         return Result.fail(result.message or action_context().reason or "未找到开始按钮")
-    ctx.goto("ba_wang.wait_game_start")
-    return Result.success()
+    return Result.success(then="ba_wang.wait_game_start")
 
 
 def wait_game_start(ctx) -> Result:
@@ -115,12 +111,10 @@ def wait_game_start(ctx) -> Result:
     while time.monotonic() < deadline:
         if find_all(_SIX, max_count=1).ok:
             logger.info("wait_game_start → pick_six")
-            ctx.goto("ba_wang.pick_six")
-            return Result.success()
+            return Result.success(then="ba_wang.pick_six")
         if _setting_visible(timeout=0.3):
             logger.info("wait_game_start → move_aside")
-            ctx.goto("ba_wang.move_aside")
-            return Result.success()
+            return Result.success(then="ba_wang.move_aside")
         time.sleep(_WAIT_INTERVAL_SEC)
     return Result.fail("等待开局超时")
 
@@ -139,8 +133,7 @@ def pick_all_sixes(ctx) -> Result:
         logger.info("pick_all_sixes @ (%s,%s) conf=%.3f", cx, cy, hit.confidence)
         click_at(cx, cy, pause=0.2)
         time.sleep(_AFTER_SIX_CLICK_SEC)
-    ctx.goto("ba_wang.click_ok")
-    return Result.success()
+    return Result.success(then="ba_wang.click_ok")
 
 
 def click_ok_if_any(ctx) -> Result:
@@ -149,14 +142,12 @@ def click_ok_if_any(ctx) -> Result:
         cx, cy = result.value.center
         logger.info("click_ok_if_any @ (%s,%s)", cx, cy)
         click_at(cx, cy, pause=0.2)
-    ctx.goto("ba_wang.move_aside")
-    return Result.success()
+    return Result.success(then="ba_wang.move_aside")
 
 
 def move_aside(ctx) -> Result:
     do(move().to(80, 80).raw())()
-    ctx.goto("ba_wang.wait_setting")
-    return Result.success()
+    return Result.success(then="ba_wang.wait_setting")
 
 
 def wait_click_setting(ctx) -> Result:
@@ -166,17 +157,14 @@ def wait_click_setting(ctx) -> Result:
     )()
     if not result.ok:
         return Result.fail(result.message or action_context().reason or "未找到 setting")
-    ctx.goto("ba_wang.click_auto")
-    return Result.success()
+    return Result.success(then="ba_wang.click_auto")
 
 
 def click_auto(ctx) -> Result:
     r = do(move().image(_AUTO).match(timeout=3.0), click())()
     if not r.ok:
-        ctx.goto("ba_wang.wait_setting")
-    else:
-        ctx.goto("ba_wang.click_challenge_end")
-    return Result.success()
+        return Result.success(then="ba_wang.wait_setting")
+    return Result.success(then="ba_wang.click_challenge_end")
 
 
 def click_challenge_end(ctx) -> Result:
@@ -186,8 +174,7 @@ def click_challenge_end(ctx) -> Result:
     )()
     if not result.ok:
         return Result.fail(result.message or action_context().reason or "挑战未结束")
-    ctx.goto("ba_wang.next_step")
-    return Result.success()
+    return Result.success(then="ba_wang.next_step")
 
 
 def click_next_step_if_any(ctx) -> Result:
@@ -199,13 +186,12 @@ def click_next_step_if_any(ctx) -> Result:
         logger.info("click_next_step_if_any @ (%s,%s)", cx, cy)
         do(move().to(cx, cy).raw(), click())()
         time.sleep(0.4)
-    ctx.goto("ba_wang.battle_done")
-    return Result.success()
+    return Result.success(then="ba_wang.battle_done")
 
 
 def battle_round_done(ctx) -> Result:
-    target = resolve(relocate_role, ctx)
-    if not isinstance(target, str) or not target:
+    outcome = resolve(relocate_role, ctx)
+    if outcome is None or not outcome.ok or not outcome.then:
         return Result.fail("无法定位下一入口")
-    logger.info("battle_round_done → call %s", target)
-    return ctx.call(target)
+    logger.info("battle_round_done → call %s", outcome.then)
+    return ctx.call(outcome.then)

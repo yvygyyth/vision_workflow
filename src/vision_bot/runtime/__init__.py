@@ -2,11 +2,10 @@ from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
-from vision_bot.runtime.jump import Relocate
 from vision_bot.runtime.module import Module
 from vision_bot.runtime.registry import FlowRegistry
 from vision_bot.runtime.relocate import RelocateRule, resolve
-from vision_bot.runtime.result import Result
+from vision_bot.runtime.result import Result, normalize_outcome
 from vision_bot.runtime.runner import RunReport, run
 from vision_bot.runtime.catalog import (
     DEFAULT_ROOT_ID,
@@ -23,7 +22,7 @@ __all__ = [
     "Flow",
     "Module",
     "Result",
-    "Relocate",
+    "normalize_outcome",
     "RelocateRule",
     "resolve",
     "flow",

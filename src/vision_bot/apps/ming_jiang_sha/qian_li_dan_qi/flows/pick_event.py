@@ -47,8 +47,7 @@ def choose(ctx) -> Result:
             Mouse().move(*c).click().sleep(0.2).perform()
             ctx.vars["pending_event"] = outcome
             logger.info("pick_event 选中 %s", outcome)
-            ctx.goto("qldq.battle_hub.pick_event.confirm")
-            return Result.success()
+            return Result.success(then="qldq.battle_hub.pick_event.confirm")
     return Result.fail("无事件选项")
 
 
@@ -60,5 +59,4 @@ def confirm(ctx) -> Result:
     if not r.ok:
         return Result.fail(r.message)
     ctx.vars.pop("pending_event", None)
-    ctx.goto(f"qldq.{outcome}")
-    return Result.success()
+    return Result.success(then=f"qldq.{outcome}")

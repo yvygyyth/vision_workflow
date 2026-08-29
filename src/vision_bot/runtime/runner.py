@@ -13,10 +13,11 @@ from vision_bot.runtime.cancel import CancelledError
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
-from vision_bot.runtime.jump import Jump, JumpTargetError, Relocate, RelocateStop
+from vision_bot.runtime.jump import JumpTargetError, ThenEscape
 from vision_bot.runtime.module import Module
 from vision_bot.runtime.registry import FlowRegistry
-from vision_bot.runtime.result import Result
+from vision_bot.runtime.relocate import resolve
+from vision_bot.runtime.result import Result, normalize_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +41,29 @@ class Runner:
         self.registry = registry
         self.root = root
         self.path: list[str] = []
-
-    def goto(self, target_id: str) -> None:
-        """永久跳转；抛出 Jump，调用方后续代码不会执行。"""
-        self.registry.get(target_id)
-        raise Jump("goto", target_id)
+        self._flow_stack: list[str] = []
+        self._call_stack: list[str] = []
 
     def call(self, target_id: str) -> Result:
-        """同步插入执行目标子树，返回其 Result；调用方可继续处理。"""
+        """同步插入执行目标子树，返回其 Result；调用方可继续处理。
+
+        被 call 的工具 Flow 若 relocate 失败且无业务父级，
+        则改走**调用方 Flow** 的 relocate。
+        若恢复目标落在 call 子树外，抛出 ThenEscape 由外层接管（等同旧 goto）。
+        """
+        if not self._flow_stack:
+            raise RuntimeError("call 必须在 Flow 执行中调用")
         self.registry.get(target_id)
-        return self._run_subtree(target_id)
+        self._call_stack.append(self._flow_stack[-1])
+        try:
+            return self._run_subtree(target_id)
+        finally:
+            self._call_stack.pop()
 
     def run_flow(self, flow: Flow) -> Result:
         try:
             return self._run_flow(flow)
         except JumpTargetError as exc:
-            return Result.fail(str(exc))
-        except RelocateStop as exc:
             return Result.fail(str(exc))
 
     def run_from(self, entry_id: str) -> Result:
@@ -67,41 +74,64 @@ class Runner:
         self.ctx.enter_flow(parent.id, parent.params)
         try:
             return self._run_flow_children(parent, start_index)
-        except RelocateStop as exc:
-            return Result.fail(str(exc))
         except JumpTargetError as exc:
             return Result.fail(str(exc))
         finally:
             self.ctx.exit_flow()
 
     def _try_relocate(self, flow: Flow) -> str | None:
-        from vision_bot.runtime.relocate import resolve
+        """解析 relocate，返回跳转目标 id；None 表示不跳。
 
-        # 未配置 relocate → 不跳转，由调用方从 children[0] 开跑
+        fail 且无父级可上交时返回 ``Result.fail`` 语义：抛 JumpTargetError 不再合适，
+        用 ``Result.fail`` 消息经由调用方——此处用特殊返回：raise 已改为返回
+        并在入口处把「根上 fail」变成 fail Result。
+        """
         if flow.relocate is None:
             return None
-        target = resolve(flow.relocate, self.ctx)
-        if target is Relocate.PARENT:
-            parent_id = self.registry.parent_flow.get(flow.id)
-            if parent_id is None:
-                raise RelocateStop()
-            parent = self.registry.get(parent_id)
-            assert isinstance(parent, Flow)
-            logger.info("relocate PARENT → %s", parent.id)
-            return self._try_relocate(parent)
-        if isinstance(target, str) and target:
-            return target
-        return None
+        outcome = resolve(flow.relocate, self.ctx)
+        return self._outcome_to_target(flow, outcome)
+
+    def _outcome_to_target(self, flow: Flow, outcome: Result | None) -> str | None:
+        if outcome is None:
+            return None
+        if outcome.ok:
+            return outcome.then
+        # fail → 上交父级 / call 方
+        parent_id = self.registry.parent_flow.get(flow.id)
+        if parent_id is None:
+            if self._call_stack and flow.id != self._call_stack[-1]:
+                caller_id = self._call_stack[-1]
+                logger.info("relocate fail → call 方 %s", caller_id)
+                caller = self.registry.get(caller_id)
+                assert isinstance(caller, Flow)
+                return self._try_relocate(caller)
+            raise _RelocateExhausted(outcome.message or "relocate 失败且无父级")
+        parent = self.registry.get(parent_id)
+        assert isinstance(parent, Flow)
+        logger.info("relocate fail → 父级 %s", parent.id)
+        return self._try_relocate(parent)
+
+    def _leave_call_if_needed(self, flow: Flow, entry: str) -> None:
+        """恢复目标不在当前 call 子树内时，ThenEscape 跳出 call。"""
+        if not self._call_stack:
+            return
+        parent, _ = self.registry.entry_point(entry)
+        if parent.id != flow.id:
+            raise ThenEscape(entry)
 
     def _run_flow(self, flow: Flow) -> Result:
         logger.info("[%s]", flow.name)
         self.path.append(flow.id)
+        self._flow_stack.append(flow.id)
         self.ctx.check_cancelled()
         self.ctx.enter_flow(flow.id, flow.params)
         try:
-            entry = self._try_relocate(flow)
+            try:
+                entry = self._try_relocate(flow)
+            except _RelocateExhausted as exc:
+                return Result.fail(str(exc))
             if entry:
-                # 本 Flow 内的子节点：从该 index 起顺序执行后续兄弟
+                self._leave_call_if_needed(flow, entry)
                 parent, idx = self.registry.entry_point(entry)
                 if parent.id == flow.id:
                     return self._run_flow_children(flow, idx)
@@ -109,6 +139,7 @@ class Runner:
             return self._run_flow_children(flow, 0)
         finally:
             self.ctx.exit_flow()
+            self._flow_stack.pop()
             self.path.pop()
 
     def _run_flow_children(self, flow: Flow, start_index: int) -> Result:
@@ -120,12 +151,23 @@ class Runner:
                 return handled
         return Result.success()
 
-    def _consume_node_result(self, flow: Flow, child_index: int, result: Result | _FlowAdvance) -> Result | None:
+    def _consume_node_result(
+        self, flow: Flow, child_index: int, result: Result | _FlowAdvance
+    ) -> Result | None:
         if isinstance(result, _FlowAdvance):
             return self._run_flow_children(result.flow, result.start_index)
+        if result.ok and result.then:
+            handled = self._apply_then(result.then)
+            if isinstance(handled, _FlowAdvance):
+                return self._run_flow_children(handled.flow, handled.start_index)
+            return handled
         if not result.ok:
-            recovery = self._try_relocate(flow)
+            try:
+                recovery = self._try_relocate(flow)
+            except _RelocateExhausted:
+                return result
             if recovery:
+                self._leave_call_if_needed(flow, recovery)
                 parent, idx = self.registry.entry_point(recovery)
                 if parent.id == flow.id:
                     return self._run_flow_children(flow, idx)
@@ -133,7 +175,17 @@ class Runner:
             return result
         return None
 
-    def _run_node(self, node: Flow | Module, *, parent_flow: Flow, child_index: int) -> Result | _FlowAdvance:
+    def _apply_then(self, target_id: str) -> Result | _FlowAdvance:
+        result = self._run_subtree(target_id)
+        if not result.ok:
+            return result
+        if result.ok and result.then:
+            return self._apply_then(result.then)
+        return self._continue_after_node(target_id)
+
+    def _run_node(
+        self, node: Flow | Module, *, parent_flow: Flow, child_index: int
+    ) -> Result | _FlowAdvance:
         if isinstance(node, Flow):
             return self._run_flow(node)
 
@@ -141,24 +193,18 @@ class Runner:
         self.path.append(node.id)
         self.ctx.check_cancelled()
         try:
-            result = node.active(self.ctx)
-        except Jump as jump:
+            raw = node.active(self.ctx)
+            outcome = normalize_outcome(raw)
+            if outcome is None:
+                outcome = Result.success()
+        except ThenEscape as esc:
             self.path.pop()
-            return self._handle_jump(jump, parent_flow=parent_flow, child_index=child_index)
+            return self._apply_then(esc.target_id)
         except CancelledError:
             self.path.pop()
             return Result.fail("用户取消")
         self.path.pop()
-
-        if not result.ok:
-            return result
-        return Result.success()
-
-    def _handle_jump(self, jump: Jump, *, parent_flow: Flow, child_index: int) -> Result | _FlowAdvance:
-        result = self._run_subtree(jump.target_id)
-        if not result.ok:
-            return result
-        return self._continue_after_node(jump.target_id)
+        return outcome
 
     def _run_subtree(self, node_id: str) -> Result:
         node = self.registry.get(node_id)
@@ -176,11 +222,13 @@ class Runner:
                 need_pop = False
             try:
                 try:
-                    result = node.active(self.ctx)
-                except Jump as jump:
+                    raw = node.active(self.ctx)
+                    outcome = normalize_outcome(raw)
+                    if outcome is None:
+                        outcome = Result.success()
+                except ThenEscape as esc:
                     self.path.pop()
-                    idx = self.registry.child_index[node_id]
-                    handled = self._handle_jump(jump, parent_flow=parent, child_index=idx)
+                    handled = self._apply_then(esc.target_id)
                     if isinstance(handled, _FlowAdvance):
                         return self._run_flow_children(handled.flow, handled.start_index)
                     return handled
@@ -188,7 +236,12 @@ class Runner:
                     self.path.pop()
                     return Result.fail("用户取消")
                 self.path.pop()
-                return result
+                if outcome.ok and outcome.then:
+                    handled = self._apply_then(outcome.then)
+                    if isinstance(handled, _FlowAdvance):
+                        return self._run_flow_children(handled.flow, handled.start_index)
+                    return handled
+                return outcome
             finally:
                 if need_pop:
                     self.ctx.exit_flow()
@@ -207,6 +260,10 @@ class Runner:
         parent = self.registry.get(parent_id)
         assert isinstance(parent, Flow)
         return _FlowAdvance(parent, len(parent.children))
+
+
+class _RelocateExhausted(Exception):
+    """relocate 链走到根仍 fail。"""
 
 
 def _prepare(

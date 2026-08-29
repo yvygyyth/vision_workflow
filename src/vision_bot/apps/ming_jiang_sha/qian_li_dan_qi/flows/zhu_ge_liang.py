@@ -30,5 +30,4 @@ def click_next(ctx) -> Result:
     if not r.ok:
         return Result.fail(r.message or "未找到继续")
     click_match(r.value)
-    ctx.goto("qldq.battle_hub")
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")

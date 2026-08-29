@@ -1,4 +1,4 @@
-"""名将杀共用：纯战斗工具 Flow（移开鼠标 → … → 本轮结束判定）。"""
+"""名将杀共用：纯战斗工具 Flow（点取消 → … → 本轮结束判定）。"""
 
 from __future__ import annotations
 
@@ -53,12 +53,9 @@ relocate: list[RelocateRule] = [
 ]
 
 
-def move_aside(ctx) -> Result:
-    do(move().to(80, 80))()
-    return Result.success()
-
-
 def click_cancel(ctx) -> Result:
+    # 识别/点击取消前移开鼠标，防止挡住图标
+    do(move().to(80, 80))()
     return do(move().image(CANCEL), click().pause(0.2))()
 
 
@@ -100,7 +97,6 @@ def build_battle() -> Flow:
         name="纯战斗",
         relocate=relocate,
         children=[
-            mod(id="mjs.battle.move_aside", name="移开鼠标", active=move_aside),
             mod(id="mjs.battle.click_cancel", name="点取消", active=click_cancel),
             mod(id="mjs.battle.click_setting", name="点设置", active=click_setting),
             mod(id="mjs.battle.click_auto", name="点自动", active=click_auto),

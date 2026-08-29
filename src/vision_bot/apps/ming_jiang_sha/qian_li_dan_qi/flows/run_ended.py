@@ -11,12 +11,11 @@ from vision_bot.runtime.result import Result
 def confirm(ctx) -> Result:
     r = click_confirm()
     if not r.ok:
-        ctx.goto("qldq.run_ended.close")
+        return Result.success(then="qldq.run_ended.close")
     return r
 
 
 def close(ctx) -> Result:
     press_esc(times=2)
     clear_battle_state(ctx)
-    ctx.goto("qldq.battle_select.enter_pick.click_start")
-    return Result.success()
+    return Result.success(then="qldq.battle_select.enter_pick.click_start")

@@ -58,6 +58,5 @@ def choose(ctx) -> Result:
         if not r.ok:
             continue
         logger.info("pick_shop 进入 %s", outcome)
-        ctx.goto(f"qldq.{outcome}")
-        return Result.success()
+        return Result.success(then=f"qldq.{outcome}")
     return Result.fail("商店选项均未识别")

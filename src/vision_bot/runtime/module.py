@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
-ActiveFn = Callable[[RunContext], Result]
+ActiveFn = Callable[[RunContext], Result | str | None]
 
 
 @dataclass

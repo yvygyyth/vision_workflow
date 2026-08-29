@@ -52,18 +52,14 @@ def pick_token_slot(titles: list[str], priority: list[str] | None = None) -> int
 def click_token_slot(ctx) -> Result:
     result = do(move().image(f"{QLDQ}/ba_qing_store/token_slot.png"), click())()
     if result.ok:
-        ctx.goto("qldq.ba_qing_store.slot_confirm")
-    else:
-        ctx.goto("qldq.ba_qing_store.choose_token")
-    return Result.success()
+        return Result.success(then="qldq.ba_qing_store.slot_confirm")
+    return Result.success(then="qldq.ba_qing_store.choose_token")
 
 
 def slot_confirm(ctx) -> Result:
     if click_confirm().ok:
-        ctx.goto("qldq.ba_qing_store.choose_token")
-    else:
-        ctx.goto("qldq.ba_qing_store.slot_no_buy")
-    return Result.success()
+        return Result.success(then="qldq.ba_qing_store.choose_token")
+    return Result.success(then="qldq.ba_qing_store.slot_no_buy")
 
 
 def slot_no_buy(ctx) -> Result:
@@ -84,8 +80,7 @@ def choose_token(ctx) -> Result:
     slot = pick_token_slot(titles)
     if slot is None:
         logger.info("choose_token → skip (%s)", "；".join(lines))
-        ctx.goto("qldq.ba_qing_store.go_back")
-        return Result.success()
+        return Result.success(then="qldq.ba_qing_store.go_back")
 
     name = next(
         (n for n in TOKEN_PRIORITY if n and n in (titles[slot] or "")),
@@ -96,16 +91,13 @@ def choose_token(ctx) -> Result:
     cy = top + height // 2
     logger.info("【巴清信物】槽位%s → %s 点击 (%s,%s)", slot + 1, name, cx, cy)
     do(move().to(cx, cy), click())()
-    ctx.goto("qldq.ba_qing_store.token_confirm")
-    return Result.success()
+    return Result.success(then="qldq.ba_qing_store.token_confirm")
 
 
 def token_confirm(ctx) -> Result:
     if click_confirm().ok:
-        ctx.goto("qldq.ba_qing_store.go_back")
-    else:
-        ctx.goto("qldq.ba_qing_store.token_no_buy")
-    return Result.success()
+        return Result.success(then="qldq.ba_qing_store.go_back")
+    return Result.success(then="qldq.ba_qing_store.token_no_buy")
 
 
 def token_no_buy(ctx) -> Result:
@@ -116,38 +108,32 @@ def _close_no_buy(ctx, *, on_absent: str) -> Result:
     hit = find(_NO_BUY, timeout=1.2, threshold=0.8)
     if not hit.ok:
         logger.info("close_no_buy → 无弹窗，继续 %s", on_absent)
-        ctx.goto(on_absent)
-        return Result.success()
+        return Result.success(then=on_absent)
     logger.info("close_no_buy → Esc 关闭 no_buy")
     press_key("esc")
     time.sleep(0.3)
-    ctx.goto("qldq.ba_qing_store.go_back")
-    return Result.success()
+    return Result.success(then="qldq.ba_qing_store.go_back")
 
 
 def go_back(ctx) -> Result:
     do(move().image(GO_BACK).match(timeout=2.0), click())()
     time.sleep(0.4)
-    ctx.goto("qldq.ba_qing_store.confirm")
-    return Result.success()
+    return Result.success(then="qldq.ba_qing_store.confirm")
 
 
 def confirm(ctx) -> Result:
     """点离店确认；点完即回三选一（不再 ensure 空转重试）。"""
     if not snap(GO_BACK).ok:
         logger.info("confirm → 已不在店内")
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     r = do(move().image(CONFIRM).match(timeout=1.0), click())()
     if r.ok:
         logger.info("confirm → 已点确认，回三选一")
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     # 确认按钮找不到：若返回键也没了，说明已经出去了
     if not snap(GO_BACK).ok:
         logger.info("confirm → 无确认且无返回，视为已离店")
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
     return Result.fail(r.message or "离店确认未找到")

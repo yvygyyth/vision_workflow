@@ -39,15 +39,12 @@ def check(ctx) -> Result:
     shot = snap(_OK, _PATTERN, _BATTLE_INTERFACE)
     if shot.found(_OK):
         do(move().image(_OK).match(timeout=0), click().pause(0.3))()
-        ctx.goto("qldq.pocket_event.check")
-        return Result.success()
+        return Result.success(then="qldq.pocket_event.check")
     if shot.found(_PATTERN):
-        ctx.goto("qldq.pocket_event.enter")
-        return Result.success()
+        return Result.success(then="qldq.pocket_event.enter")
     if shot.found(_BATTLE_INTERFACE):
         logger.info("pocket_event → 三选一")
-        ctx.goto("qldq.battle_hub")
-        return Result.success()
+        return Result.success(then="qldq.battle_hub")
 
     # 仅在判断取消前移开鼠标，避免挡住 cancel
     do(move().to(80, 80))()
@@ -61,12 +58,10 @@ def _click_pattern(ctx) -> Result:
     """场上通常 3 张 ``_PATTERN``；识别到几张点随机一张即可。"""
     hits = find_all(_PATTERN, threshold=0.8, max_count=3)
     if not hits.ok or not hits.value:
-        ctx.goto("qldq.pocket_event.check")
-        return Result.success()
+        return Result.success(then="qldq.pocket_event.check")
     choices = [h for h in hits.value if h.center] or list(hits.value)
     hit = random.choice(choices)
     logger.info("pocket_event 锦囊候选=%s，点其中一张", len(choices))
     if hit.center:
         do(move().to(*hit.center).raw(), click().pause(0.4))()
-    ctx.goto("qldq.pocket_event.check")
-    return Result.success()
+    return Result.success(then="qldq.pocket_event.check")

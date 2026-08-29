@@ -57,8 +57,7 @@ def choose(ctx) -> Result:
             return Result.fail("点击 challenge 失败")
     else:
         return Result.fail("无战斗选项")
-    ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")
-    return Result.success()
+    return Result.success(then="qldq.battle_hub.pick_battle.pre_confirm")
 
 
 def choose_yi_wai(ctx) -> Result:
@@ -68,15 +67,12 @@ def choose_yi_wai(ctx) -> Result:
     time.sleep(0.6)
     shot2 = snap(YI_WAI, region=CHOICE_REGION)
     if shot2.ok:
-        ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
-        return Result.success()
-    ctx.goto("qldq.battle_hub.pick_battle.pre_confirm")
-    return Result.success()
+        return Result.success(then="qldq.battle_hub.pick_battle.choose_yi_wai")
+    return Result.success(then="qldq.battle_hub.pick_battle.pre_confirm")
 
 
 def pre_confirm(ctx) -> Result:
     r = click_confirm()
     if not r.ok:
         return Result.fail(r.message)
-    ctx.goto("qldq.fight")
-    return Result.success()
+    return Result.success(then="qldq.fight")

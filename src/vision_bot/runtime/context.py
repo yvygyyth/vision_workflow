@@ -54,12 +54,6 @@ class RunContext:
         if self._params_stack:
             self._params_stack.pop()
 
-    def goto(self, target_id: str) -> None:
-        """永久跳转；抛出 Jump，调用方后续代码不会执行。"""
-        if self._runner is None:
-            raise RuntimeError("goto 需要在 run 内调用")
-        self._runner.goto(target_id)
-
     def call(self, target_id: str) -> Result:
         """同步插入执行目标子树，返回 Result；可继续写后续逻辑。"""
         if self._runner is None:
