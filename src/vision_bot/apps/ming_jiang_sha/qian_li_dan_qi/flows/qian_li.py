@@ -16,19 +16,10 @@ _CHOICE_TEMPLATES = (
     f"{QLDQ}/battle_select/fei_fei.png",
     f"{QLDQ}/battle_select/yi_wai.png",
 )
-_FRAME_KEY = "_qldq_relocate_frame"
-
-
-def _frame(ctx: RunContext):
-    img = ctx.vars.get(_FRAME_KEY)
-    if img is None:
-        img = capture_screen()
-        ctx.vars[_FRAME_KEY] = img
-    return img
 
 
 def _hit(ctx: RunContext, template: str, *, region=None) -> bool:
-    return match(template, screenshot=_frame(ctx), region=region).found
+    return match(template, screenshot=capture_screen(), region=region).found
 
 
 def _has_choice(ctx: RunContext) -> bool:

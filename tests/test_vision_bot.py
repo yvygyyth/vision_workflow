@@ -40,12 +40,15 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resolve(relocate_qian_li, RunContext()) == "qldq.battle_hub"
 
 
-def test_relocate_hub_pick_battle() -> None:
-    ctx = RunContext()
-    ctx.vars["_battle_hub_relocate_shot"] = ScreenSnapshot(
+def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
+    shot = ScreenSnapshot(
         hits={CHALLENGE: MatchResult(found=True, image=CHALLENGE)}
     )
-    assert resolve(relocate_hub, ctx) == HUB_PICK_BATTLE
+    monkeypatch.setattr(
+        "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub._hub_shot",
+        lambda ctx: shot,
+    )
+    assert resolve(relocate_hub, RunContext()) == HUB_PICK_BATTLE
 
 
 def test_flow_registry_build() -> None:

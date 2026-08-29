@@ -7,7 +7,7 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import input_text as type_text
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -18,37 +18,29 @@ SWITCH = f"{QLDQ}/enter_battle/switch.png"
 SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
 
 DETECT: set[str] = {START, SWITCH, SELECT_WU_JIANG}
-_SHOT_KEY = "_enter_pick_relocate_shot"
-
-
-def _shot(ctx: RunContext) -> ScreenSnapshot:
-    shot = ctx.vars.get(_SHOT_KEY)
-    if shot is None:
-        shot = snap(DETECT)
-        ctx.vars[_SHOT_KEY] = shot
-    return shot
 
 
 def _has_start(ctx: RunContext) -> bool:
-    return _shot(ctx).found(START)
+    return snap(DETECT).found(START)
 
 
 def _switch_without_select(ctx: RunContext) -> bool:
-    s = _shot(ctx)
+    s = snap(DETECT)
     return s.found(SWITCH) and not s.found(SELECT_WU_JIANG)
 
 
 def _has_select_wu_jiang(ctx: RunContext) -> bool:
-    return _shot(ctx).found(SELECT_WU_JIANG)
+    return snap(DETECT).found(SELECT_WU_JIANG)
 
 
 relocate: list[RelocateRule] = [
-    RelocateRule(when=_has_start, then="qldq.battle_select.enter_ready"),
+    # 选将相关优先，避免 start.png 在选将界面误匹配
     RelocateRule(when=_switch_without_select, then=None),
     RelocateRule(
         when=_has_select_wu_jiang,
         then="qldq.battle_select.enter_pick.focus_search",
     ),
+    RelocateRule(when=_has_start, then="qldq.battle_select.enter_ready"),
 ]
 
 

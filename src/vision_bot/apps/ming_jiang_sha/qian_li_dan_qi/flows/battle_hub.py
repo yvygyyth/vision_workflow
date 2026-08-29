@@ -44,19 +44,12 @@ _CHOICE_DETECT = (
 )
 
 
-_HUB_SHOT = "_battle_hub_relocate_shot"
-
-
 def _hub_shot(ctx: RunContext) -> ScreenSnapshot:
-    shot = ctx.vars.get(_HUB_SHOT)
-    if shot is None:
-        frame = capture_screen()
-        hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
-        for path in _CHOICE_DETECT:
-            hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
-        shot = ScreenSnapshot(hits=hits, image=frame)
-        ctx.vars[_HUB_SHOT] = shot
-    return shot
+    frame = capture_screen()
+    hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
+    for path in _CHOICE_DETECT:
+        hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
+    return ScreenSnapshot(hits=hits, image=frame)
 
 
 relocate: list[RelocateRule] = [

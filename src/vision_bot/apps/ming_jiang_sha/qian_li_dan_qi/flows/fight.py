@@ -70,12 +70,7 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
 
 
 def _fight_shot(ctx: RunContext) -> ScreenSnapshot:
-    key = "_fight_relocate_shot"
-    shot = ctx.vars.get(key)
-    if shot is None:
-        shot = snap(DETECT)
-        ctx.vars[key] = shot
-    return shot
+    return snap(DETECT)
 
 
 relocate: list[RelocateRule] = [
