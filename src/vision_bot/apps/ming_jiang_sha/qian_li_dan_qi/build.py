@@ -249,22 +249,16 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.pocket_event",
                         name="锦囊",
-                        relocate=pocket_event.relocate,
                         children=[
                             mod(
-                                id="qldq.pocket_event.pick",
-                                name="选锦囊",
-                                active=pocket_event.pick,
+                                id="qldq.pocket_event.enter",
+                                name="进店选锦囊",
+                                active=pocket_event.enter,
                             ),
                             mod(
                                 id="qldq.pocket_event.check",
                                 name="检查",
                                 active=pocket_event.check,
-                            ),
-                            mod(
-                                id="qldq.pocket_event.click_ok",
-                                name="点确定",
-                                active=pocket_event.click_ok,
                             ),
                         ],
                     ),
