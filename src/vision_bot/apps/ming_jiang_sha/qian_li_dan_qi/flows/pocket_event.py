@@ -25,8 +25,6 @@ _OK = f"{QLDQ}/pocket_event/ok.png"
 _CANCEL = f"{QLDQ}/fight/cancel.png"
 _BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
 
-_DETECT = (_CANCEL, _OK, _PATTERN, _BATTLE_INTERFACE)
-
 # 刚进必是 PATTERN，从 children[0] enter 开跑
 relocate = None
 
@@ -37,11 +35,7 @@ def enter(ctx) -> Result:
 
 
 def check(ctx) -> Result:
-    shot = snap(*_DETECT)
-    if shot.found(_CANCEL):
-        logger.info("pocket_event → 战斗")
-        ctx.goto("qldq.fight")
-        return Result.success()
+    shot = snap(_OK, _PATTERN, _BATTLE_INTERFACE)
     if shot.found(_OK):
         do(move().image(_OK).match(timeout=0), click().pause(0.3))()
         ctx.goto("qldq.pocket_event.check")
@@ -52,6 +46,13 @@ def check(ctx) -> Result:
     if shot.found(_BATTLE_INTERFACE):
         logger.info("pocket_event → 三选一")
         ctx.goto("qldq.battle_hub")
+        return Result.success()
+
+    # 仅在判断取消前移开鼠标，避免挡住 cancel
+    do(move().to(80, 80))()
+    if snap(_CANCEL).ok:
+        logger.info("pocket_event → 战斗")
+        ctx.goto("qldq.fight")
         return Result.success()
     return Result.fail("锦囊画面未识别")
 
