@@ -9,7 +9,9 @@ from typing import Literal
 
 @dataclass
 class Jump(Exception):
-    kind: Literal["goto", "call"]
+    """goto 控制流：抛出后由 runner 接管，后续代码不会执行。"""
+
+    kind: Literal["goto"]
     target_id: str
 
 

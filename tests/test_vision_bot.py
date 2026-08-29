@@ -142,6 +142,40 @@ def test_goto_jumps_to_target() -> None:
     assert log == ["a", "c"]
 
 
+def test_call_runs_sync_and_resumes() -> None:
+    """call 同步跑完目标后回到调用方，可继续执行。"""
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        r = ctx.call("t.c")
+        assert r.ok
+        log.append("a-after")
+        return Result.success()
+
+    def b(ctx):
+        log.append("b")
+        return Result.success()
+
+    def c(ctx):
+        log.append("c")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "测试",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.b", "B", b),
+            mod("t.c", "C", c),
+        ],
+    )
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert report.success
+    # call 同步跑 c 后回到 a；a 结束后继续兄弟 b、c
+    assert log == ["a", "c", "a-after", "b", "c"]
+
+
 def test_relocate_on_entry() -> None:
     log: list[str] = []
 

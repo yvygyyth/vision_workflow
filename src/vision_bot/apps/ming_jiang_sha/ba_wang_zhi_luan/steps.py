@@ -208,5 +208,4 @@ def battle_round_done(ctx) -> Result:
     if not isinstance(target, str) or not target:
         return Result.fail("无法定位下一入口")
     logger.info("battle_round_done → call %s", target)
-    ctx.call(target)
-    return Result.success()
+    return ctx.call(target)

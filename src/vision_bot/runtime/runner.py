@@ -29,12 +29,6 @@ class RunReport:
 
 
 @dataclass
-class _Resume:
-    flow: Flow
-    child_index: int
-
-
-@dataclass
 class _FlowAdvance:
     flow: Flow
     start_index: int
@@ -46,15 +40,16 @@ class Runner:
         self.registry = registry
         self.root = root
         self.path: list[str] = []
-        self._call_stack: list[_Resume] = []
 
     def goto(self, target_id: str) -> None:
+        """永久跳转；抛出 Jump，调用方后续代码不会执行。"""
         self.registry.get(target_id)
         raise Jump("goto", target_id)
 
-    def call(self, target_id: str) -> None:
+    def call(self, target_id: str) -> Result:
+        """同步插入执行目标子树，返回其 Result；调用方可继续处理。"""
         self.registry.get(target_id)
-        raise Jump("call", target_id)
+        return self._run_subtree(target_id)
 
     def run_flow(self, flow: Flow) -> Result:
         try:
@@ -160,14 +155,9 @@ class Runner:
         return Result.success()
 
     def _handle_jump(self, jump: Jump, *, parent_flow: Flow, child_index: int) -> Result | _FlowAdvance:
-        if jump.kind == "call":
-            self._call_stack.append(_Resume(flow=parent_flow, child_index=child_index + 1))
         result = self._run_subtree(jump.target_id)
         if not result.ok:
             return result
-        if jump.kind == "call":
-            resume = self._call_stack.pop()
-            return _FlowAdvance(resume.flow, resume.child_index)
         return self._continue_after_node(jump.target_id)
 
     def _run_subtree(self, node_id: str) -> Result:
