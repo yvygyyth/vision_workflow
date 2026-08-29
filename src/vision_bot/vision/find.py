@@ -64,10 +64,16 @@ def search(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> Result:
-    """识图核心：在超时内轮询一张或多张模板，任一命中即返回。"""
+    """识图核心：在超时内轮询一张或多张模板，任一命中即返回。
+
+    每次轮询内部固定 ``timeout=0``（只匹配一次）；外层用 ``timeout`` /
+    ``defaults.timeout`` 控制最长等待。``timeout=0`` 表示整次调用只查一轮。
+    """
     if not images:
         return Result.fail("未指定模板图")
 
+    base = defaults or MatchOptions()
+    # 单次匹配不在底层空等；等待由外层 while + wait 负责
     opts = _merge_options(
         defaults,
         threshold=threshold,
@@ -76,7 +82,7 @@ def search(
         region=region,
         grayscale=grayscale,
     )
-    wait = opts.timeout if timeout is None else timeout
+    wait = base.timeout if timeout is None else timeout
     poll = opts.interval
     labels = "/".join(Path(p).name for p in images)
     deadline = time.monotonic() + max(wait, 0.0)
@@ -107,9 +113,10 @@ def find(
     region: tuple[int, int, int, int] | None = None,
     grayscale: bool | None = None,
 ) -> Result:
-    """在屏幕上查找模板图（默认等 3 秒、每 0.5 秒查一次）。
+    """在屏幕上查找模板图（默认等会话 ``timeout``，通常 3 秒、每 0.5 秒查一次）。
 
     可传一张或多张模板；多图时每一轮按顺序尝试，任一命中即返回。
+    只需查一次时用 :func:`find_once`。
     """
     cfg = session()
     return search(
@@ -120,6 +127,26 @@ def find(
         timeout=timeout,
         threshold=threshold,
         interval=interval,
+        region=region,
+        grayscale=grayscale,
+    )
+
+
+def find_once(
+    *images: str | Path,
+    threshold: float | None = None,
+    region: tuple[int, int, int, int] | None = None,
+    grayscale: bool | None = None,
+) -> Result:
+    """快速匹配：只查一轮，覆盖默认等待（``timeout=0``）。
+
+    适用于「确认某图已消失才能下一步」等场景：``not result.ok`` 表示未找到。
+    可传多张模板，任一命中即 ``ok=True``。
+    """
+    return find(
+        *images,
+        timeout=0.0,
+        threshold=threshold,
         region=region,
         grayscale=grayscale,
     )

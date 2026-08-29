@@ -27,7 +27,9 @@ def relocate(ctx: RunContext) -> str | Relocate | None:
 
     def has_choice() -> bool:
         return any(hit(p, region=_CHOICE_REGION) for p in _CHOICE_TEMPLATES)
-
+        
+    if hit(f"{QLDQ}/enter_battle/switch.png"):
+        return None
     if hit(f"{QLDQ}/enter_battle/battle_interface.png"):
         return None
     if hit(f"{QLDQ}/ba_qing_store/go_back.png"):
