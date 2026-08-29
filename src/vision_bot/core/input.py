@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Callable, Literal, Self
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,109 @@ def _pyautogui():
         raise RuntimeError("请安装 pyautogui: pip install pyautogui") from exc
     pyautogui.FAILSAFE = True
     return pyautogui
+
+
+class CursorKind(str, Enum):
+    """系统光标形态（Win32 标准光标；类比 CSS cursor）。"""
+
+    HIDDEN = "hidden"
+    ARROW = "arrow"
+    HAND = "hand"  # 约等于 CSS pointer
+    IBEAM = "ibeam"
+    WAIT = "wait"
+    OTHER = "other"
+
+
+@dataclass(frozen=True, slots=True)
+class CursorState:
+    """当前系统光标快照。"""
+
+    kind: CursorKind
+    visible: bool
+    x: int
+    y: int
+
+    @property
+    def is_pointer(self) -> bool:
+        """是否为可点击手型（``IDC_HAND`` / CSS ``pointer``）。"""
+        return self.kind == CursorKind.HAND
+
+    @property
+    def is_hidden(self) -> bool:
+        """系统光标是否不可见。"""
+        return not self.visible or self.kind == CursorKind.HIDDEN
+
+
+def get_cursor_state() -> CursorState:
+    """读取 Windows 系统光标状态（非游戏自绘准星）。
+
+    通过 ``GetCursorInfo`` 判断是否显示，并与标准光标句柄比对形态。
+    非 Windows 平台返回 ``OTHER`` 且 ``visible=True``。
+    """
+    import sys
+
+    if sys.platform != "win32":
+        pos = _pyautogui().position()
+        return CursorState(
+            kind=CursorKind.OTHER,
+            visible=True,
+            x=int(pos[0]),
+            y=int(pos[1]),
+        )
+
+    import ctypes
+    from ctypes import wintypes
+
+    class CURSORINFO(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.DWORD),
+            ("flags", wintypes.DWORD),
+            ("hCursor", wintypes.HANDLE),
+            ("ptScreenPos", wintypes.POINT),
+        ]
+
+    user32 = ctypes.windll.user32
+    CURSOR_SHOWING = 0x00000001
+    # https://learn.microsoft.com/windows/win32/menurc/about-cursors
+    _STD = {
+        CursorKind.ARROW: 32512,  # IDC_ARROW
+        CursorKind.IBEAM: 32513,  # IDC_IBEAM
+        CursorKind.WAIT: 32514,  # IDC_WAIT
+        CursorKind.HAND: 32649,  # IDC_HAND
+    }
+
+    info = CURSORINFO()
+    info.cbSize = ctypes.sizeof(CURSORINFO)
+    if not user32.GetCursorInfo(ctypes.byref(info)):
+        pos = _pyautogui().position()
+        return CursorState(
+            kind=CursorKind.OTHER,
+            visible=True,
+            x=int(pos[0]),
+            y=int(pos[1]),
+        )
+
+    visible = bool(info.flags & CURSOR_SHOWING)
+    x, y = int(info.ptScreenPos.x), int(info.ptScreenPos.y)
+    if not visible:
+        return CursorState(kind=CursorKind.HIDDEN, visible=False, x=x, y=y)
+
+    handle = int(info.hCursor) if info.hCursor else 0
+    for kind, res_id in _STD.items():
+        std = int(user32.LoadCursorW(None, res_id) or 0)
+        if std and handle == std:
+            return CursorState(kind=kind, visible=True, x=x, y=y)
+    return CursorState(kind=CursorKind.OTHER, visible=True, x=x, y=y)
+
+
+def cursor_is_pointer() -> bool:
+    """当前系统光标是否为手型（可点击）。"""
+    return get_cursor_state().is_pointer
+
+
+def cursor_is_hidden() -> bool:
+    """当前系统光标是否隐藏。"""
+    return get_cursor_state().is_hidden
 
 
 @dataclass

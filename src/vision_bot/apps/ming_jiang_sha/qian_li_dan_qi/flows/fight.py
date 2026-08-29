@@ -16,9 +16,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     pick_reward_slot,
     resolve_general_priority,
 )
-from vision_bot.core.input import Mouse
 from vision_bot.core.vision import grab_region, image_to_text
-from vision_bot.events import click_match
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
@@ -105,41 +103,29 @@ def move_aside(ctx) -> Result:
 
 
 def click_cancel(ctx) -> Result:
-    r = snap(CANCEL)
-    if r.ok and r.value and r.value.center:
-        Mouse().move(*r.value.center).click().sleep(0.2).perform()
-        return Result.success()
-    return Result.fail("无 cancel")
+    return do(move().image(CANCEL), click().pause(0.2))()
 
 
 def click_setting(ctx) -> Result:
-    r = snap(SETTING)
-    if r.ok and r.value and r.value.center:
-        Mouse().move(*r.value.center).click().sleep(0.5).perform()
-        return Result.success()
-    return Result.fail("无 setting")
+    return do(move().image(SETTING), click().pause(0.5))()
 
 
 def click_auto(ctx) -> Result:
-    result = find(AUTO, timeout=1.0)
-    if not result.ok:
-        return Result.fail("无 auto")
-    return click_match(result.value, pause=0.2)
+    return do(move().image(AUTO).match(timeout=1.0), click().pause(0.2))()
 
 
 def wait_end(ctx) -> Result:
-    result = find(CHALLENGE_END, timeout=1200, interval=5)
-    if not result.ok:
-        return Result.fail("挑战未结束")
-    return click_match(result.value, pause=0.2)
+    return do(
+        move().image(CHALLENGE_END).match(timeout=1200, interval=5),
+        click().pause(0.2),
+    )()
 
 
 def next_step(ctx) -> Result:
     for _ in range(5):
-        result = find(NEXT_STEP, timeout=1.2)
-        if not result.ok or not result.value.center:
+        r = do(move().image(NEXT_STEP).match(timeout=1.2), click().pause(0.4))()
+        if not r.ok:
             break
-        click_match(result.value, pause=0.4)
     ctx.goto("qldq.fight.check_run_end")
     return Result.success()
 

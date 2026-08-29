@@ -18,6 +18,7 @@ from vision_bot.vision import find, snap
 logger = logging.getLogger(__name__)
 
 GO_BACK = f"{QLDQ}/ba_qing_store/go_back.png"
+CONFIRM = f"{QLDQ}/ba_qing_store/confirm.png"
 _NO_BUY = f"{QLDQ}/ba_qing_store/no_buy.png"
 
 TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
@@ -25,9 +26,6 @@ TOKEN_TITLE_REGIONS: tuple[tuple[int, int, int, int], ...] = (
     (1730, 300, 280, 50),
     (2186, 300, 280, 50),
 )
-
-_EXIT_CONFIRM_TRIES = "ba_qing_exit_confirm_tries"
-_EXIT_CONFIRM_MAX = 3
 
 
 relocate: list[RelocateRule] = [
@@ -128,32 +126,28 @@ def _close_no_buy(ctx, *, on_absent: str) -> Result:
 
 
 def go_back(ctx) -> Result:
-    do(move().image(f"{QLDQ}/ba_qing_store/go_back.png"), click())()
-    time.sleep(0.6)
+    do(move().image(GO_BACK).match(timeout=2.0), click())()
+    time.sleep(0.4)
     ctx.goto("qldq.ba_qing_store.confirm")
     return Result.success()
 
 
 def confirm(ctx) -> Result:
-    do(move().image(f"{QLDQ}/ba_qing_store/confirm.png"), click())()
-    ctx.goto("qldq.ba_qing_store.ensure_left")
-    return Result.success()
-
-
-def ensure_left(ctx) -> Result:
-    time.sleep(0.6)
-    if snap(GO_BACK).ok:
-        tries = int(ctx.vars.get(_EXIT_CONFIRM_TRIES, 0)) + 1
-        ctx.vars[_EXIT_CONFIRM_TRIES] = tries
-        if tries > _EXIT_CONFIRM_MAX:
-            logger.info("ensure_left → 确认重试超限，结束离店")
-            ctx.vars.pop(_EXIT_CONFIRM_TRIES, None)
-            ctx.goto("qldq.battle_hub")
-            return Result.success()
-        logger.info("ensure_left → still_here (%s/%s)", tries, _EXIT_CONFIRM_MAX)
-        ctx.goto("qldq.ba_qing_store.confirm")
+    """点离店确认；点完即回三选一（不再 ensure 空转重试）。"""
+    if not snap(GO_BACK).ok:
+        logger.info("confirm → 已不在店内")
+        ctx.goto("qldq.battle_hub")
         return Result.success()
-    logger.info("ensure_left → left")
-    ctx.vars.pop(_EXIT_CONFIRM_TRIES, None)
-    ctx.goto("qldq.battle_hub")
-    return Result.success()
+
+    r = do(move().image(CONFIRM).match(timeout=1.0), click())()
+    if r.ok:
+        logger.info("confirm → 已点确认，回三选一")
+        ctx.goto("qldq.battle_hub")
+        return Result.success()
+
+    # 确认按钮找不到：若返回键也没了，说明已经出去了
+    if not snap(GO_BACK).ok:
+        logger.info("confirm → 无确认且无返回，视为已离店")
+        ctx.goto("qldq.battle_hub")
+        return Result.success()
+    return Result.fail(r.message or "离店确认未找到")

@@ -2,10 +2,27 @@
 
 from __future__ import annotations
 
-from vision_bot.core.input import Mouse
+from vision_bot.core.input import (
+    CursorKind,
+    CursorState,
+    Mouse,
+    cursor_is_hidden,
+    cursor_is_pointer,
+    get_cursor_state,
+)
 from vision_bot.core.models import MatchResult
 from vision_bot.runtime.result import Result
 
+__all__ = [
+    "CursorKind",
+    "CursorState",
+    "click_at",
+    "click_below_box",
+    "click_match",
+    "cursor_is_hidden",
+    "cursor_is_pointer",
+    "get_cursor_state",
+]
 
 def click_at(x: int, y: int, *, pause: float = 0.2) -> Result:
     """移动鼠标到屏幕坐标并左键单击。

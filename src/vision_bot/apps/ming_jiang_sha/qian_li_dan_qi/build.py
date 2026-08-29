@@ -121,11 +121,6 @@ def build_qian_li_dan_qi() -> Flow:
                                         name="选商店",
                                         active=pick_shop.choose,
                                     ),
-                                    mod(
-                                        id="qldq.battle_hub.pick_shop.verify_ba_qing",
-                                        name="验证巴清",
-                                        active=pick_shop.verify_ba_qing,
-                                    ),
                                 ],
                             ),
                             flow(
@@ -248,11 +243,6 @@ def build_qian_li_dan_qi() -> Flow:
                                 id="qldq.ba_qing_store.confirm",
                                 name="确认",
                                 active=ba_qing_store.confirm,
-                            ),
-                            mod(
-                                id="qldq.ba_qing_store.ensure_left",
-                                name="确认离店",
-                                active=ba_qing_store.ensure_left,
                             ),
                         ],
                     ),

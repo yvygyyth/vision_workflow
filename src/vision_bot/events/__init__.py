@@ -5,14 +5,28 @@
 """
 
 from vision_bot.events.keyboard import press_esc, press_key
-from vision_bot.events.mouse import click_at, click_below_box, click_match
+from vision_bot.events.mouse import (
+    CursorKind,
+    CursorState,
+    click_at,
+    click_below_box,
+    click_match,
+    cursor_is_hidden,
+    cursor_is_pointer,
+    get_cursor_state,
+)
 from vision_bot.events.session import bind
 
 __all__ = [
+    "CursorKind",
+    "CursorState",
     "bind",
     "click_at",
     "click_below_box",
     "click_match",
+    "cursor_is_hidden",
+    "cursor_is_pointer",
+    "get_cursor_state",
     "press_esc",
     "press_key",
 ]
