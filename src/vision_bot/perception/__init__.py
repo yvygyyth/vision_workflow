@@ -8,7 +8,6 @@ from vision_bot.perception.snapshot import (
     ScreenSnapshot,
     capture_screen,
     match,
-    refresh,
     resolve_template,
     snap,
 )
@@ -20,7 +19,6 @@ __all__ = [
     "capture_screen",
     "match",
     "perception",
-    "refresh",
     "resolve_template",
     "snap",
     "unbind_perception",

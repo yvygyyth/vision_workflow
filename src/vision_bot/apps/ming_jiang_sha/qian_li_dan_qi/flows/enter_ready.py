@@ -15,14 +15,12 @@ from vision_bot.runtime.result import Result
 BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
 START = f"{QLDQ}/enter_battle/start.png"
 
-DETECT: set[str] = {BATTLE_INTERFACE, START}
+DETECT: set[str] = {BATTLE_INTERFACE}
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if shot.found(BATTLE_INTERFACE):
         return "qldq.battle_select.enter_ready.check_done"
-    if shot.found(START):
-        return "qldq.battle_select.enter_ready.try_start"
     return "qldq.battle_select.enter_ready.try_start"
 
 

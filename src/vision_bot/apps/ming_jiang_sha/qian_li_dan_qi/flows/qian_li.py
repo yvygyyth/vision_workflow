@@ -8,6 +8,14 @@ from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.jump import Relocate
 
 _CHOICE_REGION = (800, 350, 1630, 780)
+_CHOICE_TEMPLATES = (
+    f"{QLDQ}/battle_select/challenge.png",
+    f"{QLDQ}/battle_select/ba_qing_store.png",
+    f"{QLDQ}/battle_select/pocket_event.png",
+    f"{QLDQ}/battle_select/rest.png",
+    f"{QLDQ}/battle_select/fei_fei.png",
+    f"{QLDQ}/battle_select/yi_wai.png",
+)
 
 
 def relocate(ctx: RunContext) -> str | Relocate | None:
@@ -16,6 +24,9 @@ def relocate(ctx: RunContext) -> str | Relocate | None:
 
     def hit(template: str, *, region=None) -> bool:
         return match(template, screenshot=frame, region=region).found
+
+    def has_choice() -> bool:
+        return any(hit(p, region=_CHOICE_REGION) for p in _CHOICE_TEMPLATES)
 
     if hit(f"{QLDQ}/enter_battle/battle_interface.png"):
         return None
@@ -30,25 +41,11 @@ def relocate(ctx: RunContext) -> str | Relocate | None:
 
     # confirm 在结算和三选一面板都会出现：有 choice 图 → hub，否则 → 跑完
     if hit(f"{COMMON_DIR}/confirm.png"):
-        if (
-            hit(f"{QLDQ}/battle_select/challenge.png", region=_CHOICE_REGION)
-            or hit(f"{QLDQ}/battle_select/ba_qing_store.png", region=_CHOICE_REGION)
-            or hit(f"{QLDQ}/battle_select/pocket_event.png", region=_CHOICE_REGION)
-            or hit(f"{QLDQ}/battle_select/rest.png", region=_CHOICE_REGION)
-            or hit(f"{QLDQ}/battle_select/fei_fei.png", region=_CHOICE_REGION)
-            or hit(f"{QLDQ}/battle_select/yi_wai.png", region=_CHOICE_REGION)
-        ):
+        if has_choice():
             return "qldq.battle_hub"
         return "qldq.run_ended"
 
-    if (
-        hit(f"{QLDQ}/battle_select/challenge.png", region=_CHOICE_REGION)
-        or hit(f"{QLDQ}/battle_select/ba_qing_store.png", region=_CHOICE_REGION)
-        or hit(f"{QLDQ}/battle_select/pocket_event.png", region=_CHOICE_REGION)
-        or hit(f"{QLDQ}/battle_select/rest.png", region=_CHOICE_REGION)
-        or hit(f"{QLDQ}/battle_select/fei_fei.png", region=_CHOICE_REGION)
-        or hit(f"{QLDQ}/battle_select/yi_wai.png", region=_CHOICE_REGION)
-    ):
+    if has_choice():
         return "qldq.battle_hub"
     if hit(f"{QLDQ}/enter_battle/select_wu_jiang.png"):
         return "qldq.battle_select.enter_pick"

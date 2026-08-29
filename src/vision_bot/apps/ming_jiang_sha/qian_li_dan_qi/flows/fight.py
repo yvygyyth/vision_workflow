@@ -43,8 +43,6 @@ DETECT: set[str] = {
     SETTING,
     CHALLENGE_END,
     NEXT_STEP,
-    AUTO,
-    CONFIRM,
     TOKEN,
     JOINT,
     CARD,

@@ -39,9 +39,6 @@ def check(ctx) -> Result:
     shot = snap(_CHECK)
     if shot.found(_CANCEL):
         ctx.goto("qldq.fight")
-        return Result.success()
-    if shot.found(_OK):
-        return Result.success()
     return Result.success()
 
 

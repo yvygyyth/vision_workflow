@@ -111,23 +111,3 @@ def snap(
         if result.found:
             logger.debug("snapshot hit %s conf=%.3f", path, result.confidence)
     return ScreenSnapshot(hits=hits, image=img)
-
-
-def refresh(
-    snap_result: ScreenSnapshot,
-    templates: Iterable[str],
-    *,
-    new_screenshot: bool = True,
-    threshold: float | None = None,
-    region: Region | None = None,
-) -> ScreenSnapshot:
-    """点击后局部重扫：默认重新截屏，只更新指定模板。"""
-    img = capture_screen() if new_screenshot else snap_result.image
-    if img is None:
-        img = capture_screen()
-    updated = dict(snap_result.hits)
-    for path in templates:
-        updated[path] = match(
-            path, screenshot=img, threshold=threshold, region=region
-        )
-    return ScreenSnapshot(hits=updated, image=img)

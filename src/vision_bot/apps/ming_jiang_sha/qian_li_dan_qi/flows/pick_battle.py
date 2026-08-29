@@ -23,9 +23,7 @@ DETECT: set[str] = {CHALLENGE, CHALLENGE_HELP, YI_WAI}
 
 
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(CHALLENGE_HELP):
-        return "qldq.battle_hub.pick_battle.choose"
-    if shot.found(CHALLENGE):
+    if shot.found(CHALLENGE_HELP) or shot.found(CHALLENGE):
         return "qldq.battle_hub.pick_battle.choose"
     if shot.found(YI_WAI):
         return "qldq.battle_hub.pick_battle.choose_yi_wai"
