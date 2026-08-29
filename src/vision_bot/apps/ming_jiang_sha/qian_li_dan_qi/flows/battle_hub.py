@@ -8,6 +8,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.perception.snapshot import ScreenSnapshot, capture_screen, match, snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
 HUB_DISMISS = "qldq.battle_hub.dismiss_up"
@@ -43,6 +44,9 @@ _CHOICE_DETECT = (
 )
 
 
+_HUB_SHOT = "_battle_hub_relocate_shot"
+
+
 def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     if shot.found(UP_PANEL):
         return HUB_DISMISS
@@ -57,12 +61,40 @@ def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     return None
 
 
-def relocate(ctx: RunContext) -> str | None:
-    frame = capture_screen()
-    hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
-    for path in _CHOICE_DETECT:
-        hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
-    return detect(ScreenSnapshot(hits=hits, image=frame), ctx)
+def _hub_shot(ctx: RunContext) -> ScreenSnapshot:
+    shot = ctx.vars.get(_HUB_SHOT)
+    if shot is None:
+        frame = capture_screen()
+        hits = {UP_PANEL: match(UP_PANEL, screenshot=frame)}
+        for path in _CHOICE_DETECT:
+            hits[path] = match(path, screenshot=frame, region=CHOICE_REGION)
+        shot = ScreenSnapshot(hits=hits, image=frame)
+        ctx.vars[_HUB_SHOT] = shot
+    return shot
+
+
+relocate: list[RelocateRule] = [
+    RelocateRule(when=lambda ctx: _hub_shot(ctx).found(UP_PANEL), then=HUB_DISMISS),
+    RelocateRule(
+        when=lambda ctx: _hub_shot(ctx).found(CHALLENGE)
+        or _hub_shot(ctx).found(CHALLENGE_HELP)
+        or _hub_shot(ctx).found(YI_WAI),
+        then=HUB_PICK_BATTLE,
+    ),
+    RelocateRule(
+        when=lambda ctx: any(
+            _hub_shot(ctx).found(p)
+            for p in (BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE)
+        ),
+        then=HUB_PICK_SHOP,
+    ),
+    RelocateRule(
+        when=lambda ctx: any(
+            _hub_shot(ctx).found(p) for p in (FEI_FEI, SHI_CHANG_SHI, MO_ZI)
+        ),
+        then=HUB_PICK_EVENT,
+    ),
+]
 
 
 def dismiss_up(ctx) -> Result:

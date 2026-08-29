@@ -6,8 +6,9 @@ from collections.abc import Callable
 from typing import Any
 
 from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.flow import Flow, Node, RelocateFn
+from vision_bot.runtime.flow import Flow, Node
 from vision_bot.runtime.module import Module
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
 ActiveFn = Callable[[RunContext], Result]
@@ -21,7 +22,7 @@ def flow(
     id: str,
     name: str,
     params: dict[str, Any] | None = None,
-    relocate: list[RelocateFn] | None = None,
+    relocate: list[RelocateRule] | None = None,
     *,
     children: list[Node],
 ) -> Flow:
@@ -29,6 +30,6 @@ def flow(
         id=id,
         name=name,
         params=params or {},
-        relocate=relocate or [],
+        relocate=relocate,
         children=children,
     )

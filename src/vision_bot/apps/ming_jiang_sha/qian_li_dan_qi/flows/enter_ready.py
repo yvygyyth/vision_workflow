@@ -8,8 +8,9 @@ from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import bind_battle_state
 from vision_bot.core.input import Mouse, press_key
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
 BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
@@ -18,15 +19,20 @@ START = f"{QLDQ}/enter_battle/start.png"
 DETECT: set[str] = {BATTLE_INTERFACE}
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(BATTLE_INTERFACE):
-        return "qldq.battle_select.enter_ready.check_done"
-    return "qldq.battle_select.enter_ready.try_start"
+def _has_battle_interface(ctx: RunContext) -> bool:
+    return snap(DETECT).found(BATTLE_INTERFACE)
 
 
-def relocate(ctx: RunContext) -> str | None:
-    shot = snap(DETECT)
-    return detect(shot, ctx)
+relocate: list[RelocateRule] = [
+    RelocateRule(
+        when=_has_battle_interface,
+        then="qldq.battle_select.enter_ready.check_done",
+    ),
+    RelocateRule(
+        when=lambda ctx: True,
+        then="qldq.battle_select.enter_ready.try_start",
+    ),
+]
 
 
 def check_done(ctx) -> Result:

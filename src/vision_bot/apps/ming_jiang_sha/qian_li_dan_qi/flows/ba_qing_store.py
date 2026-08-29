@@ -13,6 +13,7 @@ from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
@@ -31,11 +32,12 @@ _EXIT_CONFIRM_TRIES = "ba_qing_exit_confirm_tries"
 _EXIT_CONFIRM_MAX = 3
 
 
-def relocate(ctx: RunContext) -> str | None:
-    shot = snap({GO_BACK})
-    if shot.found(GO_BACK):
-        return "qldq.ba_qing_store.click_token_slot"
-    return None
+relocate: list[RelocateRule] = [
+    RelocateRule(
+        when=lambda ctx: snap({GO_BACK}).found(GO_BACK),
+        then="qldq.ba_qing_store.click_token_slot",
+    ),
+]
 
 
 def pick_token_slot(titles: list[str], priority: list[str] | None = None) -> int | None:

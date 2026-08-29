@@ -3,20 +3,16 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.jump import Relocate
 from vision_bot.runtime.module import Module
+from vision_bot.runtime.relocate import RelocateRule
 
 if TYPE_CHECKING:
     from vision_bot.runtime.config import RunConfig
     from vision_bot.runtime.runner import RunReport
-
-RelocateFn = Callable[[RunContext], str | Relocate | None]
 
 
 @dataclass(kw_only=True)
@@ -24,7 +20,7 @@ class Flow:
     id: str
     name: str
     params: dict[str, Any] = field(default_factory=dict)
-    relocate: list[RelocateFn] = field(default_factory=list)
+    relocate: list[RelocateRule] | None = None
     children: list[Flow | Module]
 
     def __post_init__(self) -> None:

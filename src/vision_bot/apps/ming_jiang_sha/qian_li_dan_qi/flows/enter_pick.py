@@ -7,8 +7,9 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import input_text as type_text
-from vision_bot.perception.snapshot import ScreenSnapshot, snap
+from vision_bot.perception.snapshot import snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find_once
 
@@ -18,15 +19,16 @@ SELECT_WU_JIANG = f"{QLDQ}/enter_battle/select_wu_jiang.png"
 DETECT: set[str] = {SELECT_WU_JIANG}
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(SELECT_WU_JIANG):
-        return "qldq.battle_select.enter_pick.select_wu_jiang"
-    return None
+def _has_select_wu_jiang(ctx: RunContext) -> bool:
+    return snap(DETECT).found(SELECT_WU_JIANG)
 
 
-def relocate(ctx: RunContext) -> str | None:
-    shot = snap(DETECT)
-    return detect(shot, ctx)
+relocate: list[RelocateRule] = [
+    RelocateRule(
+        when=_has_select_wu_jiang,
+        then="qldq.battle_select.enter_pick.select_wu_jiang",
+    ),
+]
 
 
 def select_wu_jiang(ctx) -> Result:

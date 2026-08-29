@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from vision_bot.apps.ming_jiang_sha.actions import go_back
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import (
     ba_qing_store,
     battle_hub,
@@ -29,13 +30,13 @@ def build_qian_li_dan_qi() -> Flow:
         id="qldq",
         name="千里单骑",
         params={"wu_jiang": "吕布"},
-        relocate=[qian_li.relocate],
+        relocate=qian_li.relocate,
         children=[
             flow(
                 id="qldq.battle_select.enter_pick",
                 name="选将",
                 params={"wu_jiang": "吕布"},
-                relocate=[enter_pick.relocate],
+                relocate=enter_pick.relocate,
                 children=[
                     mod(
                         id="qldq.battle_select.enter_pick.select_wu_jiang",
@@ -59,15 +60,20 @@ def build_qian_li_dan_qi() -> Flow:
                     ),
                     mod(
                         id="qldq.battle_select.enter_pick.click_general",
-                        name="选吕布",
+                        name="选武将",
                         active=enter_pick.click_general,
+                    ),
+                    mod(
+                        id="qldq.battle_select.enter_pick.go_back",
+                        name="返回",
+                        active=go_back,
                     ),
                 ],
             ),
             flow(
                 id="qldq.battle_select.enter_ready",
                 name="已选将",
-                relocate=[enter_ready.relocate],
+                relocate=enter_ready.relocate,
                 children=[
                     mod(
                         id="qldq.battle_select.enter_ready.try_start",
@@ -93,7 +99,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.battle_hub",
                         name="三选一枢纽",
-                        relocate=[battle_hub.relocate],
+                        relocate=battle_hub.relocate,
                         children=[
                             mod(
                                 id="qldq.battle_hub.dismiss_up",
@@ -103,7 +109,7 @@ def build_qian_li_dan_qi() -> Flow:
                             flow(
                                 id="qldq.battle_hub.pick_battle",
                                 name="战斗三选一",
-                                relocate=[pick_battle.relocate],
+                                relocate=pick_battle.relocate,
                                 children=[
                                     mod(
                                         id="qldq.battle_hub.pick_battle.choose",
@@ -125,7 +131,7 @@ def build_qian_li_dan_qi() -> Flow:
                             flow(
                                 id="qldq.battle_hub.pick_shop",
                                 name="商店三选一",
-                                relocate=[pick_shop.relocate],
+                                relocate=pick_shop.relocate,
                                 children=[
                                     mod(
                                         id="qldq.battle_hub.pick_shop.choose",
@@ -142,7 +148,7 @@ def build_qian_li_dan_qi() -> Flow:
                             flow(
                                 id="qldq.battle_hub.pick_event",
                                 name="事件三选一",
-                                relocate=[pick_event.relocate],
+                                relocate=pick_event.relocate,
                                 children=[
                                     mod(
                                         id="qldq.battle_hub.pick_event.choose",
@@ -161,7 +167,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.fight",
                         name="战斗",
-                        relocate=[fight.relocate],
+                        relocate=fight.relocate,
                         children=[
                             mod(
                                 id="qldq.fight.move_aside",
@@ -218,7 +224,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.ba_qing_store",
                         name="巴清商店",
-                        relocate=[ba_qing_store.relocate],
+                        relocate=ba_qing_store.relocate,
                         children=[
                             mod(
                                 id="qldq.ba_qing_store.click_token_slot",
@@ -270,7 +276,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.pocket_event",
                         name="锦囊",
-                        relocate=[pocket_event.relocate],
+                        relocate=pocket_event.relocate,
                         children=[
                             mod(
                                 id="qldq.pocket_event.pick",
@@ -335,7 +341,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.shi_chang_shi",
                         name="十常侍",
-                        relocate=[shi_chang_shi.relocate],
+                        relocate=shi_chang_shi.relocate,
                         children=[
                             mod(
                                 id="qldq.shi_chang_shi.confirm",
@@ -376,7 +382,7 @@ def build_qian_li_dan_qi() -> Flow:
             flow(
                 id="qldq.home_recovery",
                 name="回首页恢复",
-                relocate=[home_recovery.relocate],
+                relocate=home_recovery.relocate,
                 children=[
                     mod(
                         id="qldq.home_recovery.esc_home",

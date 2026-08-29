@@ -25,5 +25,5 @@ def build() -> Flow:
             mod("ba_wang.next_step", "下一步", s.click_next_step_if_any),
             mod("ba_wang.battle_done", "回合结束", s.battle_round_done),
         ],
-        relocate=[s.relocate_role],
+        relocate=s.relocate_role,
     )

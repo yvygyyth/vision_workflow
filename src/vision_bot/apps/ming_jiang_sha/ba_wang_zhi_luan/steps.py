@@ -9,6 +9,7 @@ from vision_bot.actions import click, do, move
 from vision_bot.actions.context import action_context
 from vision_bot.apps.ming_jiang_sha.paths import BA_WANG, QLDQ
 from vision_bot.events import click_at
+from vision_bot.runtime.relocate import RelocateRule, resolve
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find, find_all
 
@@ -40,20 +41,38 @@ def _setting_visible(*, timeout: float = 0.8) -> bool:
     return find(_SETTING, timeout=timeout).ok
 
 
-def relocate_role(ctx) -> str | None:
-    """根据当前界面决定下一轮的入口（房主 / 房客共用）。"""
-    if _probe(_ZHUN_BEI):
+def _when_zhun_bei(ctx) -> bool:
+    ok = _probe(_ZHUN_BEI)
+    if ok:
         logger.info("relocate_role → click_ready")
-        return "ba_wang.click_ready"
-    # 房客：优先等「开始」；勿因房主已准备（取消准备可见）误进 wait_game_start
-    if _probe(_START, timeout=0.5):
+    return ok
+
+
+def _when_start(ctx) -> bool:
+    ok = _probe(_START, timeout=0.5)
+    if ok:
         logger.info("relocate_role → poll_start")
-        return "ba_wang.poll_start"
-    if _probe(_UN_ZHUN_BEI):
+    return ok
+
+
+def _when_un_zhun_bei(ctx) -> bool:
+    ok = _probe(_UN_ZHUN_BEI)
+    if ok:
         logger.info("relocate_role → wait_game_start")
-        return "ba_wang.wait_game_start"
+    return ok
+
+
+def _when_default_poll(ctx) -> bool:
     logger.info("relocate_role → poll_start")
-    return "ba_wang.poll_start"
+    return True
+
+
+relocate_role: list[RelocateRule] = [
+    RelocateRule(when=_when_zhun_bei, then="ba_wang.click_ready"),
+    RelocateRule(when=_when_start, then="ba_wang.poll_start"),
+    RelocateRule(when=_when_un_zhun_bei, then="ba_wang.wait_game_start"),
+    RelocateRule(when=_when_default_poll, then="ba_wang.poll_start"),
+]
 
 
 def click_ready(ctx) -> Result:
@@ -185,7 +204,9 @@ def click_next_step_if_any(ctx) -> Result:
 
 
 def battle_round_done(ctx) -> Result:
-    target = relocate_role(ctx)
+    target = resolve(relocate_role, ctx)
+    if not isinstance(target, str) or not target:
+        return Result.fail("无法定位下一入口")
     logger.info("battle_round_done → call %s", target)
     ctx.call(target)
     return Result.success()

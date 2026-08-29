@@ -6,6 +6,7 @@ from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
 from vision_bot.perception.snapshot import capture_screen, match
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.jump import Relocate
+from vision_bot.runtime.relocate import RelocateRule
 
 _CHOICE_REGION = (800, 350, 1630, 780)
 _CHOICE_TEMPLATES = (
@@ -16,41 +17,64 @@ _CHOICE_TEMPLATES = (
     f"{QLDQ}/battle_select/fei_fei.png",
     f"{QLDQ}/battle_select/yi_wai.png",
 )
+_FRAME_KEY = "_qldq_relocate_frame"
 
 
-def relocate(ctx: RunContext) -> str | Relocate | None:
-    """截一帧 → 按优先级逐张匹配 → 命中则返回对应 id。"""
-    frame = capture_screen()
+def _frame(ctx: RunContext):
+    img = ctx.vars.get(_FRAME_KEY)
+    if img is None:
+        img = capture_screen()
+        ctx.vars[_FRAME_KEY] = img
+    return img
 
-    def hit(template: str, *, region=None) -> bool:
-        return match(template, screenshot=frame, region=region).found
 
-    def has_choice() -> bool:
-        return any(hit(p, region=_CHOICE_REGION) for p in _CHOICE_TEMPLATES)
-        
-    if hit(f"{QLDQ}/enter_battle/switch.png"):
-        return None
-    if hit(f"{QLDQ}/enter_battle/battle_interface.png"):
-        return None
-    if hit(f"{QLDQ}/ba_qing_store/go_back.png"):
-        return "qldq.ba_qing_store"
-    if hit(f"{QLDQ}/fight/cancel.png") or hit(f"{QLDQ}/fight/setting.png"):
-        return "qldq.fight"
-    if hit(f"{QLDQ}/pocket_event/event_patterm.png"):
-        return "qldq.pocket_event"
-    if hit(f"{QLDQ}/fei_fei/i_help_you.png"):
-        return "qldq.fei_fei"
+def _hit(ctx: RunContext, template: str, *, region=None) -> bool:
+    return match(template, screenshot=_frame(ctx), region=region).found
 
-    # confirm 在结算和三选一面板都会出现：有 choice 图 → hub，否则 → 跑完
-    if hit(f"{COMMON_DIR}/confirm.png"):
-        if has_choice():
-            return "qldq.battle_hub"
-        return "qldq.run_ended"
 
-    if has_choice():
-        return "qldq.battle_hub"
-    if hit(f"{QLDQ}/enter_battle/select_wu_jiang.png"):
-        return "qldq.battle_select.enter_pick"
-    if hit(f"{QLDQ}/enter_battle/start.png"):
-        return "qldq.battle_select.enter_ready"
-    return Relocate.PARENT
+def _has_choice(ctx: RunContext) -> bool:
+    return any(_hit(ctx, p, region=_CHOICE_REGION) for p in _CHOICE_TEMPLATES)
+
+
+relocate: list[RelocateRule] = [
+    RelocateRule(when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/switch.png"), then=None),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/battle_interface.png"),
+        then=None,
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/ba_qing_store/go_back.png"),
+        then="qldq.ba_qing_store",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/fight/cancel.png")
+        or _hit(ctx, f"{QLDQ}/fight/setting.png"),
+        then="qldq.fight",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/pocket_event/event_patterm.png"),
+        then="qldq.pocket_event",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/fei_fei/i_help_you.png"),
+        then="qldq.fei_fei",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{COMMON_DIR}/confirm.png") and _has_choice(ctx),
+        then="qldq.battle_hub",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{COMMON_DIR}/confirm.png"),
+        then="qldq.run_ended",
+    ),
+    RelocateRule(when=_has_choice, then="qldq.battle_hub"),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/select_wu_jiang.png"),
+        then="qldq.battle_select.enter_pick",
+    ),
+    RelocateRule(
+        when=lambda ctx: _hit(ctx, f"{QLDQ}/enter_battle/start.png"),
+        then="qldq.battle_select.enter_ready",
+    ),
+    RelocateRule(when=lambda ctx: True, then=Relocate.PARENT),
+]

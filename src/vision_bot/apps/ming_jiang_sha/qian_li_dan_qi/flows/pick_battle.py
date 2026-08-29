@@ -15,6 +15,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub import (
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
@@ -22,17 +23,19 @@ logger = logging.getLogger(__name__)
 DETECT: set[str] = {CHALLENGE, CHALLENGE_HELP, YI_WAI}
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if shot.found(CHALLENGE_HELP) or shot.found(CHALLENGE):
-        return "qldq.battle_hub.pick_battle.choose"
-    if shot.found(YI_WAI):
-        return "qldq.battle_hub.pick_battle.choose_yi_wai"
-    return None
-
-
-def relocate(ctx: RunContext) -> str | None:
+def _has_challenge(ctx: RunContext) -> bool:
     shot = snap(DETECT, region=CHOICE_REGION)
-    return detect(shot, ctx)
+    return shot.found(CHALLENGE_HELP) or shot.found(CHALLENGE)
+
+
+def _has_yi_wai(ctx: RunContext) -> bool:
+    return snap(DETECT, region=CHOICE_REGION).found(YI_WAI)
+
+
+relocate: list[RelocateRule] = [
+    RelocateRule(when=_has_challenge, then="qldq.battle_hub.pick_battle.choose"),
+    RelocateRule(when=_has_yi_wai, then="qldq.battle_hub.pick_battle.choose_yi_wai"),
+]
 
 
 def _click(shot: ScreenSnapshot, path: str, *, label: str, times: int = 1) -> bool:

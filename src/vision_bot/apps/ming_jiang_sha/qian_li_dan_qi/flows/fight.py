@@ -21,6 +21,7 @@ from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.events import click_match
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
@@ -84,9 +85,40 @@ def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
     return "qldq.fight.click_cancel"
 
 
-def relocate(ctx: RunContext) -> str | None:
-    shot = snap(DETECT)
-    return detect(shot, ctx)
+def _fight_shot(ctx: RunContext) -> ScreenSnapshot:
+    key = "_fight_relocate_shot"
+    shot = ctx.vars.get(key)
+    if shot is None:
+        shot = snap(DETECT)
+        ctx.vars[key] = shot
+    return shot
+
+
+relocate: list[RelocateRule] = [
+    RelocateRule(
+        when=lambda ctx: _fight_shot(ctx).found(CANCEL),
+        then="qldq.fight.click_cancel",
+    ),
+    RelocateRule(
+        when=lambda ctx: _fight_shot(ctx).found(SETTING),
+        then="qldq.fight.click_setting",
+    ),
+    RelocateRule(
+        when=lambda ctx: _fight_shot(ctx).found(CHALLENGE_END),
+        then="qldq.fight.wait_end",
+    ),
+    RelocateRule(
+        when=lambda ctx: _fight_shot(ctx).found(NEXT_STEP),
+        then="qldq.fight.next_step",
+    ),
+    RelocateRule(
+        when=lambda ctx: any(
+            _fight_shot(ctx).found(path) for path in REWARD_KIND_IMGS.values()
+        ),
+        then="qldq.fight.choose_reward_kind",
+    ),
+    RelocateRule(when=lambda ctx: True, then="qldq.fight.click_cancel"),
+]
 
 
 def move_aside(ctx) -> Result:

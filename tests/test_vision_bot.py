@@ -21,6 +21,7 @@ from vision_bot.runtime.catalog import ROOT_FLOWS, get_root_flow, root_flow_choi
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.registry import FlowRegistry
+from vision_bot.runtime.relocate import RelocateRule, resolve
 from vision_bot.runtime.result import Result
 
 
@@ -36,7 +37,7 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
             found=template == challenge, image=template
         ),
     )
-    assert relocate_qian_li(RunContext()) == "qldq.battle_hub"
+    assert resolve(relocate_qian_li, RunContext()) == "qldq.battle_hub"
 
 
 def test_detect_hub_pick_battle() -> None:
@@ -160,7 +161,7 @@ def test_relocate_on_entry() -> None:
             mod("t.b", "B", b),
             mod("t.c", "C", c),
         ],
-        relocate=[lambda ctx: "t.b"],
+        relocate=[RelocateRule(when=lambda ctx: True, then="t.b")],
     )
     report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
@@ -186,7 +187,7 @@ def test_relocate_parent_on_entry() -> None:
         "t.inner",
         "内",
         children=[mod("t.inner.leaf", "叶", leaf)],
-        relocate=[lambda ctx: Relocate.PARENT],
+        relocate=[RelocateRule(when=lambda ctx: True, then=Relocate.PARENT)],
     )
     root = flow(
         "t",
@@ -195,7 +196,7 @@ def test_relocate_parent_on_entry() -> None:
             mod("t.other", "另", other),
             inner,
         ],
-        relocate=[lambda ctx: "t.other"],
+        relocate=[RelocateRule(when=lambda ctx: True, then="t.other")],
     )
     report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
     assert report.success
@@ -218,7 +219,7 @@ def test_relocate_none_keeps_first_child() -> None:
         "t.inner",
         "内",
         children=[mod("t.inner.leaf", "叶", leaf)],
-        relocate=[lambda ctx: None],
+        relocate=[RelocateRule(when=lambda ctx: True, then=None)],
     )
     root = flow(
         "t",
@@ -227,7 +228,7 @@ def test_relocate_none_keeps_first_child() -> None:
             mod("t.other", "另", other),
             inner,
         ],
-        relocate=[lambda ctx: "t.other"],
+        relocate=[RelocateRule(when=lambda ctx: True, then="t.other")],
     )
     report = run(root, RunConfig(entry_id="t.inner"), base_dir=Path("."))
     assert report.success
@@ -248,7 +249,7 @@ def test_relocate_parent_at_root_stops() -> None:
         "t",
         "根",
         children=[mod("t.a", "A", a)],
-        relocate=[lambda ctx: Relocate.PARENT],
+        relocate=[RelocateRule(when=lambda ctx: True, then=Relocate.PARENT)],
     )
     report = run(root, RunConfig(), base_dir=Path("."))
     assert not report.success

@@ -80,19 +80,19 @@ class Runner:
             self.ctx.exit_flow()
 
     def _try_relocate(self, flow: Flow) -> str | None:
-        for rule in flow.relocate:
-            self.ctx.check_cancelled()
-            target = rule(self.ctx)
-            if target is Relocate.PARENT:
-                parent_id = self.registry.parent_flow.get(flow.id)
-                if parent_id is None:
-                    raise RelocateStop()
-                parent = self.registry.get(parent_id)
-                assert isinstance(parent, Flow)
-                logger.info("relocate PARENT → %s", parent.id)
-                return self._try_relocate(parent)
-            if isinstance(target, str) and target:
-                return target
+        from vision_bot.runtime.relocate import resolve
+
+        target = resolve(flow.relocate, self.ctx)
+        if target is Relocate.PARENT:
+            parent_id = self.registry.parent_flow.get(flow.id)
+            if parent_id is None:
+                raise RelocateStop()
+            parent = self.registry.get(parent_id)
+            assert isinstance(parent, Flow)
+            logger.info("relocate PARENT → %s", parent.id)
+            return self._try_relocate(parent)
+        if isinstance(target, str) and target:
+            return target
         return None
 
     def _run_flow(self, flow: Flow) -> Result:

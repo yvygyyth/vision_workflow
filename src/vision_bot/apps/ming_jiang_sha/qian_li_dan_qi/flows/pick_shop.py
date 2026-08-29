@@ -17,6 +17,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.bag import refresh_copp
 from vision_bot.core.input import Mouse
 from vision_bot.perception.snapshot import ScreenSnapshot, snap
 from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
@@ -24,15 +25,14 @@ logger = logging.getLogger(__name__)
 DETECT: set[str] = {BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE}
 
 
-def detect(shot: ScreenSnapshot, ctx: RunContext | None = None) -> str | None:
-    if any(shot.found(p) for p in DETECT):
-        return "qldq.battle_hub.pick_shop.choose"
-    return None
-
-
-def relocate(ctx: RunContext) -> str | None:
+def _has_shop_choice(ctx: RunContext) -> bool:
     shot = snap(DETECT, region=CHOICE_REGION)
-    return detect(shot, ctx)
+    return any(shot.found(p) for p in DETECT)
+
+
+relocate: list[RelocateRule] = [
+    RelocateRule(when=_has_shop_choice, then="qldq.battle_hub.pick_shop.choose"),
+]
 
 
 def choose(ctx) -> Result:

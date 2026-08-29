@@ -8,7 +8,7 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.core.input import Mouse
 from vision_bot.perception.session import perception
 from vision_bot.perception.snapshot import snap
-from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find_all
 
@@ -17,9 +17,9 @@ _OK = f"{QLDQ}/pocket_event/ok.png"
 _CANCEL = f"{QLDQ}/fight/cancel.png"
 _CHECK = {_CANCEL, _OK}
 
-
-def relocate(ctx: RunContext) -> str | None:
-    return "qldq.pocket_event.check"
+relocate: list[RelocateRule] = [
+    RelocateRule(when=lambda ctx: True, then="qldq.pocket_event.check"),
+]
 
 
 def pick(ctx) -> Result:
