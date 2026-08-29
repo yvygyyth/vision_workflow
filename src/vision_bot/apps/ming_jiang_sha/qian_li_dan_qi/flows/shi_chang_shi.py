@@ -20,15 +20,7 @@ def _has_attack(ctx: RunContext) -> bool:
 
 relocate: list[RelocateRule] = [
     RelocateRule(when=_has_attack, then="qldq.shi_chang_shi.attack"),
-    RelocateRule(when=lambda ctx: True, then="qldq.shi_chang_shi.confirm"),
 ]
-
-
-def confirm(ctx) -> Result:
-    r = click_confirm()
-    if not r.ok:
-        ctx.goto("qldq.shi_chang_shi.attack")
-    return r
 
 
 def attack(ctx) -> Result:

@@ -24,10 +24,11 @@ LV_BU_WEI_STORE = f"{QLDQ}/battle_select/lv_bu_wei_store.png"
 FEI_FEI = f"{QLDQ}/battle_select/fei_fei.png"
 SHI_CHANG_SHI = f"{QLDQ}/battle_select/shi_chang_shi.png"
 MO_ZI = f"{QLDQ}/battle_select/mo_zi.png"
+ZHU_GE_LIANG = f"{QLDQ}/battle_select/zhu_ge_liang.png"
 
 BATTLE_DETECT: set[str] = {CHALLENGE, CHALLENGE_HELP, YI_WAI}
 SHOP_DETECT: set[str] = {BA_QING_STORE, POCKET_EVENT, REST, LV_BU_WEI_STORE}
-EVENT_DETECT: set[str] = {FEI_FEI, SHI_CHANG_SHI, MO_ZI}
+EVENT_DETECT: set[str] = {FEI_FEI, SHI_CHANG_SHI, MO_ZI, ZHU_GE_LIANG}
 
 
 def _has_up_panel(ctx: RunContext) -> bool:

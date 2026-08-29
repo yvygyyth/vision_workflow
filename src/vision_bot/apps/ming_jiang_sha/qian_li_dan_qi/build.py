@@ -19,6 +19,7 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import (
     rest,
     run_ended,
     shi_chang_shi,
+    zhu_ge_liang,
 )
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.flow import Flow
@@ -138,9 +139,9 @@ def build_qian_li_dan_qi() -> Flow:
                                         active=pick_event.choose,
                                     ),
                                     mod(
-                                        id="qldq.battle_hub.pick_event.verify",
-                                        name="验证",
-                                        active=pick_event.verify,
+                                        id="qldq.battle_hub.pick_event.confirm",
+                                        name="确认",
+                                        active=pick_event.confirm,
                                     ),
                                 ],
                             ),
@@ -149,7 +150,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.fight",
                         name="战斗",
-                        relocate=fight.relocate,
+                        # relocate=fight.relocate,
                         children=[
                             mod(
                                 id="qldq.fight.move_aside",
@@ -293,11 +294,6 @@ def build_qian_li_dan_qi() -> Flow:
                         name="妃妃",
                         children=[
                             mod(
-                                id="qldq.fei_fei.confirm",
-                                name="确认",
-                                active=fei_fei.confirm,
-                            ),
-                            mod(
                                 id="qldq.fei_fei.choose",
                                 name="选择",
                                 active=fei_fei.choose,
@@ -309,14 +305,25 @@ def build_qian_li_dan_qi() -> Flow:
                         name="墨子",
                         children=[
                             mod(
-                                id="qldq.mo_zi.confirm",
-                                name="确认",
-                                active=mo_zi.confirm,
-                            ),
-                            mod(
                                 id="qldq.mo_zi.click",
                                 name="点选项",
                                 active=mo_zi.click_option,
+                            ),
+                        ],
+                    ),
+                    flow(
+                        id="qldq.zhu_ge_liang",
+                        name="诸葛亮",
+                        children=[
+                            mod(
+                                id="qldq.zhu_ge_liang.wait_title",
+                                name="等标题",
+                                active=zhu_ge_liang.wait_title,
+                            ),
+                            mod(
+                                id="qldq.zhu_ge_liang.click_next",
+                                name="点继续",
+                                active=zhu_ge_liang.click_next,
                             ),
                         ],
                     ),
@@ -325,11 +332,6 @@ def build_qian_li_dan_qi() -> Flow:
                         name="十常侍",
                         relocate=shi_chang_shi.relocate,
                         children=[
-                            mod(
-                                id="qldq.shi_chang_shi.confirm",
-                                name="确认",
-                                active=shi_chang_shi.confirm,
-                            ),
                             mod(
                                 id="qldq.shi_chang_shi.attack",
                                 name="攻击",

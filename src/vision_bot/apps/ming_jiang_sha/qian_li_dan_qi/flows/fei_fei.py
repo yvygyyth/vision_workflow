@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.events import click_match
 from vision_bot.runtime.result import Result
@@ -13,13 +12,6 @@ _OPTS = (
     f"{QLDQ}/fei_fei/sleep.png",
     f"{QLDQ}/fei_fei/bargaining.png",
 )
-
-
-def confirm(ctx) -> Result:
-    r = click_confirm()
-    if not r.ok:
-        ctx.goto("qldq.fei_fei.choose")
-    return r
 
 
 def choose(ctx) -> Result:
