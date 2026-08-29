@@ -36,13 +36,12 @@ def _has_select_wu_jiang(ctx: RunContext) -> bool:
 
 
 relocate: list[RelocateRule] = [
-    # 选将相关优先，避免 start.png 在选将界面误匹配
+    RelocateRule(when=_has_start, then=CLICK_START),
     RelocateRule(when=_switch_without_select, then=None),
     RelocateRule(
         when=_has_select_wu_jiang,
         then="qldq.battle_select.enter_pick.focus_search",
-    ),
-    RelocateRule(when=_has_start, then=CLICK_START),
+    )
 ]
 
 

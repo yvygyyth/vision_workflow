@@ -11,11 +11,6 @@ from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 
-HUB_DISMISS = "qldq.battle_hub.dismiss_up"
-HUB_PICK_BATTLE = "qldq.battle_hub.pick_battle"
-HUB_PICK_SHOP = "qldq.battle_hub.pick_shop"
-HUB_PICK_EVENT = "qldq.battle_hub.pick_event"
-
 CHOICE_REGION: tuple[int, int, int, int] = (800, 350, 1630, 780)
 
 UP_PANEL = f"{QLDQ}/battle_select/up.png"
@@ -55,10 +50,10 @@ def _has_event(ctx: RunContext) -> bool:
 
 
 relocate: list[RelocateRule] = [
-    RelocateRule(when=_has_up_panel, then=HUB_DISMISS),
-    RelocateRule(when=_has_battle, then=HUB_PICK_BATTLE),
-    RelocateRule(when=_has_shop, then=HUB_PICK_SHOP),
-    RelocateRule(when=_has_event, then=HUB_PICK_EVENT),
+    RelocateRule(when=_has_up_panel, then="qldq.battle_hub.dismiss_up"),
+    RelocateRule(when=_has_battle, then="qldq.battle_hub.pick_battle"),
+    RelocateRule(when=_has_shop, then="qldq.battle_hub.pick_shop"),
+    RelocateRule(when=_has_event, then="qldq.battle_hub.pick_event"),
 ]
 
 
