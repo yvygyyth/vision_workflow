@@ -5,6 +5,7 @@ from __future__ import annotations
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import fight
 from vision_bot.vision import find, snap
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
@@ -38,7 +39,6 @@ def check_cancel(ctx) -> Result:
         r = click_confirm()
         if not r.ok:
             return r
-        ctx.goto("qldq.fight")
-        return Result.success()
+        return fight.run_battle_no_gift(ctx)
     ctx.goto("qldq.shi_chang_shi.attack")
     return Result.success()

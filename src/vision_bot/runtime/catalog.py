@@ -1,30 +1,31 @@
-"""根 Flow 目录（替代 Job 注册表）。"""
+"""根 Flow 目录与工具解析（应用注册表在 apps 层）。"""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 
-from vision_bot.apps.ming_jiang_sha.ba_wang_zhi_luan.build import build as build_ba_wang
-from vision_bot.apps.ming_jiang_sha.fee_day.build import build_fee_day
-from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.build import build_qian_li_dan_qi
+from vision_bot.apps.ming_jiang_sha.registry import (
+    DEFAULT_ROOT_ID,
+    ROOT_FLOWS,
+    tool_flows_for,
+)
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.runner import RunReport, run
 
-RootBuilder = Callable[[], Flow]
-
-ROOT_FLOWS: dict[str, RootBuilder] = {
-    "qldq": build_qian_li_dan_qi,
-    "ba_wang": build_ba_wang,
-    "fee_day": build_fee_day,
-}
-
-DEFAULT_ROOT_ID = "qldq"
+__all__ = [
+    "DEFAULT_ROOT_ID",
+    "ROOT_FLOWS",
+    "get_root_flow",
+    "resolve_tool_flows",
+    "root_flow_choices",
+    "root_flow_ids",
+    "run_root",
+]
 
 
 def root_flow_ids() -> list[str]:
-    return list(ROOT_FLOWS.keys())
+    return list(ROOT_FLOWS)
 
 
 def get_root_flow(root_id: str) -> Flow:
@@ -32,6 +33,23 @@ def get_root_flow(root_id: str) -> Flow:
     if builder is None:
         raise KeyError(f"未知 Flow: {root_id}，可选: {list(ROOT_FLOWS)}")
     return builder()
+
+
+def resolve_tool_flows(root_id: str, tools: list[str] | None) -> list[Flow]:
+    """解析要挂载的工具 Flow。``tools is None`` → 该 root 默认工具表全部。"""
+    catalog = tool_flows_for(root_id)
+    if not catalog:
+        return []
+    ids = list(catalog) if tools is None else tools
+    out: list[Flow] = []
+    for tid in ids:
+        builder = catalog.get(tid)
+        if builder is None:
+            raise KeyError(
+                f"未知工具 Flow: {tid}（root={root_id}），可选: {list(catalog)}"
+            )
+        out.append(builder())
+    return out
 
 
 def run_root(
@@ -46,6 +64,7 @@ def run_root(
         config,
         cancel_event=cancel_event,
         base_dir=base_dir,
+        root_id=root_id,
     )
 
 

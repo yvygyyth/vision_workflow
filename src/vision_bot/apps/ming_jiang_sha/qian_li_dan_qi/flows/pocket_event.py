@@ -15,6 +15,7 @@ import random
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
+from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows import fight
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find_all, snap
 
@@ -51,9 +52,8 @@ def check(ctx) -> Result:
     # 仅在判断取消前移开鼠标，避免挡住 cancel
     do(move().to(80, 80))()
     if snap(_CANCEL).ok:
-        logger.info("pocket_event → 战斗")
-        ctx.goto("qldq.fight")
-        return Result.success()
+        logger.info("pocket_event → 无赠礼战斗")
+        return fight.run_battle_no_gift(ctx)
     return Result.fail("锦囊画面未识别")
 
 

@@ -145,42 +145,11 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.fight",
                         name="战斗",
-                        # relocate=fight.relocate,
                         children=[
                             mod(
-                                id="qldq.fight.move_aside",
-                                name="移开鼠标",
-                                active=fight.move_aside,
-                            ),
-                            mod(
-                                id="qldq.fight.click_cancel",
-                                name="点取消",
-                                active=fight.click_cancel,
-                            ),
-                            mod(
-                                id="qldq.fight.click_setting",
-                                name="点设置",
-                                active=fight.click_setting,
-                            ),
-                            mod(
-                                id="qldq.fight.click_auto",
-                                name="点自动",
-                                active=fight.click_auto,
-                            ),
-                            mod(
-                                id="qldq.fight.wait_end",
-                                name="等结束",
-                                active=fight.wait_end,
-                            ),
-                            mod(
-                                id="qldq.fight.next_step",
-                                name="下一步",
-                                active=fight.next_step,
-                            ),
-                            mod(
-                                id="qldq.fight.check_run_end",
-                                name="本轮结束判定",
-                                active=fight.check_run_end,
+                                id="qldq.fight.run_battle",
+                                name="执行纯战斗",
+                                active=fight.run_battle,
                             ),
                             mod(
                                 id="qldq.fight.after_settle",

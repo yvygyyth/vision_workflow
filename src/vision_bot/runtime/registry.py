@@ -40,6 +40,22 @@ class FlowRegistry:
                 self.child_index[child.id] = i
                 self._walk(child, parent_id=flow.id)
 
+    def register_tool(self, flow: Flow) -> None:
+        """注册无业务父级的工具 Flow（仅供 ``call``，不进主树展示路径）。"""
+        if flow.id in self.nodes:
+            raise ValueError(f"节点 id 重复: {flow.id}")
+        self.nodes[flow.id] = flow
+        for i, child in enumerate(flow.children):
+            if isinstance(child, Module):
+                if child.id in self.nodes:
+                    raise ValueError(f"节点 id 重复: {child.id}")
+                self.nodes[child.id] = child
+                self.parent_flow[child.id] = flow.id
+                self.child_index[child.id] = i
+            else:
+                self.child_index[child.id] = i
+                self._walk(child, parent_id=flow.id)
+
     def get(self, node_id: str) -> Flow | Module:
         if node_id not in self.nodes:
             raise JumpTargetError(f"节点不存在: {node_id}")

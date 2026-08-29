@@ -1,4 +1,4 @@
-"""战斗 mod。"""
+"""战斗外壳：call 纯战斗后，按有无赠礼结算。"""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import get_battle_state
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     GeneralPriority,
@@ -16,37 +16,18 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     pick_reward_slot,
     resolve_general_priority,
 )
+from vision_bot.apps.ming_jiang_sha.tools.battle import RUN_ENDED_FLAG
 from vision_bot.core.vision import grab_region, image_to_text
-from vision_bot.runtime.context import RunContext
-from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import ScreenSnapshot, find, snap
+from vision_bot.vision import snap
 
 logger = logging.getLogger(__name__)
 
-CANCEL = f"{QLDQ}/fight/cancel.png"
-SETTING = f"{QLDQ}/fight/setting.png"
-CHALLENGE_END = f"{QLDQ}/fight/challenge_end.png"
-NEXT_STEP = f"{QLDQ}/fight/next_step.png"
-AUTO = f"{QLDQ}/fight/auto.png"
 TOKEN = f"{QLDQ}/fight/token.png"
 JOINT = f"{QLDQ}/fight/joint.png"
 CARD = f"{QLDQ}/fight/card.png"
 HELP = f"{QLDQ}/fight/help.png"
 BUFF = f"{QLDQ}/fight/buff.png"
-CONFIRM = f"{COMMON_DIR}/confirm.png"
-
-DETECT: set[str] = {
-    CANCEL,
-    SETTING,
-    CHALLENGE_END,
-    NEXT_STEP,
-    TOKEN,
-    JOINT,
-    CARD,
-    HELP,
-    BUFF,
-}
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -66,76 +47,27 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
 }
 
 
-def _fight_shot(ctx: RunContext) -> ScreenSnapshot:
-    return snap(DETECT)
-
-
-relocate: list[RelocateRule] = [
-    RelocateRule(
-        when=lambda ctx: _fight_shot(ctx).found(CANCEL),
-        then="qldq.fight.click_cancel",
-    ),
-    RelocateRule(
-        when=lambda ctx: _fight_shot(ctx).found(SETTING),
-        then="qldq.fight.click_setting",
-    ),
-    RelocateRule(
-        when=lambda ctx: _fight_shot(ctx).found(CHALLENGE_END),
-        then="qldq.fight.wait_end",
-    ),
-    RelocateRule(
-        when=lambda ctx: _fight_shot(ctx).found(NEXT_STEP),
-        then="qldq.fight.next_step",
-    ),
-    RelocateRule(
-        when=lambda ctx: any(
-            _fight_shot(ctx).found(path) for path in REWARD_KIND_IMGS.values()
-        ),
-        then="qldq.fight.choose_reward_kind",
-    ),
-    RelocateRule(when=lambda ctx: True, then="qldq.fight.click_cancel"),
-]
-
-
-def move_aside(ctx) -> Result:
-    do(move().to(80, 80))()
-    return Result.success()
-
-
-def click_cancel(ctx) -> Result:
-    return do(move().image(CANCEL), click().pause(0.2))()
-
-
-def click_setting(ctx) -> Result:
-    return do(move().image(SETTING), click().pause(0.5))()
-
-
-def click_auto(ctx) -> Result:
-    return do(move().image(AUTO).match(timeout=1.0), click().pause(0.2))()
-
-
-def wait_end(ctx) -> Result:
-    return do(
-        move().image(CHALLENGE_END).match(timeout=1200, interval=5),
-        click().pause(0.2),
-    )()
-
-
-def next_step(ctx) -> Result:
-    for _ in range(5):
-        r = do(move().image(NEXT_STEP).match(timeout=1.2), click().pause(0.4))()
-        if not r.ok:
-            break
-    ctx.goto("qldq.fight.check_run_end")
-    return Result.success()
-
-
-def check_run_end(ctx) -> Result:
-    if find(CONFIRM, timeout=1.0, threshold=0.8).ok:
-        logger.info("check_run_end → run_ended")
+def run_battle(ctx) -> Result:
+    """同步执行名将杀共用纯战斗；本轮结束则 goto run_ended，否则进入结算。"""
+    r = ctx.call("mjs.battle")
+    if not r.ok:
+        return r
+    if ctx.vars.pop(RUN_ENDED_FLAG, None):
         ctx.goto("qldq.run_ended.confirm")
         return Result.success()
-    ctx.goto("qldq.fight.after_settle")
+    return Result.success()
+
+
+def run_battle_no_gift(ctx) -> Result:
+    """无赠礼战斗（锦囊/十常侍等）：call 纯战斗后回三选一。"""
+    r = ctx.call("mjs.battle")
+    if not r.ok:
+        return r
+    if ctx.vars.pop(RUN_ENDED_FLAG, None):
+        ctx.goto("qldq.run_ended.confirm")
+        return Result.success()
+    logger.info("run_battle_no_gift → 回三选一")
+    ctx.goto("qldq.battle_hub")
     return Result.success()
 
 

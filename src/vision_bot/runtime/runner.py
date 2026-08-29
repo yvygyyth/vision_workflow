@@ -213,8 +213,14 @@ def _prepare(
     flow: Flow,
     ctx: RunContext,
     config: RunConfig,
+    *,
+    root_id: str | None = None,
 ) -> Runner:
+    from vision_bot.runtime.catalog import resolve_tool_flows
+
     reg = FlowRegistry.build(flow)
+    for tool in resolve_tool_flows(root_id or flow.id, config.tools):
+        reg.register_tool(tool)
     entry_id = config.entry_id or flow.id
     ctx._entry_flow_id = reg.flow_of(entry_id)
     ctx._run_param_overrides = dict(config.params)
@@ -245,8 +251,9 @@ def run(
     *,
     cancel_event=None,
     base_dir: Path | None = None,
+    root_id: str | None = None,
 ) -> RunReport:
     bind_perception((base_dir or project_root()).resolve())
     ctx = RunContext(cancel_event=cancel_event)
-    runner = _prepare(flow, ctx, config)
+    runner = _prepare(flow, ctx, config, root_id=root_id)
     return _run_loop(runner, ctx, flow, config)
