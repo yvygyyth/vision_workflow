@@ -3,9 +3,10 @@
 刚进必是 ``_PATTERN``（通常 3 张），由 ``enter`` 直接点。
 点完后 ``check`` 分流（先挪鼠标再轮询，避免过渡帧 / tooltip 误判）：
 1. ``_PATTERN`` → 再选一张
-2. ``_OK`` → 当场点确定
+2. ``_OK`` / ``_YI_WAI`` → 当场点击，再检查
 3. ``_CANCEL`` → 进入无赠礼战斗
 4. ``battle_interface`` → 已回三选一
+5. 皆未识别 → 成功回三选一
 """
 
 from __future__ import annotations
@@ -26,10 +27,11 @@ logger = logging.getLogger(__name__)
 
 _PATTERN = f"{QLDQ}/pocket_event/event_patterm.png"
 _OK = f"{QLDQ}/pocket_event/ok.png"
+_YI_WAI = f"{QLDQ}/battle_select/yi_wai.png"
 _CANCEL = f"{QLDQ}/fight/cancel.png"
 _BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
 
-DETECT: set[str] = {_PATTERN, _OK, _CANCEL, _BATTLE_INTERFACE}
+DETECT: set[str] = {_PATTERN, _OK, _YI_WAI, _CANCEL, _BATTLE_INTERFACE}
 
 
 def _shot(ctx: RunContext | None = None):
@@ -42,7 +44,9 @@ relocate: list[RelocateRule] = [
         then="qldq.pocket_event.enter",
     ),
     RelocateRule(
-        when=lambda ctx: _shot().found(_OK) or _shot().found(_CANCEL),
+        when=lambda ctx: _shot().found(_OK)
+        or _shot().found(_YI_WAI)
+        or _shot().found(_CANCEL),
         then="qldq.pocket_event.check",
     ),
     RelocateRule(
@@ -66,6 +70,10 @@ def check(ctx) -> Result:
         if shot.found(_OK):
             do(move().image(_OK).match(timeout=0.8), click().pause(0.3))()
             return Result.success(then="qldq.pocket_event.check")
+        if shot.found(_YI_WAI):
+            logger.info("pocket_event → 点意外，再检查")
+            do(move().image(_YI_WAI).match(timeout=0.8), click().pause(0.3))()
+            return Result.success(then="qldq.pocket_event.check")
         if shot.found(_PATTERN):
             return Result.success(then="qldq.pocket_event.enter")
         if shot.found(_BATTLE_INTERFACE):
@@ -75,7 +83,8 @@ def check(ctx) -> Result:
             logger.info("pocket_event → 无赠礼战斗")
             return fight.run_battle_no_gift(ctx)
         time.sleep(0.25)
-    return Result.fail("锦囊画面未识别")
+    logger.info("pocket_event check → 皆未识别，交三选一枢纽")
+    return Result.success(then="qldq.battle_hub")
 
 
 def _click_pattern(ctx) -> Result:
