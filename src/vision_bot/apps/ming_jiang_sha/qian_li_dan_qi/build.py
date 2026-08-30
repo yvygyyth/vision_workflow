@@ -145,6 +145,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.fight",
                         name="战斗",
+                        relocate=fight.relocate,
                         children=[
                             mod(
                                 id="qldq.fight.run_battle",

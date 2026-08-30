@@ -49,8 +49,14 @@ def _battle_shot(ctx: RunContext) -> ScreenSnapshot:
     return snap(DETECT)
 
 
-# 进战 setting 会先出现，但点设置前必须先点取消；故 relocate 绝不因 setting 跳过取消。
-# 正常顺序靠 children：点取消 → 点设置 → 点自动 → …
+def _in_setup(ctx: RunContext) -> bool:
+    """设置/取消还在 → 仍处开局，不得跳到等结束/下一步。"""
+    shot = _battle_shot(ctx)
+    return shot.found(CANCEL) or shot.found(SETTING)
+
+
+# 进战 setting 常先出，但点设置前必须先点取消。
+# 有 cancel/setting 时绝不因误匹配 challenge_end/next_step 跳过取消。
 relocate: list[RelocateRule] = [
     RelocateRule(when=_prepare_relocate, then=None),
     RelocateRule(
@@ -58,26 +64,31 @@ relocate: list[RelocateRule] = [
         then="mjs.battle.click_cancel",
     ),
     RelocateRule(
-        when=lambda ctx: _battle_shot(ctx).found(CHALLENGE_END),
+        when=lambda ctx: _battle_shot(ctx).found(SETTING),
+        then="mjs.battle.click_cancel",
+    ),
+    RelocateRule(
+        when=lambda ctx: not _in_setup(ctx) and _battle_shot(ctx).found(CHALLENGE_END),
         then="mjs.battle.wait_end",
     ),
     RelocateRule(
-        when=lambda ctx: _battle_shot(ctx).found(NEXT_STEP),
+        when=lambda ctx: not _in_setup(ctx) and _battle_shot(ctx).found(NEXT_STEP),
         then="mjs.battle.next_step",
     ),
-    # setting 先出 / 尚未出现取消：仍从点取消开跑
     RelocateRule(when=lambda ctx: True, then="mjs.battle.click_cancel"),
 ]
 
 
 def click_cancel(ctx) -> Result:
     ctx.vars.pop(_RELOCATE_SHOT, None)
-    # relocate 已挪过一次；这里再挪一次兜底（例如纠偏直达本步）
     _move_aside()
-    return do(
+    r = do(
         move().image(CANCEL).match(timeout=12.0, interval=0.25),
-        click().pause(0.15),
+        click().pause(0.2),
     )()
+    if not r.ok:
+        logger.warning("click_cancel → 未找到取消")
+    return r
 
 
 def click_setting(ctx) -> Result:
@@ -86,10 +97,28 @@ def click_setting(ctx) -> Result:
 
 def click_auto(ctx) -> Result:
     r = do(move().image(AUTO).match(timeout=1.5, interval=0.25), click().pause(0.15))()
-    if not r.ok:
-        logger.info("click_auto → 未找到 auto，继续等结束")
-        return Result.success()
-    return r
+    if r.ok:
+        return r
+
+    # 点了设置却无 auto → 多半取消没点上：补取消后再找 auto
+    logger.info("click_auto → 无 auto，补点取消后再找")
+    _move_aside()
+    cancel_r = do(
+        move().image(CANCEL).match(timeout=3.0, interval=0.25),
+        click().pause(0.25),
+    )()
+    if cancel_r.ok:
+        r2 = do(move().image(AUTO).match(timeout=2.0, interval=0.25), click().pause(0.15))()
+        if r2.ok:
+            return r2
+        # 取消后菜单可能收起，再点一次设置
+        do(move().image(SETTING).match(timeout=2.0, interval=0.25), click().pause(0.35))()
+        r3 = do(move().image(AUTO).match(timeout=2.0, interval=0.25), click().pause(0.15))()
+        if r3.ok:
+            return r3
+
+    logger.info("click_auto → 仍无 auto，继续等结束")
+    return Result.success()
 
 
 def wait_end(ctx) -> Result:

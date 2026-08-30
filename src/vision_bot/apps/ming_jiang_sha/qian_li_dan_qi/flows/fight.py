@@ -17,6 +17,8 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     resolve_general_priority,
 )
 from vision_bot.core.vision import grab_region, image_to_text
+from vision_bot.runtime.context import RunContext
+from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find, snap
 
@@ -28,6 +30,8 @@ CARD = f"{QLDQ}/fight/card.png"
 HELP = f"{QLDQ}/fight/help.png"
 BUFF = f"{QLDQ}/fight/buff.png"
 YI_QI = f"{QLDQ}/fight/yq.png"
+SELECT_WUJIANG = f"{QLDQ}/fight/select_wujiang.png"
+SELECT_ZENG_LI = f"{QLDQ}/fight/select_zeng_li.png"
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -45,6 +49,27 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
     RewardKind.HELP: HELP,
     RewardKind.BUFF: BUFF,
 }
+
+
+def _has_select_zeng_li(ctx: RunContext) -> bool:
+    return snap(SELECT_ZENG_LI).ok
+
+
+def _has_select_wujiang(ctx: RunContext) -> bool:
+    return snap(SELECT_WUJIANG).ok
+
+
+def _has_yi_qi(ctx: RunContext) -> bool:
+    return snap(YI_QI).ok
+
+
+# 赠礼两步用标题纠偏；正常进战从 run_battle 开跑
+relocate: list[RelocateRule] = [
+    RelocateRule(when=_has_select_zeng_li, then="qldq.fight.choose_reward_kind"),
+    RelocateRule(when=_has_select_wujiang, then="qldq.fight.choose_reward_title"),
+    RelocateRule(when=_has_yi_qi, then="qldq.run_ended.confirm"),
+    RelocateRule(when=lambda ctx: True, then=None),
+]
 
 
 def run_battle(ctx) -> Result:
@@ -82,12 +107,22 @@ def after_settle(ctx) -> Result:
         logger.info("after_settle → 义旗，本轮结束")
         return Result.success(then="qldq.run_ended.confirm")
 
+    if find(SELECT_ZENG_LI, timeout=0.8).ok:
+        logger.info("after_settle → 已在选赠礼类别")
+        return Result.success(then="qldq.fight.choose_reward_kind")
+
+    # 等选武将标题，再 OCR
+    find(SELECT_WUJIANG, timeout=2.0)
     ctx.vars[PENDING_TITLES_KEY] = _ocr_reward_titles()
     logger.info("after_settle → choose_reward_title")
     return Result.success(then="qldq.fight.choose_reward_title")
 
 
 def choose_reward_title(ctx) -> Result:
+    if not find(SELECT_WUJIANG, timeout=2.0).ok and find(SELECT_ZENG_LI, timeout=0.5).ok:
+        logger.info("choose_reward_title → 已是类别页")
+        return Result.success(then="qldq.fight.choose_reward_kind")
+
     cached = ctx.vars.pop(PENDING_TITLES_KEY, None)
     titles = cached if isinstance(cached, list) else _ocr_reward_titles()
 
@@ -129,7 +164,16 @@ def choose_reward_kind(ctx) -> Result:
     if not isinstance(entry, GeneralPriority):
         entry = None
 
-    time.sleep(0.6)
+    # 必须看到「请选择一项赠礼」才选驰援/信物等
+    if not find(SELECT_ZENG_LI, timeout=5.0, interval=0.3).ok:
+        if find(SELECT_WUJIANG, timeout=0.5).ok:
+            logger.info("choose_reward_kind → 仍在选武将")
+            return Result.success(then="qldq.fight.choose_reward_title")
+        logger.warning("choose_reward_kind → 无赠礼类别标题")
+        ctx.vars.pop(PENDING_GENERAL_KEY, None)
+        return Result.fail("未到赠礼类别页")
+
+    time.sleep(0.3)
     available = _scan_reward_kinds(ctx)
     if not available:
         time.sleep(0.5)
@@ -137,14 +181,13 @@ def choose_reward_kind(ctx) -> Result:
 
     if not available:
         logger.warning("choose_reward_kind → no_kind")
-        ctx.vars.pop(PENDING_GENERAL_KEY, None)
-        return Result.success(then="qldq.battle_hub")
+        return Result.fail("赠礼类别未识别")
 
     kind = pick_reward_kind(available.keys(), entry, state)
     if kind is None:
         logger.warning("choose_reward_kind → 无可选项")
         ctx.vars.pop(PENDING_GENERAL_KEY, None)
-        return Result.success(then="qldq.battle_hub")
+        return Result.fail("赠礼类别无可选项")
 
     cx, cy = available[kind]
     general = entry.name if entry else "?"
