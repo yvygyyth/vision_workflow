@@ -218,6 +218,7 @@ def build_qian_li_dan_qi() -> Flow:
                     flow(
                         id="qldq.pocket_event",
                         name="锦囊",
+                        relocate=pocket_event.relocate,
                         children=[
                             mod(
                                 id="qldq.pocket_event.enter",
