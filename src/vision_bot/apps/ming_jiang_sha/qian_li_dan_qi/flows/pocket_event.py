@@ -4,9 +4,9 @@
 点完后 ``check`` 分流（先挪鼠标再轮询，避免过渡帧 / tooltip 误判）：
 1. ``_PATTERN`` → 再选一张
 2. ``_OK`` / ``_YI_WAI`` → 当场点击，再检查
-3. ``_CANCEL`` → 进入无赠礼战斗
+3. ``_CANCEL`` / ``_SETTING`` → 进入无赠礼战斗
 4. ``battle_interface`` → 已回三选一
-5. 皆未识别 → 成功回三选一
+5. 皆未识别 → 成功回三选一（枢纽会兜底认取消）
 """
 
 from __future__ import annotations
@@ -29,13 +29,18 @@ _PATTERN = f"{QLDQ}/pocket_event/event_patterm.png"
 _OK = f"{QLDQ}/pocket_event/ok.png"
 _YI_WAI = f"{QLDQ}/battle_select/yi_wai.png"
 _CANCEL = f"{QLDQ}/fight/cancel.png"
+_SETTING = f"{QLDQ}/fight/setting.png"
 _BATTLE_INTERFACE = f"{QLDQ}/enter_battle/battle_interface.png"
 
-DETECT: set[str] = {_PATTERN, _OK, _YI_WAI, _CANCEL, _BATTLE_INTERFACE}
+DETECT: set[str] = {_PATTERN, _OK, _YI_WAI, _CANCEL, _SETTING, _BATTLE_INTERFACE}
 
 
 def _shot(ctx: RunContext | None = None):
     return snap(DETECT)
+
+
+def _in_fight(shot) -> bool:
+    return shot.found(_CANCEL) or shot.found(_SETTING)
 
 
 relocate: list[RelocateRule] = [
@@ -46,7 +51,7 @@ relocate: list[RelocateRule] = [
     RelocateRule(
         when=lambda ctx: _shot().found(_OK)
         or _shot().found(_YI_WAI)
-        or _shot().found(_CANCEL),
+        or _in_fight(_shot()),
         then="qldq.pocket_event.check",
     ),
     RelocateRule(
@@ -79,12 +84,13 @@ def check(ctx) -> Result:
         if shot.found(_BATTLE_INTERFACE):
             logger.info("pocket_event → 三选一")
             return Result.success(then="qldq.battle_hub")
-        if shot.found(_CANCEL):
+        if _in_fight(shot):
             logger.info("pocket_event → 无赠礼战斗")
             return fight.run_battle_no_gift(ctx)
         time.sleep(0.25)
     logger.info("pocket_event check → 皆未识别，交三选一枢纽")
     return Result.success(then="qldq.battle_hub")
+
 
 
 def _click_pattern(ctx) -> Result:

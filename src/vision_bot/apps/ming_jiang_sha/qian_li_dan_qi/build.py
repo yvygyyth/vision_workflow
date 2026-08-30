@@ -89,6 +89,11 @@ def build_qian_li_dan_qi() -> Flow:
                                 name="关闭上面板",
                                 active=battle_hub.dismiss_up,
                             ),
+                            mod(
+                                id="qldq.battle_hub.recover_fight",
+                                name="枢纽补打无赠礼",
+                                active=battle_hub.recover_fight,
+                            ),
                             flow(
                                 id="qldq.battle_hub.pick_battle",
                                 name="战斗三选一",

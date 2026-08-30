@@ -33,6 +33,7 @@ YI_QI = f"{QLDQ}/fight/yq.png"
 SELECT_WUJIANG = f"{QLDQ}/fight/select_wujiang.png"
 SELECT_ZENG_LI = f"{QLDQ}/fight/select_zeng_li.png"
 NEXT_STEP = f"{QLDQ}/fight/next_step.png"
+YI_WAI = f"{QLDQ}/battle_select/yi_wai.png"
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -64,11 +65,16 @@ def _has_yi_qi(ctx: RunContext) -> bool:
     return snap(YI_QI).ok
 
 
-# 赠礼两步用标题纠偏；正常进战从 run_battle 开跑
+def _has_yi_wai(ctx: RunContext) -> bool:
+    return snap(YI_WAI).ok
+
+
+# 结算后可能的画面：赠礼 / 义旗 / 意外（再进含赠礼战斗）
 relocate: list[RelocateRule] = [
     RelocateRule(when=_has_select_zeng_li, then="qldq.fight.choose_reward_kind"),
     RelocateRule(when=_has_select_wujiang, then="qldq.fight.choose_reward_title"),
     RelocateRule(when=_has_yi_qi, then="qldq.run_ended.confirm"),
+    RelocateRule(when=_has_yi_wai, then="qldq.battle_hub.pick_battle.choose_yi_wai"),
     RelocateRule(when=lambda ctx: True, then=None),
 ]
 
@@ -103,15 +109,19 @@ def _ocr_reward_titles() -> list[str]:
 
 
 def after_settle(ctx) -> Result:
-    """纯战斗结束后的千里结算：义旗→本轮结束，否则走赠礼。
+    """纯战斗结束后：义旗结束 / 赠礼 / 意外再战；否则等赠礼标题再 OCR。
 
-    若 battle.next_step 过早交出，这里再补点下一步，并等到赠礼/义旗再 OCR。
+    若 battle.next_step 过早交出，这里再补点下一步。
     """
     deadline = time.monotonic() + 15.0
     while time.monotonic() < deadline:
         if find(YI_QI, timeout=0.35, threshold=0.8).ok:
             logger.info("after_settle → 义旗，本轮结束")
             return Result.success(then="qldq.run_ended.confirm")
+        if find(YI_WAI, timeout=0.35).ok:
+            # 战后意外：点选后进含赠礼战斗（复用三选一里的选意外）
+            logger.info("after_settle → 意外，再进含赠礼战斗")
+            return Result.success(then="qldq.battle_hub.pick_battle.choose_yi_wai")
         if find(SELECT_ZENG_LI, timeout=0.35).ok:
             logger.info("after_settle → 已在选赠礼类别")
             return Result.success(then="qldq.fight.choose_reward_kind")
