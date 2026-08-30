@@ -26,17 +26,35 @@ AUTO = f"{_FIGHT}/auto.png"
 CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 RUN_ENDED_FLAG = "mjs_battle_run_ended"
+_RELOCATE_SHOT = "_mjs_battle_relocate_shot"
 
 DETECT: set[str] = {CANCEL, SETTING, CHALLENGE_END, NEXT_STEP}
 
 
+def _move_aside() -> None:
+    """开局光标常触发 tooltip，会挡住随后出现的取消。"""
+    do(move().to(80, 80))()
+
+
+def _prepare_relocate(ctx: RunContext) -> bool:
+    """relocate 第一条：先挪鼠标，再只识图一次供后续规则用（本条不命中）。"""
+    _move_aside()
+    time.sleep(0.12)
+    ctx.vars[_RELOCATE_SHOT] = snap(DETECT)
+    return False
+
+
 def _battle_shot(ctx: RunContext) -> ScreenSnapshot:
+    shot = ctx.vars.get(_RELOCATE_SHOT)
+    if isinstance(shot, ScreenSnapshot):
+        return shot
     return snap(DETECT)
 
 
 # 进战 setting 会先出现，但点设置前必须先点取消；故 relocate 绝不因 setting 跳过取消。
 # 正常顺序靠 children：点取消 → 点设置 → 点自动 → …
 relocate: list[RelocateRule] = [
+    RelocateRule(when=_prepare_relocate, then=None),
     RelocateRule(
         when=lambda ctx: _battle_shot(ctx).found(CANCEL),
         then="mjs.battle.click_cancel",
@@ -49,28 +67,27 @@ relocate: list[RelocateRule] = [
         when=lambda ctx: _battle_shot(ctx).found(NEXT_STEP),
         then="mjs.battle.next_step",
     ),
-    # setting 先出 / 尚未出现取消：仍从点取消开跑（先挪鼠标再等取消）
+    # setting 先出 / 尚未出现取消：仍从点取消开跑
     RelocateRule(when=lambda ctx: True, then="mjs.battle.click_cancel"),
 ]
 
 
 def click_cancel(ctx) -> Result:
-    # 先挪开鼠标：开局光标常触发 tooltip，会挡住随后出现的取消
-    do(move().to(80, 80))()
-    time.sleep(0.3)
+    ctx.vars.pop(_RELOCATE_SHOT, None)
+    # relocate 已挪过一次；这里再挪一次兜底（例如纠偏直达本步）
+    _move_aside()
     return do(
-        move().image(CANCEL).match(timeout=20.0, interval=0.4),
-        click().pause(0.2),
+        move().image(CANCEL).match(timeout=12.0, interval=0.25),
+        click().pause(0.15),
     )()
 
 
 def click_setting(ctx) -> Result:
-    return do(move().image(SETTING).match(timeout=5.0), click().pause(0.5))()
+    return do(move().image(SETTING).match(timeout=4.0, interval=0.25), click().pause(0.35))()
 
 
 def click_auto(ctx) -> Result:
-    # 找不到自动也不整段失败纠偏（菜单已关 / 已是自动态）
-    r = do(move().image(AUTO).match(timeout=2.0), click().pause(0.2))()
+    r = do(move().image(AUTO).match(timeout=1.5, interval=0.25), click().pause(0.15))()
     if not r.ok:
         logger.info("click_auto → 未找到 auto，继续等结束")
         return Result.success()
