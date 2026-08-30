@@ -17,4 +17,4 @@ def click_slot(ctx) -> Result:
     x, y = random.choice(_POINTS)
     logger.info("rest @ (%s,%s)", x, y)
     do(move().to(x, y).raw(), click())()
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")

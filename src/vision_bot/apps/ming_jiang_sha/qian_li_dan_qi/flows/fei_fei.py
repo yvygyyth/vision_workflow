@@ -18,5 +18,8 @@ def choose(ctx) -> Result:
     for path in _OPTS:
         result = find(path, timeout=0.8)
         if result.ok:
-            return click_match(result.value)
+            r = click_match(result.value)
+            if not r.ok:
+                return r
+            return Result.success(then="qldq.battle_hub")
     return Result.fail("妃妃选项未识别")

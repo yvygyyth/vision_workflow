@@ -13,4 +13,4 @@ _OPTS = ((1130, 360), (1130, 630), (1130, 900))
 def click_option(ctx) -> Result:
     x, y = random.choice(_OPTS)
     do(move().to(x, y).raw(), click())()
-    return Result.success()
+    return Result.success(then="qldq.battle_hub")
