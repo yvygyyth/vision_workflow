@@ -1,8 +1,9 @@
-"""名将杀共用：纯战斗工具 Flow（点取消 → … → 本轮结束判定）。"""
+"""名将杀共用：纯战斗工具 Flow（先取消 → 设置 → 自动 → … → 本轮结束判定）。"""
 
 from __future__ import annotations
 
 import logging
+import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
@@ -25,6 +26,8 @@ AUTO = f"{_FIGHT}/auto.png"
 CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 RUN_ENDED_FLAG = "mjs_battle_run_ended"
+# 进战 setting 会先出现，但必须先点掉 cancel 后点 setting 才能出 auto
+_CANCEL_DONE = "mjs_battle_cancel_done"
 
 DETECT: set[str] = {CANCEL, SETTING, CHALLENGE_END, NEXT_STEP}
 
@@ -33,13 +36,18 @@ def _battle_shot(ctx: RunContext) -> ScreenSnapshot:
     return snap(DETECT)
 
 
+def _cancel_done(ctx: RunContext) -> bool:
+    return bool(ctx.vars.get(_CANCEL_DONE))
+
+
 relocate: list[RelocateRule] = [
     RelocateRule(
         when=lambda ctx: _battle_shot(ctx).found(CANCEL),
         then="mjs.battle.click_cancel",
     ),
+    # 仅「已点过取消」后才允许因 setting 跳到点设置（避免进战 setting 先出现就误点）
     RelocateRule(
-        when=lambda ctx: _battle_shot(ctx).found(SETTING),
+        when=lambda ctx: _cancel_done(ctx) and _battle_shot(ctx).found(SETTING),
         then="mjs.battle.click_setting",
     ),
     RelocateRule(
@@ -50,21 +58,36 @@ relocate: list[RelocateRule] = [
         when=lambda ctx: _battle_shot(ctx).found(NEXT_STEP),
         then="mjs.battle.next_step",
     ),
+    # 进战默认：先移开鼠标并等取消（setting 先出也不跳设置）
+    RelocateRule(when=lambda ctx: True, then="mjs.battle.click_cancel"),
 ]
 
 
 def click_cancel(ctx) -> Result:
-    # 识别/点击取消前移开鼠标，防止挡住图标
+    ctx.vars.pop(_CANCEL_DONE, None)
+    # 先挪开鼠标：开局光标常触发 tooltip，会挡住随后出现的取消
     do(move().to(80, 80))()
-    return do(move().image(CANCEL), click().pause(0.2))()
+    time.sleep(0.3)
+    r = do(
+        move().image(CANCEL).match(timeout=20.0, interval=0.4),
+        click().pause(0.2),
+    )()
+    if r.ok:
+        ctx.vars[_CANCEL_DONE] = True
+    return r
 
 
 def click_setting(ctx) -> Result:
-    return do(move().image(SETTING), click().pause(0.5))()
+    return do(move().image(SETTING).match(timeout=5.0), click().pause(0.5))()
 
 
 def click_auto(ctx) -> Result:
-    return do(move().image(AUTO).match(timeout=1.0), click().pause(0.2))()
+    # 找不到自动也不整段失败纠偏（菜单已关 / 已是自动态）
+    r = do(move().image(AUTO).match(timeout=2.0), click().pause(0.2))()
+    if not r.ok:
+        logger.info("click_auto → 未找到 auto，继续等结束")
+        return Result.success()
+    return r
 
 
 def wait_end(ctx) -> Result:
@@ -83,7 +106,7 @@ def next_step(ctx) -> Result:
 
 
 def check_run_end(ctx) -> Result:
-    """本轮彻底结束则打标，由各模式外壳自行 goto 结算/结束。"""
+    """本轮彻底结束则打标，由各模式外壳自行跳转结算/结束。"""
     if find(CONFIRM, timeout=1.0, threshold=0.8).ok:
         logger.info("mjs.battle check_run_end → 标记本轮结束")
         ctx.vars[RUN_ENDED_FLAG] = True
