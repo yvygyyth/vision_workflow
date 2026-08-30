@@ -35,5 +35,5 @@ def _when_battle_interface(ctx: RunContext) -> bool:
 relocate: list[RelocateRule] = [
     RelocateRule(when=_when_battle_interface, then="qldq.battle_hub"),
     RelocateRule(when=_when_pick, then=None),
-    
+    RelocateRule(when=lambda ctx: True, then="qldq.home_recovery"),
 ]

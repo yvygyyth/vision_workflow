@@ -50,14 +50,15 @@ def test_detect_qian_li_hub(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_relocate_hub_pick_battle(monkeypatch: pytest.MonkeyPatch) -> None:
-    shot = ScreenSnapshot(
-        hits={CHALLENGE: Result.success(value=MatchResult(found=True, image=CHALLENGE))}
-    )
-
     def fake_snap(templates, region=None):
         if isinstance(templates, str):
             return Result.fail("no")
-        return shot
+        wanted = set(templates) if not isinstance(templates, set) else templates
+        if CHALLENGE in wanted:
+            return ScreenSnapshot(
+                hits={CHALLENGE: Result.success(value=MatchResult(found=True, image=CHALLENGE))}
+            )
+        return ScreenSnapshot(hits={})
 
     monkeypatch.setattr(
         "vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.flows.battle_hub.snap",
@@ -499,6 +500,39 @@ def test_fee_day_build() -> None:
     assert len(root.children) == 8
     reg = FlowRegistry.build(root)
     assert "fee_day.mail.open" in reg.nodes
+
+
+def test_then_loop_does_not_blow_stack() -> None:
+    """跨 Flow 的 then 环跑很多轮也不应 RecursionError。"""
+    log: list[str] = []
+    rounds = {"n": 0}
+
+    def hub_go(ctx):
+        log.append("hub")
+        rounds["n"] += 1
+        if rounds["n"] > 50:
+            return Result.success()
+        return Result.success(then="t.fight.hit")
+
+    def fight_hit(ctx):
+        log.append("fight")
+        return Result.success(then="t.hub")
+
+    root = flow(
+        "t",
+        "根",
+        # fight 在前、hub 在后：hub 正常结束时不会顺延进 fight
+        children=[
+            flow("t.fight", "战斗", children=[mod("t.fight.hit", "结算回枢纽", fight_hit)]),
+            flow("t.hub", "枢纽", children=[mod("t.hub.go", "去战斗", hub_go)]),
+        ],
+        relocate=[RelocateRule(when=lambda ctx: True, then="t.hub")],
+    )
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert report.success
+    assert rounds["n"] == 51
+    assert log[0] == "hub"
+    assert log.count("fight") == 50
 
 
 def test_cancel_during_wait() -> None:

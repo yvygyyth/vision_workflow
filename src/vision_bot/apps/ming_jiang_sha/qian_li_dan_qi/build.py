@@ -320,7 +320,6 @@ def build_qian_li_dan_qi() -> Flow:
             flow(
                 id="qldq.home_recovery",
                 name="回首页恢复",
-                relocate=home_recovery.relocate,
                 children=[
                     mod(
                         id="qldq.home_recovery.esc_home",
