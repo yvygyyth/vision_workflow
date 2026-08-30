@@ -1,4 +1,8 @@
-"""流程执行器（trampoline：then / 续跑不递归嵌套）。"""
+"""流程执行器（trampoline：then / 续跑不递归嵌套）。
+
+对象树只决定「默认顺跑兄弟」；每个 Flow 都可独立进入。
+``call`` 开启嵌套 drive，用 floor 挡住调用方栈，与是否 register_tool 无关。
+"""
 
 from __future__ import annotations
 
@@ -41,11 +45,13 @@ class Runner:
         self.path: list[str] = []
         self._flow_stack: list[str] = []
         self._call_stack: list[str] = []
-        # relocate 跳转到目标后，目标结束应续跑「发起 relocate 的 Flow」之后的兄弟
+        # 每层 drive 不允许 pop 到该深度以下（call 嵌套时挡住调用方）
+        self._drive_floors: list[int] = []
+        # relocate 跳到外部后，目标结束应续跑「发起方 Flow」之后的兄弟
         self._resume_after: str | None = None
 
     def call(self, target_id: str) -> Result:
-        """同步插入执行目标子树；子树外跳转抛 ``ThenEscape``。"""
+        """同步插入执行任意 Flow/节点；子树外跳转抛 ``ThenEscape``。"""
         if not self._flow_stack:
             raise RuntimeError("call 必须在 Flow 执行中调用")
         self.registry.get(target_id)
@@ -79,17 +85,24 @@ class Runner:
                 self._pop_flow()
 
     def _drive(self, start_id: str) -> Result:
-        """顶层调度：每步只推进一个节点；ThenEscape 向外抛（供 call 交给调用方）。"""
-        pend: str | None = start_id
-        while pend is not None:
-            self.ctx.check_cancelled()
-            out = self._step(pend)
-            if out is None:
-                return Result.success()
-            if isinstance(out, Result):
-                return out
-            pend = out
-        return Result.success()
+        """调度循环。floor = 进入本 drive 时的栈深；回到该深度即本 drive 结束。"""
+        self._drive_floors.append(len(self._flow_stack))
+        try:
+            pend: str | None = start_id
+            while pend is not None:
+                self.ctx.check_cancelled()
+                out = self._step(pend)
+                if out is None:
+                    return Result.success()
+                if isinstance(out, Result):
+                    return out
+                pend = out
+            return Result.success()
+        finally:
+            self._drive_floors.pop()
+
+    def _drive_floor(self) -> int:
+        return self._drive_floors[-1] if self._drive_floors else 0
 
     def _step(self, target_id: str) -> str | Result | None:
         node = self.registry.get(target_id)
@@ -112,10 +125,8 @@ class Runner:
             self._leave_call_if_needed(flow, entry)
             parent, idx = self.registry.entry_point(entry)
             if parent.id == flow.id:
-                # 目标仍在本 Flow 子树：从该 child 起顺跑（含后续兄弟）
                 self._resume_after = None
                 return parent.children[idx].id
-            # 跳到外部：跑完目标后续在本 Flow 之后
             self._resume_after = flow.id
             self._unwind_for(entry)
             return entry
@@ -190,7 +201,8 @@ class Runner:
             origin = self._resume_after
             self._resume_after = None
             return self._after(origin)
-        if not self._flow_stack:
+        # 回到本 drive 的 floor：独立 Flow（含 call 目标）结束，不再 pop 外层
+        if len(self._flow_stack) <= self._drive_floor():
             return None
         return self._after(finished_id)
 
@@ -210,8 +222,9 @@ class Runner:
 
     def _unwind_for(self, target_id: str) -> None:
         """弹出非祖先 Frame，避免 then/relocate 叠在旁路 Flow 上。"""
+        floor = self._drive_floor()
         target_flow = self.registry.flow_of(target_id)
-        while self._flow_stack:
+        while len(self._flow_stack) > floor:
             top = self._flow_stack[-1]
             if top == target_flow or self._is_under(target_id, ancestor=top):
                 return

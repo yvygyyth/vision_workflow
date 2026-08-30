@@ -217,6 +217,72 @@ def test_call_tool_relocate_parent_uses_caller() -> None:
     assert log == ["caller", "tool", "recover"]
 
 
+def test_call_tool_flow_does_not_pop_caller() -> None:
+    """call 工具 Flow 跑完后应回到调用方继续兄弟，不得顺延到调用方的叔叔节点。"""
+    from vision_bot.perception.session import bind_perception
+    from vision_bot.runtime.bind import bind_runtime
+    from vision_bot.runtime.runner import Runner
+
+    log: list[str] = []
+
+    def battle(ctx):
+        log.append("battle")
+        return Result.success()
+
+    def run_battle(ctx):
+        log.append("run")
+        r = ctx.call("tool")
+        assert r.ok
+        return Result.success()
+
+    def settle(ctx):
+        log.append("settle")
+        return Result.success(then="t.hub")
+
+    def shop(ctx):
+        log.append("shop")
+        return Result.success()
+
+    def hub(ctx):
+        log.append("hub")
+        return Result.success()
+
+    tool = flow("tool", "纯战斗", children=[mod("tool.battle", "打", battle)])
+    root = flow(
+        "t",
+        "根",
+        children=[
+            flow(
+                "t.iface",
+                "界面",
+                children=[
+                    flow(
+                        "t.fight",
+                        "战斗外壳",
+                        children=[
+                            mod("t.fight.run", "执行", run_battle),
+                            mod("t.fight.settle", "结算", settle),
+                        ],
+                    ),
+                    flow("t.shop", "店", children=[mod("t.shop.buy", "买", shop)]),
+                    flow("t.hub", "枢纽", children=[mod("t.hub.go", "回", hub)]),
+                ],
+            ),
+        ],
+    )
+    reg = FlowRegistry.build(root)
+    reg.register_tool(tool)
+    bind_perception(Path(".").resolve())
+    ctx = RunContext()
+    runner = Runner(ctx, reg, root=root)
+    ctx._runner = runner
+    bind_runtime(ctx)
+    result = runner.run_from("t.fight")
+    assert result.ok
+    assert log == ["run", "battle", "settle", "hub"]
+    assert "shop" not in log
+
+
 def test_call_runs_sync_and_resumes() -> None:
     """call 同步跑完目标后回到调用方，可继续执行。"""
     log: list[str] = []
