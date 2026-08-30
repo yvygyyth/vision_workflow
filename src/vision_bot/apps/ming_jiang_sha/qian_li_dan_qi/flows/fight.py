@@ -32,6 +32,7 @@ BUFF = f"{QLDQ}/fight/buff.png"
 YI_QI = f"{QLDQ}/fight/yq.png"
 SELECT_WUJIANG = f"{QLDQ}/fight/select_wujiang.png"
 SELECT_ZENG_LI = f"{QLDQ}/fight/select_zeng_li.png"
+NEXT_STEP = f"{QLDQ}/fight/next_step.png"
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -102,17 +103,31 @@ def _ocr_reward_titles() -> list[str]:
 
 
 def after_settle(ctx) -> Result:
-    """纯战斗结束后的千里结算：义旗→本轮结束，否则走赠礼。"""
-    if find(YI_QI, timeout=1.5, threshold=0.8).ok:
-        logger.info("after_settle → 义旗，本轮结束")
-        return Result.success(then="qldq.run_ended.confirm")
+    """纯战斗结束后的千里结算：义旗→本轮结束，否则走赠礼。
 
-    if find(SELECT_ZENG_LI, timeout=0.8).ok:
-        logger.info("after_settle → 已在选赠礼类别")
-        return Result.success(then="qldq.fight.choose_reward_kind")
+    若 battle.next_step 过早交出，这里再补点下一步，并等到赠礼/义旗再 OCR。
+    """
+    deadline = time.monotonic() + 15.0
+    while time.monotonic() < deadline:
+        if find(YI_QI, timeout=0.35, threshold=0.8).ok:
+            logger.info("after_settle → 义旗，本轮结束")
+            return Result.success(then="qldq.run_ended.confirm")
+        if find(SELECT_ZENG_LI, timeout=0.35).ok:
+            logger.info("after_settle → 已在选赠礼类别")
+            return Result.success(then="qldq.fight.choose_reward_kind")
+        if find(SELECT_WUJIANG, timeout=0.35).ok:
+            break
+        # 仍卡在下一步：补点，避免整屏 OCR 乱读
+        clicked = do(
+            move().image(NEXT_STEP).match(timeout=0.4, interval=0.2),
+            click().pause(0.35),
+        )()
+        if not clicked.ok:
+            time.sleep(0.2)
 
-    # 等选武将标题，再 OCR
-    find(SELECT_WUJIANG, timeout=2.0)
+    if not find(SELECT_WUJIANG, timeout=1.0).ok:
+        logger.warning("after_settle → 未见选武将标题，仍尝试 OCR")
+
     ctx.vars[PENDING_TITLES_KEY] = _ocr_reward_titles()
     logger.info("after_settle → choose_reward_title")
     return Result.success(then="qldq.fight.choose_reward_title")

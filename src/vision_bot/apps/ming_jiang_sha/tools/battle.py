@@ -157,21 +157,30 @@ def click_auto(ctx) -> Result:
 
 
 def wait_end(ctx) -> Result:
+    # interval 别太大：结束按钮出来后要尽快点，否则后面 next_step 会「假成功」
     return do(
-        move().image(CHALLENGE_END).match(timeout=1200, interval=5),
-        click().pause(0.2),
+        move().image(CHALLENGE_END).match(timeout=1200, interval=0.8),
+        click().pause(0.35),
     )()
 
 
 def next_step(ctx) -> Result:
-    """点掉仍在的下一步；找不到则直接成功，由外壳去做结算。"""
+    """点掉下一步。结束点完后下一步常晚几秒才出，首轮要等够；点完再交外壳结算。"""
     clicked = 0
-    for _ in range(5):
-        r = do(move().image(NEXT_STEP).match(timeout=1.2), click().pause(0.4))()
+    # 首轮久等出现；之后短轮询点到消失
+    timeouts = (12.0,) + (1.5,) * 8
+    for timeout in timeouts:
+        r = do(
+            move().image(NEXT_STEP).match(timeout=timeout, interval=0.35),
+            click().pause(0.4),
+        )()
         if not r.ok:
             break
         clicked += 1
-    logger.info("next_step → 已点%s次，无下一步，交外壳结算", clicked)
+    if clicked == 0:
+        logger.info("next_step → 等待后仍无下一步，交外壳结算")
+    else:
+        logger.info("next_step → 已点%s次，交外壳结算", clicked)
     return Result.success()
 
 
