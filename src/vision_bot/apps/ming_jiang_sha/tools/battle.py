@@ -20,13 +20,14 @@ logger = logging.getLogger(__name__)
 _FIGHT = f"{QLDQ}/fight"
 CANCEL = f"{_FIGHT}/cancel.png"
 SETTING = f"{_FIGHT}/setting.png"
+SETTING2 = f"{_FIGHT}/setting2.png"
 CHALLENGE_END = f"{_FIGHT}/challenge_end.png"
 NEXT_STEP = f"{_FIGHT}/next_step.png"
 AUTO = f"{_FIGHT}/auto.png"
 
 _RELOCATE_SHOT = "_mjs_battle_relocate_shot"
 
-DETECT: set[str] = {CANCEL, SETTING, CHALLENGE_END, NEXT_STEP}
+DETECT: set[str] = {CANCEL, SETTING, SETTING2, CHALLENGE_END, NEXT_STEP}
 
 
 def _move_aside() -> None:
@@ -52,7 +53,23 @@ def _battle_shot(ctx: RunContext) -> ScreenSnapshot:
 def _in_setup(ctx: RunContext) -> bool:
     """设置/取消还在 → 仍处开局，不得跳到等结束/下一步。"""
     shot = _battle_shot(ctx)
-    return shot.found(CANCEL) or shot.found(SETTING)
+    return shot.found(CANCEL) or shot.found(SETTING) or shot.found(SETTING2)
+
+
+def _setting_expanded() -> bool:
+    """setting2 = 菜单已展开（才能看见 auto）。"""
+    return snap(SETTING2).ok
+
+
+def _ensure_setting_open() -> bool:
+    """保证设置菜单展开；已展开则绝不再点 setting（会收起）。"""
+    if _setting_expanded():
+        return True
+    r = do(move().image(SETTING).match(timeout=2.0, interval=0.25), click().pause(0.35))()
+    if not r.ok:
+        return False
+    time.sleep(0.2)
+    return _setting_expanded()
 
 
 # 进战 setting 常先出，但点设置前必须先点取消。
@@ -64,7 +81,8 @@ relocate: list[RelocateRule] = [
         then="mjs.battle.click_cancel",
     ),
     RelocateRule(
-        when=lambda ctx: _battle_shot(ctx).found(SETTING),
+        when=lambda ctx: _battle_shot(ctx).found(SETTING)
+        or _battle_shot(ctx).found(SETTING2),
         then="mjs.battle.click_cancel",
     ),
     RelocateRule(
@@ -92,30 +110,47 @@ def click_cancel(ctx) -> Result:
 
 
 def click_setting(ctx) -> Result:
-    return do(move().image(SETTING).match(timeout=4.0, interval=0.25), click().pause(0.35))()
+    if _setting_expanded():
+        logger.info("click_setting → 已展开(setting2)，跳过点击")
+        return Result.success()
+    r = do(move().image(SETTING).match(timeout=4.0, interval=0.25), click().pause(0.35))()
+    if not r.ok:
+        return r
+    if not _setting_expanded():
+        logger.warning("click_setting → 点击后未见 setting2")
+    return r
+
+
+def _try_click_auto(*, timeout: float) -> Result:
+    return do(move().image(AUTO).match(timeout=timeout, interval=0.25), click().pause(0.15))()
 
 
 def click_auto(ctx) -> Result:
-    r = do(move().image(AUTO).match(timeout=1.5, interval=0.25), click().pause(0.15))()
+    r = _try_click_auto(timeout=1.5)
     if r.ok:
         return r
 
-    # 点了设置却无 auto → 多半取消没点上：补取消后再找 auto
-    logger.info("click_auto → 无 auto，补点取消后再找")
-    _move_aside()
-    cancel_r = do(
-        move().image(CANCEL).match(timeout=3.0, interval=0.25),
-        click().pause(0.25),
-    )()
-    if cancel_r.ok:
-        r2 = do(move().image(AUTO).match(timeout=2.0, interval=0.25), click().pause(0.15))()
-        if r2.ok:
-            return r2
-        # 取消后菜单可能收起，再点一次设置
-        do(move().image(SETTING).match(timeout=2.0, interval=0.25), click().pause(0.35))()
-        r3 = do(move().image(AUTO).match(timeout=2.0, interval=0.25), click().pause(0.15))()
-        if r3.ok:
-            return r3
+    # 无 auto：先看是否已展开；未展开才点 setting，已展开则疑似没点取消
+    if _setting_expanded():
+        logger.info("click_auto → 已展开但无 auto，补点取消后再找")
+        _move_aside()
+        cancel_r = do(
+            move().image(CANCEL).match(timeout=3.0, interval=0.25),
+            click().pause(0.25),
+        )()
+        if cancel_r.ok:
+            # 取消后菜单可能还开着：只在未展开时才点 setting，避免点第二次收起
+            if not _ensure_setting_open():
+                logger.info("click_auto → 补取消后无法展开 setting")
+            r2 = _try_click_auto(timeout=2.0)
+            if r2.ok:
+                return r2
+    else:
+        logger.info("click_auto → 未展开，尝试展开 setting 后再找 auto")
+        if _ensure_setting_open():
+            r2 = _try_click_auto(timeout=2.0)
+            if r2.ok:
+                return r2
 
     logger.info("click_auto → 仍无 auto，继续等结束")
     return Result.success()
