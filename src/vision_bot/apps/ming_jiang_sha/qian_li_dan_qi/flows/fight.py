@@ -1,4 +1,4 @@
-"""战斗外壳：call 纯战斗后，按有无赠礼结算。"""
+"""战斗外壳：call 纯战斗后，按义旗/赠礼结算。"""
 
 from __future__ import annotations
 
@@ -16,10 +16,9 @@ from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.rewards import (
     pick_reward_slot,
     resolve_general_priority,
 )
-from vision_bot.apps.ming_jiang_sha.tools.battle import RUN_ENDED_FLAG
 from vision_bot.core.vision import grab_region, image_to_text
 from vision_bot.runtime.result import Result
-from vision_bot.vision import snap
+from vision_bot.vision import find, snap
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +27,7 @@ JOINT = f"{QLDQ}/fight/joint.png"
 CARD = f"{QLDQ}/fight/card.png"
 HELP = f"{QLDQ}/fight/help.png"
 BUFF = f"{QLDQ}/fight/buff.png"
+YI_QI = f"{QLDQ}/fight/yq.png"
 
 PENDING_GENERAL_KEY = "pending_reward_general"
 PENDING_TITLES_KEY = "pending_reward_titles"
@@ -48,7 +48,7 @@ REWARD_KIND_IMGS: dict[RewardKind, str] = {
 
 
 def run_battle(ctx) -> Result:
-    """同步执行名将杀共用纯战斗；本轮结束则跳 run_ended，否则进入结算。"""
+    """同步执行名将杀共用纯战斗，随后进入结算。"""
     return _after_mjs_battle(ctx, then=None)
 
 
@@ -61,8 +61,6 @@ def _after_mjs_battle(ctx, *, then: str | None) -> Result:
     r = ctx.call("mjs.battle")
     if not r.ok:
         return r
-    if ctx.vars.pop(RUN_ENDED_FLAG, None):
-        return Result.success(then="qldq.run_ended.confirm")
     if then:
         logger.info("run_battle_no_gift → 回三选一")
         return Result.success(then=then)
@@ -78,32 +76,20 @@ def _ocr_reward_titles() -> list[str]:
     return titles
 
 
-def titles_look_like_gift(titles: list[str]) -> bool:
-    for text in titles:
-        if parse_general_name(text):
-            return True
-        raw = (text or "").strip()
-        if "赠礼" in raw or "贈禮" in raw:
-            return True
-    return False
-
-
 def after_settle(ctx) -> Result:
-    titles = _ocr_reward_titles()
-    if titles_look_like_gift(titles):
-        ctx.vars[PENDING_TITLES_KEY] = titles
-        logger.info("after_settle → has_gift")
-        return Result.success(then="qldq.fight.choose_reward_title")
-    logger.info("after_settle → 无赠礼 UI，回三选一")
-    return Result.success(then="qldq.battle_hub")
+    """纯战斗结束后的千里结算：义旗→本轮结束，否则走赠礼。"""
+    if find(YI_QI, timeout=1.5, threshold=0.8).ok:
+        logger.info("after_settle → 义旗，本轮结束")
+        return Result.success(then="qldq.run_ended.confirm")
+
+    ctx.vars[PENDING_TITLES_KEY] = _ocr_reward_titles()
+    logger.info("after_settle → choose_reward_title")
+    return Result.success(then="qldq.fight.choose_reward_title")
 
 
 def choose_reward_title(ctx) -> Result:
     cached = ctx.vars.pop(PENDING_TITLES_KEY, None)
     titles = cached if isinstance(cached, list) else _ocr_reward_titles()
-    if not titles_look_like_gift(titles):
-        logger.info("choose_reward_title → no_gift")
-        return Result.success(then="qldq.battle_hub")
 
     state = get_battle_state(ctx)
     slot = pick_reward_slot(titles, state)

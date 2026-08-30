@@ -18,4 +18,4 @@ def confirm(ctx) -> Result:
 def close(ctx) -> Result:
     press_esc(times=2)
     clear_battle_state(ctx)
-    return Result.success(then="qldq.battle_select.enter_pick.click_start")
+    return Result.success(then="qldq.battle_select.enter_pick")

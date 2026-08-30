@@ -1,4 +1,4 @@
-"""名将杀共用：纯战斗工具 Flow（先取消 → 设置 → 自动 → … → 本轮结束判定）。"""
+"""名将杀共用：纯战斗工具 Flow（先取消 → 设置 → 自动 → 等结束 → 下一步）。"""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ import logging
 import time
 
 from vision_bot.actions import click, do, move
-from vision_bot.apps.ming_jiang_sha.paths import COMMON_DIR, QLDQ
+from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.runtime.builders import flow, mod
 from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
-from vision_bot.vision import ScreenSnapshot, find, snap
+from vision_bot.vision import ScreenSnapshot, snap
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,7 @@ SETTING = f"{_FIGHT}/setting.png"
 CHALLENGE_END = f"{_FIGHT}/challenge_end.png"
 NEXT_STEP = f"{_FIGHT}/next_step.png"
 AUTO = f"{_FIGHT}/auto.png"
-CONFIRM = f"{COMMON_DIR}/confirm.png"
 
-RUN_ENDED_FLAG = "mjs_battle_run_ended"
 _RELOCATE_SHOT = "_mjs_battle_relocate_shot"
 
 DETECT: set[str] = {CANCEL, SETTING, CHALLENGE_END, NEXT_STEP}
@@ -109,14 +107,6 @@ def next_step(ctx) -> Result:
     return Result.success()
 
 
-def check_run_end(ctx) -> Result:
-    """本轮彻底结束则打标，由各模式外壳自行跳转结算/结束。"""
-    if find(CONFIRM, timeout=1.0, threshold=0.8).ok:
-        logger.info("mjs.battle check_run_end → 标记本轮结束")
-        ctx.vars[RUN_ENDED_FLAG] = True
-    return Result.success()
-
-
 def build_battle() -> Flow:
     """名将杀共用纯战斗工具（RunConfig.tools 默认挂载，供 call）。"""
     return flow(
@@ -129,10 +119,5 @@ def build_battle() -> Flow:
             mod(id="mjs.battle.click_auto", name="点自动", active=click_auto),
             mod(id="mjs.battle.wait_end", name="等结束", active=wait_end),
             mod(id="mjs.battle.next_step", name="下一步", active=next_step),
-            mod(
-                id="mjs.battle.check_run_end",
-                name="本轮结束判定",
-                active=check_run_end,
-            ),
         ],
     )

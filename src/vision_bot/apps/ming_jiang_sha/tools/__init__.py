@@ -1,5 +1,5 @@
-"""名将杀共用工具 Flow。"""
+"""名将杀共用 tools（纯战斗等）。"""
 
-from vision_bot.apps.ming_jiang_sha.tools.battle import RUN_ENDED_FLAG, build_battle
+from vision_bot.apps.ming_jiang_sha.tools.battle import build_battle
 
-__all__ = ["RUN_ENDED_FLAG", "build_battle"]
+__all__ = ["build_battle"]
