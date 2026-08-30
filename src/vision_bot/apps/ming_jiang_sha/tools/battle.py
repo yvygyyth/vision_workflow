@@ -26,8 +26,6 @@ AUTO = f"{_FIGHT}/auto.png"
 CONFIRM = f"{COMMON_DIR}/confirm.png"
 
 RUN_ENDED_FLAG = "mjs_battle_run_ended"
-# 进战 setting 会先出现，但必须先点掉 cancel 后点 setting 才能出 auto
-_CANCEL_DONE = "mjs_battle_cancel_done"
 
 DETECT: set[str] = {CANCEL, SETTING, CHALLENGE_END, NEXT_STEP}
 
@@ -36,19 +34,12 @@ def _battle_shot(ctx: RunContext) -> ScreenSnapshot:
     return snap(DETECT)
 
 
-def _cancel_done(ctx: RunContext) -> bool:
-    return bool(ctx.vars.get(_CANCEL_DONE))
-
-
+# 进战 setting 会先出现，但点设置前必须先点取消；故 relocate 绝不因 setting 跳过取消。
+# 正常顺序靠 children：点取消 → 点设置 → 点自动 → …
 relocate: list[RelocateRule] = [
     RelocateRule(
         when=lambda ctx: _battle_shot(ctx).found(CANCEL),
         then="mjs.battle.click_cancel",
-    ),
-    # 仅「已点过取消」后才允许因 setting 跳到点设置（避免进战 setting 先出现就误点）
-    RelocateRule(
-        when=lambda ctx: _cancel_done(ctx) and _battle_shot(ctx).found(SETTING),
-        then="mjs.battle.click_setting",
     ),
     RelocateRule(
         when=lambda ctx: _battle_shot(ctx).found(CHALLENGE_END),
@@ -58,23 +49,19 @@ relocate: list[RelocateRule] = [
         when=lambda ctx: _battle_shot(ctx).found(NEXT_STEP),
         then="mjs.battle.next_step",
     ),
-    # 进战默认：先移开鼠标并等取消（setting 先出也不跳设置）
+    # setting 先出 / 尚未出现取消：仍从点取消开跑（先挪鼠标再等取消）
     RelocateRule(when=lambda ctx: True, then="mjs.battle.click_cancel"),
 ]
 
 
 def click_cancel(ctx) -> Result:
-    ctx.vars.pop(_CANCEL_DONE, None)
     # 先挪开鼠标：开局光标常触发 tooltip，会挡住随后出现的取消
     do(move().to(80, 80))()
     time.sleep(0.3)
-    r = do(
+    return do(
         move().image(CANCEL).match(timeout=20.0, interval=0.4),
         click().pause(0.2),
     )()
-    if r.ok:
-        ctx.vars[_CANCEL_DONE] = True
-    return r
 
 
 def click_setting(ctx) -> Result:
