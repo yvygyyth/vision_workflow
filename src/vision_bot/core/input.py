@@ -2,6 +2,9 @@
 
 移动与点击分离：先 move/at，再 click/scroll（不带坐标）。
 
+``Mouse.click`` 默认按下后停 ``DEFAULT_CLICK_HOLD_SEC``（50ms）再抬起，
+避免部分游戏把瞬时 click 当成只按不放。
+
 示例::
 
     Mouse().move(100, 200).click().sleep(0.3).perform()
@@ -23,6 +26,9 @@ from typing import Any, Callable, Literal, Self
 logger = logging.getLogger(__name__)
 
 Button = Literal["left", "right", "middle"]
+
+# 按下到抬起的默认间隔；部分游戏对瞬时 click 会当成只按不放
+DEFAULT_CLICK_HOLD_SEC = 0.05
 
 
 def press_key(key: str) -> None:
@@ -271,16 +277,46 @@ class Mouse:
         self._ops.append(_Op("move", {"x": x, "y": y, "relative": relative}, run))
         return self
 
-    def click(self, button: Button = "left", clicks: int = 1) -> Self:
-        """在当前位置点击（不移动）。需先 move/at，或接受当前系统光标位置。"""
+    def down(self, button: Button = "left") -> Self:
+        """按下鼠标键（不抬起）。"""
+
+        def run() -> None:
+            self._api().mouseDown(button=button)
+
+        self._ops.append(_Op("down", {"button": button}, run))
+        return self
+
+    def up(self, button: Button = "left") -> Self:
+        """抬起鼠标键。"""
+
+        def run() -> None:
+            self._api().mouseUp(button=button)
+
+        self._ops.append(_Op("up", {"button": button}, run))
+        return self
+
+    def click(
+        self,
+        button: Button = "left",
+        clicks: int = 1,
+        *,
+        hold: float = DEFAULT_CLICK_HOLD_SEC,
+    ) -> Self:
+        """在当前位置点击（按下→短停→抬起）。需先 move/at，或接受当前系统光标位置。"""
 
         def run() -> None:
             api = self._api()
-            api.click(clicks=clicks, button=button)
+            for _ in range(max(1, clicks)):
+                api.mouseDown(button=button)
+                if hold > 0:
+                    time.sleep(hold)
+                api.mouseUp(button=button)
             pos = api.position()
             self._x, self._y = int(pos[0]), int(pos[1])
 
-        self._ops.append(_Op("click", {"button": button, "clicks": clicks}, run))
+        self._ops.append(
+            _Op("click", {"button": button, "clicks": clicks, "hold": hold}, run)
+        )
         return self
 
     def double_click(self, button: Button = "left") -> Self:

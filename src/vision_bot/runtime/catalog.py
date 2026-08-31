@@ -6,12 +6,18 @@ from pathlib import Path
 
 from vision_bot.apps.ming_jiang_sha.registry import (
     DEFAULT_ROOT_ID,
-    ROOT_FLOWS,
-    tool_flows_for,
+    ROOT_FLOWS as MJS_ROOT_FLOWS,
+    tool_flows_for as mjs_tool_flows_for,
+)
+from vision_bot.apps.yi_huan.registry import (
+    ROOT_FLOWS as YH_ROOT_FLOWS,
+    tool_flows_for as yh_tool_flows_for,
 )
 from vision_bot.runtime.config import RunConfig
 from vision_bot.runtime.flow import Flow
 from vision_bot.runtime.runner import RunReport, run
+
+ROOT_FLOWS = {**MJS_ROOT_FLOWS, **YH_ROOT_FLOWS}
 
 __all__ = [
     "DEFAULT_ROOT_ID",
@@ -35,9 +41,15 @@ def get_root_flow(root_id: str) -> Flow:
     return builder()
 
 
+def _tool_flows_for(root_id: str):
+    if root_id in YH_ROOT_FLOWS:
+        return yh_tool_flows_for(root_id)
+    return mjs_tool_flows_for(root_id)
+
+
 def resolve_tool_flows(root_id: str, tools: list[str] | None) -> list[Flow]:
     """解析要挂载的工具 Flow。``tools is None`` → 该 root 默认工具表全部。"""
-    catalog = tool_flows_for(root_id)
+    catalog = _tool_flows_for(root_id)
     if not catalog:
         return []
     ids = list(catalog) if tools is None else tools

@@ -24,7 +24,13 @@ __all__ = [
     "get_cursor_state",
 ]
 
-def click_at(x: int, y: int, *, pause: float = 0.2) -> Result:
+def click_at(
+    x: int,
+    y: int,
+    *,
+    pause: float = 0.2,
+    hold: float | None = None,
+) -> Result:
     """移动鼠标到屏幕坐标并左键单击。
 
     Parameters
@@ -35,13 +41,17 @@ def click_at(x: int, y: int, *, pause: float = 0.2) -> Result:
         目标点纵坐标（屏幕像素）。
     pause:
         点击后等待秒数，默认 ``0.2``。
+    hold:
+        按下到抬起间隔；``None`` 时用 ``Mouse.click`` 默认值。
 
     Returns
     -------
     Result
         始终 ``ok=True``。
     """
-    Mouse().move(x, y).click().sleep(pause).perform()
+    chain = Mouse().move(x, y)
+    chain = chain.click() if hold is None else chain.click(hold=hold)
+    chain.sleep(pause).perform()
     return Result.success()
 
 
