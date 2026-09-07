@@ -11,6 +11,7 @@ from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.utils.priority import TOKEN_PRIORITY
 from vision_bot.core.input import press_key
 from vision_bot.core.vision import grab_region, image_to_text
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.relocate import RelocateRule
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find, snap
@@ -121,19 +122,19 @@ def go_back(ctx) -> Result:
     return Result.success(then="qldq.ba_qing_store.confirm")
 
 
-def confirm(ctx) -> Result:
+def confirm(ctx: RunContext) -> Result:
     """点离店确认；点完即回三选一（不再 ensure 空转重试）。"""
     if not snap(GO_BACK).ok:
         logger.info("confirm → 已不在店内")
-        return Result.success(then="qldq.battle_hub")
+        ctx.goto("qldq.battle_hub")
 
     r = do(move().image(CONFIRM).match(timeout=1.0), click())()
     if r.ok:
         logger.info("confirm → 已点确认，回三选一")
-        return Result.success(then="qldq.battle_hub")
+        ctx.goto("qldq.battle_hub")
 
     # 确认按钮找不到：若返回键也没了，说明已经出去了
     if not snap(GO_BACK).ok:
         logger.info("confirm → 无确认且无返回，视为已离店")
-        return Result.success(then="qldq.battle_hub")
+        ctx.goto("qldq.battle_hub")
     return Result.fail(r.message or "离店确认未找到")

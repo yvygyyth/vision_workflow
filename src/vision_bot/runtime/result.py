@@ -20,8 +20,8 @@ class Result:
         附加数据。例如识图成功时为 :class:`~vision_bot.core.models.MatchResult`，
         ``find_all`` 成功时为 ``list[MatchResult]``。
     then:
-        仅 ``ok=True`` 时有意义：跳到该节点 id（取代旧 ``ctx.goto``）。
-        ``ok=False`` 时忽略此字段。
+        仅 ``ok=True`` 时有意义：``return`` 语义跳转（仅栈内 Flow 或同父兄弟）。
+        更大范围跳转请用 ``ctx.goto``。``ok=False`` 时忽略此字段。
     """
 
     ok: bool

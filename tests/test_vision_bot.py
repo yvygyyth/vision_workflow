@@ -130,7 +130,8 @@ def test_sequential_modules() -> None:
     assert log == ["a", "b"]
 
 
-def test_goto_jumps_to_target() -> None:
+def test_goto_jumps_to_sibling_via_then() -> None:
+    """同父兄弟可用 Result.then（return 语义）。"""
     log: list[str] = []
 
     def a(ctx):
@@ -157,6 +158,101 @@ def test_goto_jumps_to_target() -> None:
     report = run(root, RunConfig(), base_dir=Path("."))
     assert report.success
     assert log == ["a", "c"]
+
+
+def test_return_rejects_non_sibling() -> None:
+    """return/then 跳到非栈内、非兄弟 → 报错。"""
+
+    def a(ctx):
+        return Result.success(then="t.inner.leaf")
+
+    def leaf(ctx):
+        return Result.success()
+
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.a", "A", a),
+            flow("t.inner", "内", children=[mod("t.inner.leaf", "叶", leaf)]),
+        ],
+    )
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert not report.success
+    assert "return 越界" in (report.message or "")
+
+
+def test_ctx_goto_cross_branch() -> None:
+    """ctx.goto 可跳到非兄弟节点。"""
+    log: list[str] = []
+
+    def a(ctx):
+        log.append("a")
+        ctx.goto("t.inner.leaf")
+
+    def leaf(ctx):
+        log.append("leaf")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.a", "A", a),
+            mod("t.skip", "跳过", lambda ctx: log.append("skip") or Result.success()),
+            flow("t.inner", "内", children=[mod("t.inner.leaf", "叶", leaf)]),
+        ],
+    )
+    report = run(root, RunConfig(), base_dir=Path("."))
+    assert report.success
+    assert log == ["a", "leaf"]
+    assert "skip" not in log
+
+
+def test_goto_escapes_call() -> None:
+    """call 内 goto 逃出后不执行 call 之后的代码。"""
+    log: list[str] = []
+
+    def tool_step(ctx):
+        log.append("tool")
+        ctx.goto("t.after")
+
+    def caller(ctx):
+        log.append("caller")
+        ctx.call("tool")
+        log.append("caller-after")
+        return Result.success()
+
+    def after(ctx):
+        log.append("after")
+        return Result.success()
+
+    tool = flow("tool", "工具", children=[mod("tool.m", "T", tool_step)])
+    root = flow(
+        "t",
+        "根",
+        children=[
+            mod("t.caller", "C", caller),
+            mod("t.mid", "中", lambda ctx: log.append("mid") or Result.success()),
+            mod("t.after", "后", after),
+        ],
+    )
+    from vision_bot.perception.session import bind_perception
+    from vision_bot.runtime.bind import bind_runtime
+    from vision_bot.runtime.runner import Runner
+
+    reg = FlowRegistry.build(root)
+    reg.register_tool(tool)
+    bind_perception(Path(".").resolve())
+    ctx = RunContext()
+    runner = Runner(ctx, reg, root=root)
+    ctx._runner = runner
+    bind_runtime(ctx)
+    result = runner.run_flow(root)
+    assert result.ok
+    assert log == ["caller", "tool", "after"]
+    assert "caller-after" not in log
+    assert "mid" not in log
 
 
 def test_call_tool_relocate_parent_uses_caller() -> None:
@@ -237,7 +333,7 @@ def test_call_tool_flow_does_not_pop_caller() -> None:
 
     def settle(ctx):
         log.append("settle")
-        return Result.success(then="t.hub")
+        ctx.goto("t.hub")
 
     def shop(ctx):
         log.append("shop")
@@ -478,8 +574,8 @@ def test_relocate_parent_at_root_stops() -> None:
 
 
 def test_root_flow_catalog() -> None:
-    assert len(ROOT_FLOWS) == 3
-    assert len(root_flow_choices()) == 3
+    assert len(ROOT_FLOWS) >= 3
+    assert len(root_flow_choices()) == len(ROOT_FLOWS)
     assert get_root_flow("qldq").name == "千里单骑"
     assert get_root_flow("ba_wang").name == "八王之乱"
     assert get_root_flow("fee_day").name == "名将杀免费资源每日领取"
@@ -509,6 +605,38 @@ def test_run_from_entry() -> None:
     report = run(root, RunConfig(entry_id="t.b"))
     assert report.success
     assert log == ["b"]
+
+
+def test_run_from_flow_continues_siblings() -> None:
+    """从中间 Flow 启动 ≡ 根入栈后 goto：该 Flow 跑完继续父级后续兄弟。"""
+    log: list[str] = []
+
+    def first(ctx):
+        log.append("first")
+        return Result.success()
+
+    def second(ctx):
+        log.append("second")
+        return Result.success()
+
+    def after(ctx):
+        log.append("after")
+        return Result.success()
+
+    root = flow(
+        "t",
+        "根",
+        children=[
+            flow("t.iface", "壳", children=[
+                flow("t.iface.first", "一", children=[mod("t.iface.first.m", "M1", first)]),
+                flow("t.iface.second", "二", children=[mod("t.iface.second.m", "M2", second)]),
+            ]),
+            mod("t.after", "后", after),
+        ],
+    )
+    report = run(root, RunConfig(entry_id="t.iface.first"), base_dir=Path("."))
+    assert report.success
+    assert log == ["first", "second", "after"]
 
 
 def test_params_scope() -> None:
@@ -569,7 +697,7 @@ def test_fee_day_build() -> None:
 
 
 def test_then_loop_does_not_blow_stack() -> None:
-    """跨 Flow 的 then 环跑很多轮也不应 RecursionError。"""
+    """跨 Flow 的 goto 环跑很多轮也不应 RecursionError。"""
     log: list[str] = []
     rounds = {"n": 0}
 
@@ -578,11 +706,11 @@ def test_then_loop_does_not_blow_stack() -> None:
         rounds["n"] += 1
         if rounds["n"] > 50:
             return Result.success()
-        return Result.success(then="t.fight.hit")
+        ctx.goto("t.fight.hit")
 
     def fight_hit(ctx):
         log.append("fight")
-        return Result.success(then="t.hub")
+        ctx.goto("t.hub")
 
     root = flow(
         "t",

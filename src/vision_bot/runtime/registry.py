@@ -68,21 +68,6 @@ class FlowRegistry:
             return node.id
         return self.parent_flow[node_id]
 
-    def entry_point(self, node_id: str) -> tuple[Flow, int]:
-        """返回从 node_id 开始执行时的 (父 Flow, 起始 child index)。"""
-        node = self.get(node_id)
-        if isinstance(node, Flow):
-            if node_id not in self.parent_flow:
-                return node, 0
-            parent_id = self.parent_flow[node_id]
-            parent = self.get(parent_id)
-            assert isinstance(parent, Flow)
-            return parent, self.child_index[node_id]
-        parent_id = self.parent_flow[node_id]
-        parent = self.get(parent_id)
-        assert isinstance(parent, Flow)
-        return parent, self.child_index[node_id]
-
     def next_sibling_index(self, node_id: str) -> tuple[str, int] | None:
         """返回 (父 Flow id, 下一兄弟 index)；无兄弟则 None。"""
         parent_id = self.parent_flow.get(node_id)

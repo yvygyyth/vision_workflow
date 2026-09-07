@@ -40,7 +40,7 @@ relocate: list[RelocateRule] = [
 ]
 
 
-def choose(ctx) -> Result:
+def choose(ctx: RunContext) -> Result:
     coins = refresh_copper_coins(get_battle_state(ctx))
     if coins is None:
         coins = 0
@@ -58,5 +58,5 @@ def choose(ctx) -> Result:
         if not r.ok:
             continue
         logger.info("pick_shop 进入 %s", outcome)
-        return Result.success(then=f"qldq.{outcome}")
+        ctx.goto(f"qldq.{outcome}")
     return Result.fail("商店选项均未识别")

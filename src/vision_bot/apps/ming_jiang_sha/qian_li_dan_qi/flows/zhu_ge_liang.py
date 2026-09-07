@@ -7,6 +7,7 @@ import time
 from vision_bot.actions import click, do, move
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.events import click_match
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
@@ -25,9 +26,9 @@ def wait_title(ctx) -> Result:
     return Result.success()
 
 
-def click_next(ctx) -> Result:
+def click_next(ctx: RunContext) -> Result:
     r = find(_NEXT)
     if not r.ok:
         return Result.fail(r.message or "未找到继续")
     click_match(r.value)
-    return Result.success(then="qldq.battle_hub")
+    ctx.goto("qldq.battle_hub")

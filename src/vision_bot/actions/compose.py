@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Protocol
 
 from vision_bot.actions.context import ActionContext, resolve_action_context
@@ -14,7 +13,13 @@ class Executable(Protocol):
     def execute(self) -> ActionFn: ...
 
 
-def do(*steps: ActionFn | Executable) -> Callable[[ActionContext | None], Result]:
+class DoRunner(Protocol):
+    """``do(...)()`` 可无参调用；类型上保留可选 ``ctx``。"""
+
+    def __call__(self, ctx: ActionContext | None = None) -> Result: ...
+
+
+def do(*steps: ActionFn | Executable) -> DoRunner:
     fns: list[ActionFn] = [
         s.execute() if hasattr(s, "execute") else s  # type: ignore[arg-type]
         for s in steps

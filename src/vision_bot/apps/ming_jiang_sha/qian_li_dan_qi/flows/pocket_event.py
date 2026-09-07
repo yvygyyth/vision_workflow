@@ -66,7 +66,7 @@ def enter(ctx) -> Result:
     return _click_pattern(ctx)
 
 
-def check(ctx) -> Result:
+def check(ctx: RunContext) -> Result:
     # 先挪开：点完锦囊光标常还在牌上，会挡 OK / 取消
     do(move().to(80, 80))()
     deadline = time.monotonic() + 4.0
@@ -83,13 +83,13 @@ def check(ctx) -> Result:
             return Result.success(then="qldq.pocket_event.enter")
         if shot.found(_BATTLE_INTERFACE):
             logger.info("pocket_event → 三选一")
-            return Result.success(then="qldq.battle_hub")
+            ctx.goto("qldq.battle_hub")
         if _in_fight(shot):
             logger.info("pocket_event → 无赠礼战斗")
             return fight.run_battle_no_gift(ctx)
         time.sleep(0.25)
     logger.info("pocket_event check → 皆未识别，交三选一枢纽")
-    return Result.success(then="qldq.battle_hub")
+    ctx.goto("qldq.battle_hub")
 
 
 

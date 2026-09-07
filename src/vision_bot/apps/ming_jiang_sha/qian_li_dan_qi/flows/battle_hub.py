@@ -75,8 +75,8 @@ def recover_fight(ctx) -> Result:
     return fight.run_battle_no_gift(ctx)
 
 
-def dismiss_up(ctx) -> Result:
+def dismiss_up(ctx: RunContext) -> Result:
     if snap(UP_PANEL).ok:
         do(move().to(1300, 1150), click())()
         time.sleep(0.4)
-    return Result.success(then="qldq.battle_hub")
+    ctx.goto("qldq.battle_hub")

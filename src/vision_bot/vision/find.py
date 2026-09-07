@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 ImageArg = str | Path
 ImagesArg = ImageArg | Iterable[ImageArg]
+# 多图容器（不含 str，避免与单图重载重叠）
+MultiImages = set[str] | frozenset[str] | list[str] | tuple[str, ...] | set[Path] | list[Path] | tuple[Path, ...]
 Region = tuple[int, int, int, int]
 
 
@@ -121,7 +123,7 @@ def _run_lookup(
     gray = opts.grayscale if grayscale is None else grayscale
     stop = cfg.cancelled if cancelled is None else cancelled
     keys = [str(p) for p in flat]
-    abs_paths = [resolve_path(p) for p in flat]
+    abs_paths: list[str | Path] = [resolve_path(p) for p in flat]
 
     if len(abs_paths) == 1:
         hit = find_image(
@@ -171,17 +173,33 @@ def find(
 
 @overload
 def find(
-    *images: ImagesArg,
+    images: MultiImages,
+    /,
+    *,
     timeout: float | None = None,
     threshold: float | None = None,
     interval: float | None = None,
     region: Region | None = None,
     grayscale: bool | None = None,
     screenshot: Image | None = None,
-) -> Result | ScreenSnapshot: ...
+) -> ScreenSnapshot: ...
 
 
+@overload
 def find(
+    first: str | Path,
+    second: str | Path,
+    *rest: str | Path,
+    timeout: float | None = None,
+    threshold: float | None = None,
+    interval: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+) -> ScreenSnapshot: ...
+
+
+def find(  # pyright: ignore[reportInconsistentOverload]
     *images: ImagesArg,
     timeout: float | None = None,
     threshold: float | None = None,
@@ -194,7 +212,7 @@ def find(
     """识图（默认慢查：使用会话 ``timeout`` / ``interval``）。
 
     - 单图 → :class:`~vision_bot.runtime.result.Result`
-    - 多图 → :class:`ScreenSnapshot`（同帧整表；慢查时轮询至任一命中或超时）
+    - 多图容器 / 多位置参数 → :class:`ScreenSnapshot`
     """
     return _run_lookup(
         *images,
@@ -222,15 +240,29 @@ def snap(
 
 @overload
 def snap(
-    *images: ImagesArg,
+    images: MultiImages,
+    /,
+    *,
     threshold: float | None = None,
     region: Region | None = None,
     grayscale: bool | None = None,
     screenshot: Image | None = None,
-) -> Result | ScreenSnapshot: ...
+) -> ScreenSnapshot: ...
 
 
+@overload
 def snap(
+    first: str | Path,
+    second: str | Path,
+    *rest: str | Path,
+    threshold: float | None = None,
+    region: Region | None = None,
+    grayscale: bool | None = None,
+    screenshot: Image | None = None,
+) -> ScreenSnapshot: ...
+
+
+def snap(  # pyright: ignore[reportInconsistentOverload]
     *images: ImagesArg,
     threshold: float | None = None,
     region: Region | None = None,

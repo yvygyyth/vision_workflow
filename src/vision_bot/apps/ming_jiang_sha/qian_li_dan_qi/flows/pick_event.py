@@ -51,7 +51,7 @@ def choose(ctx) -> Result:
     return Result.fail("无事件选项")
 
 
-def confirm(ctx) -> Result:
+def confirm(ctx: RunContext) -> Result:
     outcome = ctx.vars.get("pending_event")
     if not outcome:
         return Result.fail("无 pending 事件")
@@ -59,4 +59,4 @@ def confirm(ctx) -> Result:
     if not r.ok:
         return Result.fail(r.message)
     ctx.vars.pop("pending_event", None)
-    return Result.success(then=f"qldq.{outcome}")
+    ctx.goto(f"qldq.{outcome}")

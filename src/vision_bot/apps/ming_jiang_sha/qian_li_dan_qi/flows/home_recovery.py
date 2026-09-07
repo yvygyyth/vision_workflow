@@ -7,12 +7,13 @@ import time
 
 from vision_bot.actions import click, do, move
 from vision_bot.events import press_esc
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 logger = logging.getLogger(__name__)
 
 
-def esc_home(ctx) -> Result:
+def esc_home(ctx: RunContext) -> Result:
     logger.info("home_recovery: Esc×5")
     press_esc(times=5, pause=0.25)
     time.sleep(0.5)
@@ -20,4 +21,4 @@ def esc_home(ctx) -> Result:
     do(move().to(1970, 730), click())()
     time.sleep(0.5)
     do(move().to(1130, 700), click())()
-    return Result.success(then="qldq.battle_select.enter_pick")
+    ctx.goto("qldq.battle_select.enter_pick")

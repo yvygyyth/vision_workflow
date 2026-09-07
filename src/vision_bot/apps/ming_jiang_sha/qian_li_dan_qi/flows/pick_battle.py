@@ -79,8 +79,8 @@ def choose_yi_wai(ctx) -> Result:
     return Result.success(then="qldq.battle_hub.pick_battle.pre_confirm")
 
 
-def pre_confirm(ctx) -> Result:
+def pre_confirm(ctx: RunContext) -> Result:
     r = click_confirm()
     if not r.ok:
         return Result.fail(r.message)
-    return Result.success(then="qldq.fight")
+    ctx.goto("qldq.fight")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 if TYPE_CHECKING:
     from vision_bot.runtime.result import Result
@@ -55,7 +55,21 @@ class RunContext:
             self._params_stack.pop()
 
     def call(self, target_id: str) -> Result:
-        """同步插入执行目标子树，返回 Result；可继续写后续逻辑。"""
+        """同步插入执行目标子树，返回 Result；可继续写后续逻辑。
+
+        若目标内部 ``goto`` 逃出 call，则不会回到此处之后的代码。
+        """
         if self._runner is None:
             raise RuntimeError("call 需要在 run 内调用")
         return self._runner.call(target_id)
+
+    def goto(self, target_id: str) -> NoReturn:
+        """无限制跳转（可栈外）；裁栈后继续，不回到调用点。
+
+        始终抛出内部 ``JumpEscape``，故标注为 ``NoReturn``，
+        业务里 ``-> Result`` 的 active 以 ``ctx.goto(...)`` 结尾时类型正确。
+        """
+        if self._runner is None:
+            raise RuntimeError("goto 需要在 run 内调用")
+        self._runner.goto(target_id)
+        raise RuntimeError("goto 应抛出 JumpEscape")  # pragma: no cover

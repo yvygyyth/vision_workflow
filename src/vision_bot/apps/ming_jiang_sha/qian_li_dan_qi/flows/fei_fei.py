@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vision_bot.apps.ming_jiang_sha.paths import QLDQ
 from vision_bot.events import click_match
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 from vision_bot.vision import find
 
@@ -14,12 +15,12 @@ _OPTS = (
 )
 
 
-def choose(ctx) -> Result:
+def choose(ctx: RunContext) -> Result:
     for path in _OPTS:
         result = find(path, timeout=0.8)
         if result.ok:
             r = click_match(result.value)
             if not r.ok:
                 return r
-            return Result.success(then="qldq.battle_hub")
+            ctx.goto("qldq.battle_hub")
     return Result.fail("妃妃选项未识别")

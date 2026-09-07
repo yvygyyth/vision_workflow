@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from vision_bot.apps.ming_jiang_sha.actions import click_confirm, close_popup
 from vision_bot.apps.ming_jiang_sha.qian_li_dan_qi.state import clear_battle_state
+from vision_bot.runtime.context import RunContext
 from vision_bot.runtime.result import Result
 
 
@@ -14,7 +15,7 @@ def confirm(ctx) -> Result:
     return r
 
 
-def close(ctx) -> Result:
+def close(ctx: RunContext) -> Result:
     close_popup()
     clear_battle_state(ctx)
-    return Result.success(then="qldq.battle_select.enter_pick")
+    ctx.goto("qldq.battle_select.enter_pick")

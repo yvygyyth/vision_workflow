@@ -89,13 +89,13 @@ def run_battle_no_gift(ctx) -> Result:
     return _after_mjs_battle(ctx, then="qldq.battle_hub")
 
 
-def _after_mjs_battle(ctx, *, then: str | None) -> Result:
+def _after_mjs_battle(ctx: RunContext, *, then: str | None) -> Result:
     r = ctx.call("mjs.battle")
     if not r.ok:
         return r
     if then:
         logger.info("run_battle_no_gift → 回三选一")
-        return Result.success(then=then)
+        ctx.goto(then)
     return Result.success()
 
 
@@ -108,7 +108,7 @@ def _ocr_reward_titles() -> list[str]:
     return titles
 
 
-def after_settle(ctx) -> Result:
+def after_settle(ctx: RunContext) -> Result:
     """纯战斗结束后：义旗结束 / 赠礼 / 意外再战；否则等赠礼标题再 OCR。
 
     若 battle.next_step 过早交出，这里再补点下一步。
@@ -117,11 +117,11 @@ def after_settle(ctx) -> Result:
     while time.monotonic() < deadline:
         if find(YI_QI, timeout=0.35, threshold=0.8).ok:
             logger.info("after_settle → 义旗，本轮结束")
-            return Result.success(then="qldq.run_ended.confirm")
+            ctx.goto("qldq.run_ended.confirm")
         if find(YI_WAI, timeout=0.35).ok:
             # 战后意外：点选后进含赠礼战斗（复用三选一里的选意外）
             logger.info("after_settle → 意外，再进含赠礼战斗")
-            return Result.success(then="qldq.battle_hub.pick_battle.choose_yi_wai")
+            ctx.goto("qldq.battle_hub.pick_battle.choose_yi_wai")
         if find(SELECT_ZENG_LI, timeout=0.35).ok:
             logger.info("after_settle → 已在选赠礼类别")
             return Result.success(then="qldq.fight.choose_reward_kind")
@@ -183,7 +183,7 @@ def _scan_reward_kinds(ctx) -> dict[RewardKind, tuple[int, int]]:
     return available
 
 
-def choose_reward_kind(ctx) -> Result:
+def choose_reward_kind(ctx: RunContext) -> Result:
     state = get_battle_state(ctx)
     entry = ctx.vars.get(PENDING_GENERAL_KEY)
     if not isinstance(entry, GeneralPriority):
@@ -208,7 +208,7 @@ def choose_reward_kind(ctx) -> Result:
         logger.warning("choose_reward_kind → no_kind")
         return Result.fail("赠礼类别未识别")
 
-    kind = pick_reward_kind(available.keys(), entry, state)
+    kind = pick_reward_kind(set(available), entry, state)
     if kind is None:
         logger.warning("choose_reward_kind → 无可选项")
         ctx.vars.pop(PENDING_GENERAL_KEY, None)
@@ -222,4 +222,4 @@ def choose_reward_kind(ctx) -> Result:
         state.mark_general_reward(entry.name, kind)
         logger.info("【背包】%s ← %s", entry.name, kind.value)
     ctx.vars.pop(PENDING_GENERAL_KEY, None)
-    return Result.success(then="qldq.battle_hub")
+    ctx.goto("qldq.battle_hub")
